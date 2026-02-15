@@ -98,6 +98,8 @@ export default function LogRound() {
   const [newCourseHoles, setNewCourseHoles] = useState('18');
   const [newHolePars, setNewHolePars] = useState<number[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [holeSelection, setHoleSelection] = useState<'all' | 'front9' | 'back9' | 'custom'>('all');
+  const [selectedHoles, setSelectedHoles] = useState<number[]>([]);
 
   useEffect(() => {
     supabase.from('sb_courses').select('*').order('name').then(({ data }) => setCourses(data || []));
@@ -122,6 +124,8 @@ export default function LogRound() {
     setTeeSets(teesRes.data || []);
     const numH = holesRes.data?.length || course.num_holes || 18;
     setHoleEntries(initHoleEntries(numH));
+    setHoleSelection('all');
+    setSelectedHoles(Array.from({ length: numH }, (_, i) => i + 1));
     setSelectedTee(null);
     setMixedTees(false);
     if ((teesRes.data || []).length > 0) {
@@ -180,8 +184,28 @@ export default function LogRound() {
     setHoleEntries(prev => prev.map((e, i) => i === idx ? { ...e, mental: { ...(e.mental || defaultMental()), [field]: value } } : e));
   };
 
-  const totalScore = holeEntries.reduce((s, e) => s + (e.score || 0), 0);
-  const totalPutts = holeEntries.reduce((s, e) => s + (e.putts || 0), 0);
+  const activeHoleNumbers = holeSelection === 'all' ? Array.from({ length: holes.length || 18 }, (_, i) => i + 1)
+    : holeSelection === 'front9' ? Array.from({ length: 9 }, (_, i) => i + 1)
+    : holeSelection === 'back9' ? Array.from({ length: 9 }, (_, i) => i + 10)
+    : selectedHoles.sort((a, b) => a - b);
+
+  const activeIndices = activeHoleNumbers.map(n => n - 1);
+
+  const handleHoleSelectionChange = (mode: 'all' | 'front9' | 'back9' | 'custom') => {
+    const numH = holeEntries.length || 18;
+    setHoleSelection(mode);
+    if (mode === 'all') setSelectedHoles(Array.from({ length: numH }, (_, i) => i + 1));
+    else if (mode === 'front9') setSelectedHoles(Array.from({ length: Math.min(9, numH) }, (_, i) => i + 1));
+    else if (mode === 'back9') setSelectedHoles(Array.from({ length: Math.min(9, numH - 9) }, (_, i) => i + 10));
+    // custom: keep current selectedHoles
+  };
+
+  const toggleCustomHole = (holeNum: number) => {
+    setSelectedHoles(prev => prev.includes(holeNum) ? prev.filter(h => h !== holeNum) : [...prev, holeNum]);
+  };
+
+  const totalScore = activeIndices.reduce((s, i) => s + (holeEntries[i]?.score || 0), 0);
+  const totalPutts = activeIndices.reduce((s, i) => s + (holeEntries[i]?.putts || 0), 0);
 
   const saveRound = async () => {
     if (!user || !selectedCourse) return;
@@ -192,11 +216,12 @@ export default function LogRound() {
         total_score: totalScore, weather, wind, is_complete: true, visibility,
         tee_set_id: selectedTee?.id || null,
         mixed_tees: mixedTees,
-        notes: JSON.stringify({ tracking_mode: trackingMode }),
+        notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers }),
       }).select().single();
       if (error) throw error;
 
-      const scoreInserts = holeEntries.map((e, i) => {
+      const scoreInserts = activeIndices.map((i) => {
+        const e = holeEntries[i];
         const base: any = {
           round_id: round.id, hole_id: holes[i]?.id || null, hole_number: i + 1,
           score: e.score, putts: e.putts, fairway_hit: e.fairway_hit, gir: e.gir, penalties: e.penalties,
@@ -213,7 +238,7 @@ export default function LogRound() {
       });
       await supabase.from('sb_hole_scores').insert(scoreInserts);
       Alert.alert('Success', `Round saved! Total: ${totalScore}`);
-      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false);
+      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1));
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -410,19 +435,25 @@ export default function LogRound() {
     );
   }
 
+  // Back arrow header component
+  const BackArrow = ({ onPress, label }: { onPress: () => void; label?: string }) => (
+    <TouchableOpacity style={s.backArrow} onPress={onPress}>
+      <Text style={s.backArrowText}>‹</Text>
+      {label && <Text style={s.backArrowLabel}>{label}</Text>}
+    </TouchableOpacity>
+  );
+
   // Step 2: Tee selection
   if (step === 2) {
     return (
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
+        <BackArrow onPress={() => setStep(1)} label="Courses" />
         <Text style={s.stepTitle}>Step 2: Select Tees</Text>
         <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
         <Text style={{ color: colors.grayDark, marginBottom: 16 }}>Choose the tees you played from</Text>
         {teeSets.map(renderTeeCard)}
         <TouchableOpacity style={s.mixedBtn} onPress={selectMixedTees}>
           <Text style={s.mixedBtnText}>🔀 I Played Mixed Tees</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.backBtn} onPress={() => setStep(1)}>
-          <Text style={s.backBtnText}>← Back</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -432,6 +463,7 @@ export default function LogRound() {
   if (step === 3) {
     return (
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
+        <BackArrow onPress={() => teeSets.length > 0 ? setStep(2) : setStep(1)} label={teeSets.length > 0 ? 'Tees' : 'Courses'} />
         <Text style={s.stepTitle}>Step 3: Round Details</Text>
         <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
         {selectedTee && (
@@ -454,6 +486,24 @@ export default function LogRound() {
           ))}
         </View>
 
+        <Text style={s.formLabel}>Holes Played</Text>
+        <View style={s.holeSelRow}>
+          {([['all', 'All 18'], ['front9', 'Front 9'], ['back9', 'Back 9'], ['custom', 'Custom']] as const).map(([key, label]) => (
+            <TouchableOpacity key={key} style={[s.holeSelPill, holeSelection === key && s.holeSelPillActive]} onPress={() => handleHoleSelectionChange(key)}>
+              <Text style={[s.holeSelPillText, holeSelection === key && s.holeSelPillTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        {holeSelection === 'custom' && (
+          <View style={s.customHoleGrid}>
+            {Array.from({ length: holes.length || 18 }, (_, i) => i + 1).map(num => (
+              <TouchableOpacity key={num} style={[s.customHoleBtn, selectedHoles.includes(num) && s.customHoleBtnActive]} onPress={() => toggleCustomHole(num)}>
+                <Text style={[s.customHoleBtnText, selectedHoles.includes(num) && s.customHoleBtnTextActive]}>{num}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         <Text style={s.formLabel}>Date</Text>
         <TextInput style={s.input} value={datePlayed} onChangeText={setDatePlayed} placeholder="YYYY-MM-DD" placeholderTextColor={colors.gray} />
         <Text style={s.formLabel}>Weather</Text>
@@ -468,24 +518,25 @@ export default function LogRound() {
             </TouchableOpacity>
           ))}
         </View>
-        <View style={s.navRow}>
-          <TouchableOpacity style={s.backBtn} onPress={() => teeSets.length > 0 ? setStep(2) : setStep(1)}><Text style={s.backBtnText}>← Back</Text></TouchableOpacity>
-          <TouchableOpacity style={s.goldBtn} onPress={() => setStep(4)}><Text style={s.goldBtnText}>Next: Score Entry →</Text></TouchableOpacity>
-        </View>
+        <TouchableOpacity style={s.goldBtn} onPress={() => { setCurrentHole(activeIndices[0] ?? 0); setStep(4); }}><Text style={s.goldBtnText}>Next: Score Entry →</Text></TouchableOpacity>
       </ScrollView>
     );
   }
 
   // Step 4: Hole-by-hole
   if (step === 4) {
-    const entry = holeEntries[currentHole];
-    const hole = holes[currentHole];
-    const teeHole = teeHolesData.find(th => th.hole_number === currentHole + 1);
+    // currentHole is a position within activeIndices (0-based)
+    const safePos = Math.min(currentHole, activeIndices.length - 1);
+    const actualHoleIdx = activeIndices[safePos] ?? 0;
+    const entry = holeEntries[actualHoleIdx];
+    const hole = holes[actualHoleIdx];
+    const teeHole = teeHolesData.find(th => th.hole_number === actualHoleIdx + 1);
     const yardage = teeHole?.yardage || hole?.distance_yards;
     const modeInfo = TRACKING_MODES.find(m => m.key === trackingMode);
 
     return (
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
+        <BackArrow onPress={() => setStep(3)} label="Round Details" />
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <Text style={s.stepTitle}>Hole-by-Hole</Text>
           <View style={s.modeBadge}>
@@ -495,17 +546,17 @@ export default function LogRound() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
           <View style={s.holeSelector}>
-            {holeEntries.map((e, i) => (
-              <TouchableOpacity key={i} style={[s.holePill, currentHole === i && s.holePillActive, e.score > 0 && s.holePillDone]}
-                onPress={() => { setCurrentHole(i); setExpandedSection(null); }}>
-                <Text style={[s.holePillText, currentHole === i && s.holePillTextActive]}>{i + 1}</Text>
+            {activeIndices.map((idx, pos) => (
+              <TouchableOpacity key={idx} style={[s.holePill, safePos === pos && s.holePillActive, holeEntries[idx]?.score > 0 && s.holePillDone]}
+                onPress={() => { setCurrentHole(pos); setExpandedSection(null); }}>
+                <Text style={[s.holePillText, safePos === pos && s.holePillTextActive]}>{idx + 1}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </ScrollView>
 
         <View style={s.holeHeader}>
-          <Text style={s.holeTitle}>Hole {currentHole + 1}</Text>
+          <Text style={s.holeTitle}>Hole {actualHoleIdx + 1}</Text>
           <Text style={s.holePar}>
             Par {teeHole?.par || hole?.par || '?'}
             {yardage ? ` · ${yardage} yds` : ''}
@@ -526,7 +577,7 @@ export default function LogRound() {
                   return (
                     <TouchableOpacity key={tee.id}
                       style={[s.miniTeeBtn, isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }]}
-                      onPress={() => updateHoleEntry(currentHole, 'tee_set_id', tee.id)}>
+                      onPress={() => updateHoleEntry(actualHoleIdx, 'tee_set_id', tee.id)}>
                       <View style={[s.miniTeeDot, { backgroundColor: dotColor }, isWhite && { borderWidth: 1, borderColor: colors.grayLight }]} />
                       <Text style={[s.miniTeeText, isSelected && { color: colors.white }]}>{tee.color || tee.name}</Text>
                     </TouchableOpacity>
@@ -540,7 +591,7 @@ export default function LogRound() {
               placeholderTextColor={colors.gray}
               keyboardType="number-pad"
               value={entry.custom_yardage ? String(entry.custom_yardage) : ''}
-              onChangeText={v => updateHoleEntry(currentHole, 'custom_yardage', parseInt(v) || 0)}
+              onChangeText={v => updateHoleEntry(actualHoleIdx, 'custom_yardage', parseInt(v) || 0)}
             />
           </View>
         )}
@@ -548,22 +599,22 @@ export default function LogRound() {
         {/* Basic fields — always shown */}
         <Text style={s.formLabel}>Score</Text>
         <View style={s.counterRow}>
-          <TouchableOpacity style={s.counterBtn} onPress={() => entry.score > 0 && updateHoleEntry(currentHole, 'score', entry.score - 1)}>
+          <TouchableOpacity style={s.counterBtn} onPress={() => entry.score > 0 && updateHoleEntry(actualHoleIdx, 'score', entry.score - 1)}>
             <Text style={s.counterBtnText}>−</Text>
           </TouchableOpacity>
           <Text style={s.counterVal}>{entry.score || '—'}</Text>
-          <TouchableOpacity style={s.counterBtn} onPress={() => updateHoleEntry(currentHole, 'score', entry.score + 1)}>
+          <TouchableOpacity style={s.counterBtn} onPress={() => updateHoleEntry(actualHoleIdx, 'score', entry.score + 1)}>
             <Text style={s.counterBtnText}>+</Text>
           </TouchableOpacity>
         </View>
 
         <Text style={s.formLabel}>Putts</Text>
         <View style={s.counterRow}>
-          <TouchableOpacity style={s.counterBtn} onPress={() => entry.putts > 0 && updateHoleEntry(currentHole, 'putts', entry.putts - 1)}>
+          <TouchableOpacity style={s.counterBtn} onPress={() => entry.putts > 0 && updateHoleEntry(actualHoleIdx, 'putts', entry.putts - 1)}>
             <Text style={s.counterBtnText}>−</Text>
           </TouchableOpacity>
           <Text style={s.counterVal}>{entry.putts}</Text>
-          <TouchableOpacity style={s.counterBtn} onPress={() => updateHoleEntry(currentHole, 'putts', entry.putts + 1)}>
+          <TouchableOpacity style={s.counterBtn} onPress={() => updateHoleEntry(actualHoleIdx, 'putts', entry.putts + 1)}>
             <Text style={s.counterBtnText}>+</Text>
           </TouchableOpacity>
         </View>
@@ -572,7 +623,7 @@ export default function LogRound() {
         <View style={s.toggleRow}>
           {[{ label: 'Yes', val: true }, { label: 'No', val: false }, { label: 'N/A', val: null }].map(opt => (
             <TouchableOpacity key={String(opt.val)} style={[s.toggleBtn, entry.fairway_hit === opt.val && s.toggleBtnActive]}
-              onPress={() => updateHoleEntry(currentHole, 'fairway_hit', opt.val)}>
+              onPress={() => updateHoleEntry(actualHoleIdx, 'fairway_hit', opt.val)}>
               <Text style={[s.toggleBtnText, entry.fairway_hit === opt.val && s.toggleBtnTextActive]}>{opt.label}</Text>
             </TouchableOpacity>
           ))}
@@ -580,40 +631,40 @@ export default function LogRound() {
 
         <Text style={s.formLabel}>Green in Regulation</Text>
         <View style={s.toggleRow}>
-          <TouchableOpacity style={[s.toggleBtn, entry.gir && s.toggleBtnActive]} onPress={() => updateHoleEntry(currentHole, 'gir', true)}>
+          <TouchableOpacity style={[s.toggleBtn, entry.gir && s.toggleBtnActive]} onPress={() => updateHoleEntry(actualHoleIdx, 'gir', true)}>
             <Text style={[s.toggleBtnText, entry.gir && s.toggleBtnTextActive]}>Yes</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.toggleBtn, !entry.gir && s.toggleBtnActive]} onPress={() => updateHoleEntry(currentHole, 'gir', false)}>
+          <TouchableOpacity style={[s.toggleBtn, !entry.gir && s.toggleBtnActive]} onPress={() => updateHoleEntry(actualHoleIdx, 'gir', false)}>
             <Text style={[s.toggleBtnText, !entry.gir && s.toggleBtnTextActive]}>No</Text>
           </TouchableOpacity>
         </View>
 
         <Text style={s.formLabel}>Penalties</Text>
         <View style={s.counterRow}>
-          <TouchableOpacity style={s.counterBtn} onPress={() => entry.penalties > 0 && updateHoleEntry(currentHole, 'penalties', entry.penalties - 1)}>
+          <TouchableOpacity style={s.counterBtn} onPress={() => entry.penalties > 0 && updateHoleEntry(actualHoleIdx, 'penalties', entry.penalties - 1)}>
             <Text style={s.counterBtnText}>−</Text>
           </TouchableOpacity>
           <Text style={s.counterVal}>{entry.penalties}</Text>
-          <TouchableOpacity style={s.counterBtn} onPress={() => updateHoleEntry(currentHole, 'penalties', entry.penalties + 1)}>
+          <TouchableOpacity style={s.counterBtn} onPress={() => updateHoleEntry(actualHoleIdx, 'penalties', entry.penalties + 1)}>
             <Text style={s.counterBtnText}>+</Text>
           </TouchableOpacity>
         </View>
 
         {/* Mode-specific fields */}
-        {trackingMode === 'advanced' && renderAdvancedFields(currentHole)}
-        {trackingMode === 'strategy' && renderStrategyFields(currentHole)}
-        {trackingMode === 'mental' && renderMentalFields(currentHole)}
+        {trackingMode === 'advanced' && renderAdvancedFields(actualHoleIdx)}
+        {trackingMode === 'strategy' && renderStrategyFields(actualHoleIdx)}
+        {trackingMode === 'mental' && renderMentalFields(actualHoleIdx)}
 
         <View style={s.holeNav}>
-          {currentHole > 0 && (
-            <TouchableOpacity style={s.backBtn} onPress={() => { setCurrentHole(currentHole - 1); setExpandedSection(null); }}>
-              <Text style={s.backBtnText}>← Hole {currentHole}</Text>
+          {currentActiveIdx > 0 && (
+            <TouchableOpacity style={s.backBtn} onPress={() => { setCurrentHole(activeIndices[currentActiveIdx - 1]); setExpandedSection(null); }}>
+              <Text style={s.backBtnText}>← Hole {activeIndices[currentActiveIdx - 1] + 1}</Text>
             </TouchableOpacity>
           )}
           <View style={{ flex: 1 }} />
-          {currentHole < holeEntries.length - 1 ? (
-            <TouchableOpacity style={s.goldBtn} onPress={() => { setCurrentHole(currentHole + 1); setExpandedSection(null); }}>
-              <Text style={s.goldBtnText}>Hole {currentHole + 2} →</Text>
+          {currentActiveIdx < activeIndices.length - 1 ? (
+            <TouchableOpacity style={s.goldBtn} onPress={() => { setCurrentHole(activeIndices[currentActiveIdx + 1]); setExpandedSection(null); }}>
+              <Text style={s.goldBtnText}>Hole {activeIndices[currentActiveIdx + 1] + 1} →</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={s.goldBtn} onPress={() => setStep(5)}>
@@ -628,6 +679,7 @@ export default function LogRound() {
   // Step 5: Review
   return (
     <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
+      <BackArrow onPress={() => setStep(4)} label="Edit Holes" />
       <Text style={s.stepTitle}>Review & Save</Text>
       <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
       {selectedTee && <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color}</Text>}
@@ -657,30 +709,33 @@ export default function LogRound() {
           <Text style={[s.reviewCell, s.reviewHeaderText]}>FW</Text>
           <Text style={[s.reviewCell, s.reviewHeaderText]}>GIR</Text>
         </View>
-        {holeEntries.map((e, i) => (
-          <TouchableOpacity key={i} style={s.reviewRow} onPress={() => { setCurrentHole(i); setStep(4); }}>
-            <Text style={[s.reviewCell, { flex: 0.5 }]}>{i + 1}</Text>
-            <Text style={s.reviewCell}>{holes[i]?.par || '—'}</Text>
-            <Text style={[s.reviewCell, s.reviewScore, e.score && holes[i] && e.score < holes[i].par ? s.under : e.score && holes[i] && e.score > holes[i].par ? s.over : {}]}>{e.score || '—'}</Text>
-            <Text style={s.reviewCell}>{e.putts || '—'}</Text>
-            <Text style={s.reviewCell}>{e.fairway_hit === null ? '—' : e.fairway_hit ? '✓' : '✗'}</Text>
-            <Text style={s.reviewCell}>{e.gir ? '✓' : '✗'}</Text>
-          </TouchableOpacity>
-        ))}
+        {activeIndices.map((i) => {
+          const e = holeEntries[i];
+          return (
+            <TouchableOpacity key={i} style={s.reviewRow} onPress={() => { setCurrentHole(i); setStep(4); }}>
+              <Text style={[s.reviewCell, { flex: 0.5 }]}>{i + 1}</Text>
+              <Text style={s.reviewCell}>{holes[i]?.par || '—'}</Text>
+              <Text style={[s.reviewCell, s.reviewScore, e.score && holes[i] && e.score < holes[i].par ? s.under : e.score && holes[i] && e.score > holes[i].par ? s.over : {}]}>{e.score || '—'}</Text>
+              <Text style={s.reviewCell}>{e.putts || '—'}</Text>
+              <Text style={s.reviewCell}>{e.fairway_hit === null ? '—' : e.fairway_hit ? '✓' : '✗'}</Text>
+              <Text style={s.reviewCell}>{e.gir ? '✓' : '✗'}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      <View style={s.navRow}>
-        <TouchableOpacity style={s.backBtn} onPress={() => setStep(4)}><Text style={s.backBtnText}>← Edit Holes</Text></TouchableOpacity>
-        <TouchableOpacity style={[s.goldBtn, saving && { opacity: 0.6 }]} onPress={saveRound} disabled={saving}>
-          <Text style={s.goldBtnText}>{saving ? 'Saving...' : '✓ Save Round'}</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={[s.goldBtn, saving && { opacity: 0.6 }]} onPress={saveRound} disabled={saving}>
+        <Text style={s.goldBtnText}>{saving ? 'Saving...' : '✓ Save Round'}</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.offWhite },
+  backArrow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, alignSelf: 'flex-start' },
+  backArrowText: { fontSize: 28, fontWeight: '300', color: colors.gold, marginRight: 4, lineHeight: 32 },
+  backArrowLabel: { fontSize: 15, fontWeight: '600', color: colors.gold },
   stepTitle: { fontSize: 20, fontWeight: '800', color: colors.primary, marginBottom: 16 },
   searchInput: { backgroundColor: colors.white, borderRadius: 10, padding: 14, fontSize: 16, borderWidth: 1, borderColor: colors.grayLight, marginBottom: 12 },
   courseCard: { backgroundColor: colors.white, borderRadius: 10, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: colors.grayLight },
@@ -748,6 +803,17 @@ const s = StyleSheet.create({
   reviewScore: { fontWeight: '700' },
   under: { color: colors.green },
   over: { color: colors.red },
+  // Hole selection
+  holeSelRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  holeSelPill: { flex: 1, paddingVertical: 10, borderRadius: 20, borderWidth: 2, borderColor: colors.grayLight, alignItems: 'center', backgroundColor: colors.white },
+  holeSelPillActive: { backgroundColor: colors.primary, borderColor: colors.gold },
+  holeSelPillText: { fontSize: 13, fontWeight: '700', color: colors.grayDark },
+  holeSelPillTextActive: { color: colors.gold },
+  customHoleGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8, marginTop: 4 },
+  customHoleBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, borderWidth: 2, borderColor: colors.grayLight, alignItems: 'center', justifyContent: 'center' },
+  customHoleBtnActive: { backgroundColor: colors.primary, borderColor: colors.gold },
+  customHoleBtnText: { fontSize: 15, fontWeight: '700', color: colors.grayDark },
+  customHoleBtnTextActive: { color: colors.gold },
   // Mode selection
   modeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   modeCard: { width: '48%' as any, backgroundColor: colors.white, borderRadius: 12, padding: 14, borderWidth: 2, borderColor: colors.grayLight, alignItems: 'center' },
