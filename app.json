@@ -25,6 +25,9 @@
       "output": "single",
       "bundler": "metro"
     },
-    "plugins": ["expo-router"]
+    "plugins": ["expo-router"],
+    "experiments": {
+      "baseUrl": "/sandbagger"
+    }
   }
 }
