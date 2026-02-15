@@ -1,3 +1,12 @@
+export const teeColors: Record<string, string> = {
+  Black: '#000000',
+  Blue: '#1e3a8a',
+  White: '#ffffff',
+  Gold: '#d4a843',
+  Red: '#dc2626',
+  Green: '#16a34a',
+};
+
 export const colors = {
   primary: '#1a472a',
   primaryLight: '#2d6b45',

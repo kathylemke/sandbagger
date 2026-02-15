@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import { supabase } from '../../lib/supabase';
-import { colors } from '../../lib/theme';
+import { colors, teeColors } from '../../lib/theme';
 
 interface Course { id: string; name: string; city: string; state: string; country: string; num_holes: number; created_at: string; }
 interface Hole { id: string; hole_number: number; par: number; distance_yards: number; shape: string; hazards: any[]; notes: string; }
+interface TeeSet { id: string; course_id: string; color: string; name: string; total_yardage: number; total_par: number; rating: number; slope: number; }
+interface TeeHole { id: string; tee_set_id: string; hole_number: number; yardage: number; par: number; handicap_index: number; }
 
 export default function Courses() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Course | null>(null);
   const [holes, setHoles] = useState<Hole[]>([]);
+  const [teeSets, setTeeSets] = useState<TeeSet[]>([]);
+  const [expandedTee, setExpandedTee] = useState<string | null>(null);
+  const [teeHoles, setTeeHoles] = useState<Record<string, TeeHole[]>>({});
   const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
@@ -21,13 +26,80 @@ export default function Courses() {
 
   const viewCourse = async (course: Course) => {
     setSelected(course);
-    const { data } = await supabase.from('sb_holes').select('*').eq('course_id', course.id).order('hole_number');
-    setHoles(data || []);
+    setExpandedTee(null);
+    const [holesRes, teesRes] = await Promise.all([
+      supabase.from('sb_holes').select('*').eq('course_id', course.id).order('hole_number'),
+      supabase.from('sb_tee_sets').select('*').eq('course_id', course.id).order('total_yardage', { ascending: false }),
+    ]);
+    setHoles(holesRes.data || []);
+    setTeeSets(teesRes.data || []);
     setShowDetail(true);
+  };
+
+  const toggleTee = async (teeSet: TeeSet) => {
+    if (expandedTee === teeSet.id) { setExpandedTee(null); return; }
+    setExpandedTee(teeSet.id);
+    if (!teeHoles[teeSet.id]) {
+      const { data } = await supabase.from('sb_tee_holes').select('*').eq('tee_set_id', teeSet.id).order('hole_number');
+      setTeeHoles(prev => ({ ...prev, [teeSet.id]: data || [] }));
+    }
   };
 
   const totalPar = holes.reduce((s, h) => s + h.par, 0);
   const totalYards = holes.reduce((s, h) => s + (h.distance_yards || 0), 0);
+
+  const renderTeeCard = (tee: TeeSet) => {
+    const dotColor = teeColors[tee.color] || teeColors[tee.name] || colors.gray;
+    const isWhite = tee.color === 'White' || tee.name === 'White';
+    const expanded = expandedTee === tee.id;
+    const holeData = teeHoles[tee.id] || [];
+    const front9 = holeData.filter(h => h.hole_number <= 9);
+    const back9 = holeData.filter(h => h.hole_number > 9);
+
+    return (
+      <View key={tee.id} style={s.teeCard}>
+        <TouchableOpacity style={s.teeCardHeader} onPress={() => toggleTee(tee)}>
+          <View style={[s.teeDot, { backgroundColor: dotColor }, isWhite && { borderWidth: 2, borderColor: colors.grayLight }]} />
+          <View style={{ flex: 1 }}>
+            <Text style={s.teeName}>{tee.name || tee.color}</Text>
+            <Text style={s.teeSub}>
+              {(tee.total_yardage || 0).toLocaleString()} yds | Par {tee.total_par} | Rating {tee.rating} / Slope {tee.slope}
+            </Text>
+          </View>
+          <Text style={s.teeChevron}>{expanded ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {expanded && holeData.length > 0 && (
+          <View style={s.teeScorecard}>
+            {[{ label: 'Front 9', data: front9 }, { label: 'Back 9', data: back9 }].map(section => section.data.length > 0 && (
+              <View key={section.label} style={{ marginBottom: 8 }}>
+                <Text style={s.sectionLabel}>{section.label}</Text>
+                <View style={s.scHeader}>
+                  <Text style={[s.scCell, s.scHeaderText, { flex: 0.6 }]}>Hole</Text>
+                  <Text style={[s.scCell, s.scHeaderText]}>Par</Text>
+                  <Text style={[s.scCell, s.scHeaderText]}>Yds</Text>
+                  <Text style={[s.scCell, s.scHeaderText]}>Hcp</Text>
+                </View>
+                {section.data.map(h => (
+                  <View key={h.hole_number} style={s.scRow}>
+                    <Text style={[s.scCell, { flex: 0.6, fontWeight: '700' }]}>{h.hole_number}</Text>
+                    <Text style={s.scCell}>{h.par}</Text>
+                    <Text style={s.scCell}>{h.yardage}</Text>
+                    <Text style={s.scCell}>{h.handicap_index}</Text>
+                  </View>
+                ))}
+                <View style={[s.scRow, { backgroundColor: colors.offWhite }]}>  
+                  <Text style={[s.scCell, { flex: 0.6, fontWeight: '800' }]}>Tot</Text>
+                  <Text style={[s.scCell, { fontWeight: '800' }]}>{section.data.reduce((a, h) => a + h.par, 0)}</Text>
+                  <Text style={[s.scCell, { fontWeight: '800' }]}>{section.data.reduce((a, h) => a + h.yardage, 0)}</Text>
+                  <Text style={s.scCell}>—</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   return (
     <View style={s.container}>
@@ -74,6 +146,14 @@ export default function Courses() {
                   </View>
                 )}
               </View>
+
+              {teeSets.length > 0 && (
+                <View style={{ padding: 16 }}>
+                  <Text style={s.teeSectionTitle}>Tee Sets</Text>
+                  {teeSets.map(renderTeeCard)}
+                </View>
+              )}
+
               {holes.length > 0 && (
                 <View style={s.holeTable}>
                   <View style={s.holeTableHeader}>
@@ -125,6 +205,19 @@ const s = StyleSheet.create({
   modalLoc: { fontSize: 14, color: colors.grayDark, marginTop: 4 },
   modalStats: { flexDirection: 'row', gap: 16, marginTop: 12 },
   modalStat: { fontSize: 15, fontWeight: '700', color: colors.gold, backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  teeSectionTitle: { fontSize: 16, fontWeight: '800', color: colors.primary, marginBottom: 10 },
+  teeCard: { backgroundColor: colors.cardBg, borderRadius: 10, marginBottom: 8, overflow: 'hidden' },
+  teeCardHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+  teeDot: { width: 24, height: 24, borderRadius: 12 },
+  teeName: { fontSize: 15, fontWeight: '700', color: colors.black },
+  teeSub: { fontSize: 12, color: colors.grayDark, marginTop: 2 },
+  teeChevron: { fontSize: 12, color: colors.gray },
+  teeScorecard: { paddingHorizontal: 14, paddingBottom: 14 },
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.primary, marginBottom: 4 },
+  scHeader: { flexDirection: 'row', backgroundColor: colors.primary, borderRadius: 6, padding: 6 },
+  scHeaderText: { color: colors.white, fontWeight: '700', fontSize: 11 },
+  scCell: { flex: 1, textAlign: 'center', fontSize: 12 },
+  scRow: { flexDirection: 'row', padding: 6, borderBottomWidth: 1, borderBottomColor: colors.grayLight },
   holeTable: { margin: 16 },
   holeTableHeader: { flexDirection: 'row', backgroundColor: colors.primary, borderRadius: 8, padding: 10 },
   holeTableHeaderText: { color: colors.white, fontWeight: '700' },

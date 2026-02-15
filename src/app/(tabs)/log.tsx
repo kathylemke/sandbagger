@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
-import { colors } from '../../lib/theme';
+import { colors, teeColors } from '../../lib/theme';
 
 interface Course { id: string; name: string; city: string; state: string; num_holes: number; }
 interface Hole { id: string; hole_number: number; par: number; distance_yards: number; }
-interface HoleEntry { score: number; putts: number; fairway_hit: boolean | null; gir: boolean; penalties: number; }
+interface TeeSet { id: string; course_id: string; color: string; name: string; total_yardage: number; total_par: number; rating: number; slope: number; }
+interface TeeHole { id: string; tee_set_id: string; hole_number: number; yardage: number; par: number; handicap_index: number; }
+interface HoleEntry { score: number; putts: number; fairway_hit: boolean | null; gir: boolean; penalties: number; tee_set_id?: string; custom_yardage?: number; }
 
 export default function LogRound() {
   const { user } = useAuth();
@@ -15,6 +17,10 @@ export default function LogRound() {
   const [search, setSearch] = useState('');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [holes, setHoles] = useState<Hole[]>([]);
+  const [teeSets, setTeeSets] = useState<TeeSet[]>([]);
+  const [selectedTee, setSelectedTee] = useState<TeeSet | null>(null);
+  const [teeHolesData, setTeeHolesData] = useState<TeeHole[]>([]);
+  const [mixedTees, setMixedTees] = useState(false);
   const [datePlayed, setDatePlayed] = useState(new Date().toISOString().split('T')[0]);
   const [weather, setWeather] = useState('');
   const [wind, setWind] = useState('');
@@ -37,11 +43,41 @@ export default function LogRound() {
 
   const selectCourse = async (course: Course) => {
     setSelectedCourse(course);
-    const { data } = await supabase.from('sb_holes').select('*').eq('course_id', course.id).order('hole_number');
-    setHoles(data || []);
-    const numH = data?.length || course.num_holes || 18;
+    const [holesRes, teesRes] = await Promise.all([
+      supabase.from('sb_holes').select('*').eq('course_id', course.id).order('hole_number'),
+      supabase.from('sb_tee_sets').select('*').eq('course_id', course.id).order('total_yardage', { ascending: false }),
+    ]);
+    setHoles(holesRes.data || []);
+    setTeeSets(teesRes.data || []);
+    const numH = holesRes.data?.length || course.num_holes || 18;
     setHoleEntries(Array(numH).fill(null).map(() => ({ score: 0, putts: 0, fairway_hit: null, gir: false, penalties: 0 })));
-    setStep(2);
+    setSelectedTee(null);
+    setMixedTees(false);
+    // If tees exist, go to tee selection; otherwise skip to details
+    if ((teesRes.data || []).length > 0) {
+      setStep(2);
+    } else {
+      setStep(3);
+    }
+  };
+
+  const selectTee = async (tee: TeeSet) => {
+    setSelectedTee(tee);
+    setMixedTees(false);
+    const { data } = await supabase.from('sb_tee_holes').select('*').eq('tee_set_id', tee.id).order('hole_number');
+    setTeeHolesData(data || []);
+    setStep(3);
+  };
+
+  const selectMixedTees = () => {
+    setMixedTees(true);
+    setSelectedTee(null);
+    // Default each hole to the longest tee set
+    if (teeSets.length > 0) {
+      const longest = teeSets[0]; // already sorted desc by yardage
+      setHoleEntries(prev => prev.map(e => ({ ...e, tee_set_id: longest.id })));
+    }
+    setStep(3);
   };
 
   const createCourse = async () => {
@@ -51,7 +87,6 @@ export default function LogRound() {
       name: newCourseName, city: newCourseCity, state: newCourseState, num_holes: numH, created_by: user?.id
     }).select().single();
     if (error) { Alert.alert('Error', error.message); return; }
-    // Create holes
     const pars = newHolePars.length === numH ? newHolePars : Array(numH).fill(4);
     const holeInserts = pars.map((par, i) => ({ course_id: course.id, hole_number: i + 1, par }));
     await supabase.from('sb_holes').insert(holeInserts);
@@ -73,7 +108,9 @@ export default function LogRound() {
     try {
       const { data: round, error } = await supabase.from('sb_rounds').insert({
         user_id: user.id, course_id: selectedCourse.id, date_played: datePlayed,
-        total_score: totalScore, weather, wind, is_complete: true, visibility
+        total_score: totalScore, weather, wind, is_complete: true, visibility,
+        tee_set_id: selectedTee?.id || null,
+        mixed_tees: mixedTees,
       }).select().single();
       if (error) throw error;
 
@@ -83,7 +120,7 @@ export default function LogRound() {
       }));
       await supabase.from('sb_hole_scores').insert(scoreInserts);
       Alert.alert('Success', `Round saved! Total: ${totalScore}`);
-      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]);
+      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false);
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -91,6 +128,24 @@ export default function LogRound() {
     }
   };
 
+  const renderTeeCard = (tee: TeeSet) => {
+    const dotColor = teeColors[tee.color] || teeColors[tee.name] || colors.gray;
+    const isWhite = tee.color === 'White' || tee.name === 'White';
+    return (
+      <TouchableOpacity key={tee.id} style={s.teeCard} onPress={() => selectTee(tee)}>
+        <View style={[s.teeDot, { backgroundColor: dotColor }, isWhite && { borderWidth: 2, borderColor: colors.grayLight }]} />
+        <View style={{ flex: 1 }}>
+          <Text style={s.teeName}>{tee.name || tee.color}</Text>
+          <Text style={s.teeSub}>
+            {(tee.total_yardage || 0).toLocaleString()} yds | Par {tee.total_par} | {tee.rating}/{tee.slope}
+          </Text>
+        </View>
+        <Text style={{ color: colors.gray }}>›</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // Step 1: Course selection
   if (step === 1) {
     return (
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
@@ -137,11 +192,34 @@ export default function LogRound() {
     );
   }
 
+  // Step 2: Tee selection
   if (step === 2) {
     return (
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
-        <Text style={s.stepTitle}>Step 2: Round Details</Text>
+        <Text style={s.stepTitle}>Step 2: Select Tees</Text>
         <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
+        <Text style={{ color: colors.grayDark, marginBottom: 16 }}>Choose the tees you played from</Text>
+        {teeSets.map(renderTeeCard)}
+        <TouchableOpacity style={s.mixedBtn} onPress={selectMixedTees}>
+          <Text style={s.mixedBtnText}>🔀 I Played Mixed Tees</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.backBtn} onPress={() => setStep(1)}>
+          <Text style={s.backBtnText}>← Back</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
+  }
+
+  // Step 3: Round details
+  if (step === 3) {
+    return (
+      <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
+        <Text style={s.stepTitle}>Step 3: Round Details</Text>
+        <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
+        {selectedTee && (
+          <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color} ({selectedTee.total_yardage} yds)</Text>
+        )}
+        {mixedTees && <Text style={s.selectedTeeLabel}>Mixed Tees</Text>}
         <Text style={s.formLabel}>Date</Text>
         <TextInput style={s.input} value={datePlayed} onChangeText={setDatePlayed} placeholder="YYYY-MM-DD" placeholderTextColor={colors.gray} />
         <Text style={s.formLabel}>Weather</Text>
@@ -157,20 +235,23 @@ export default function LogRound() {
           ))}
         </View>
         <View style={s.navRow}>
-          <TouchableOpacity style={s.backBtn} onPress={() => setStep(1)}><Text style={s.backBtnText}>← Back</Text></TouchableOpacity>
-          <TouchableOpacity style={s.goldBtn} onPress={() => setStep(3)}><Text style={s.goldBtnText}>Next: Score Entry →</Text></TouchableOpacity>
+          <TouchableOpacity style={s.backBtn} onPress={() => teeSets.length > 0 ? setStep(2) : setStep(1)}><Text style={s.backBtnText}>← Back</Text></TouchableOpacity>
+          <TouchableOpacity style={s.goldBtn} onPress={() => setStep(4)}><Text style={s.goldBtnText}>Next: Score Entry →</Text></TouchableOpacity>
         </View>
       </ScrollView>
     );
   }
 
-  if (step === 3) {
+  // Step 4: Hole-by-hole
+  if (step === 4) {
     const entry = holeEntries[currentHole];
     const hole = holes[currentHole];
+    const teeHole = teeHolesData.find(th => th.hole_number === currentHole + 1);
+    const yardage = teeHole?.yardage || hole?.distance_yards;
+
     return (
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
-        <Text style={s.stepTitle}>Step 3: Hole-by-Hole</Text>
-        {/* Hole selector */}
+        <Text style={s.stepTitle}>Step 4: Hole-by-Hole</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
           <View style={s.holeSelector}>
             {holeEntries.map((e, i) => (
@@ -184,8 +265,44 @@ export default function LogRound() {
 
         <View style={s.holeHeader}>
           <Text style={s.holeTitle}>Hole {currentHole + 1}</Text>
-          {hole && <Text style={s.holePar}>Par {hole.par}{hole.distance_yards ? ` · ${hole.distance_yards} yds` : ''}</Text>}
+          <Text style={s.holePar}>
+            Par {teeHole?.par || hole?.par || '?'}
+            {yardage ? ` · ${yardage} yds` : ''}
+            {teeHole?.handicap_index ? ` · Hcp ${teeHole.handicap_index}` : ''}
+          </Text>
         </View>
+
+        {/* Mixed tees: per-hole tee selector */}
+        {mixedTees && teeSets.length > 0 && (
+          <View style={{ marginBottom: 12 }}>
+            <Text style={s.formLabel}>Tee for this hole</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {teeSets.map(tee => {
+                  const dotColor = teeColors[tee.color] || teeColors[tee.name] || colors.gray;
+                  const isWhite = tee.color === 'White' || tee.name === 'White';
+                  const isSelected = entry.tee_set_id === tee.id;
+                  return (
+                    <TouchableOpacity key={tee.id}
+                      style={[s.miniTeeBtn, isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                      onPress={() => updateHoleEntry(currentHole, 'tee_set_id', tee.id)}>
+                      <View style={[s.miniTeeDot, { backgroundColor: dotColor }, isWhite && { borderWidth: 1, borderColor: colors.grayLight }]} />
+                      <Text style={[s.miniTeeText, isSelected && { color: colors.white }]}>{tee.color || tee.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+            <TextInput
+              style={[s.input, { marginTop: 8 }]}
+              placeholder="Custom yardage (optional)"
+              placeholderTextColor={colors.gray}
+              keyboardType="number-pad"
+              value={entry.custom_yardage ? String(entry.custom_yardage) : ''}
+              onChangeText={v => updateHoleEntry(currentHole, 'custom_yardage', parseInt(v) || 0)}
+            />
+          </View>
+        )}
 
         <Text style={s.formLabel}>Score</Text>
         <View style={s.counterRow}>
@@ -252,7 +369,7 @@ export default function LogRound() {
               <Text style={s.goldBtnText}>Hole {currentHole + 2} →</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={s.goldBtn} onPress={() => setStep(4)}>
+            <TouchableOpacity style={s.goldBtn} onPress={() => setStep(5)}>
               <Text style={s.goldBtnText}>Review →</Text>
             </TouchableOpacity>
           )}
@@ -261,11 +378,13 @@ export default function LogRound() {
     );
   }
 
-  // Step 4: Review
+  // Step 5: Review
   return (
     <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
-      <Text style={s.stepTitle}>Step 4: Review & Save</Text>
+      <Text style={s.stepTitle}>Step 5: Review & Save</Text>
       <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
+      {selectedTee && <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color}</Text>}
+      {mixedTees && <Text style={s.selectedTeeLabel}>Mixed Tees</Text>}
       <Text style={s.reviewDate}>{datePlayed} · {weather || 'No weather'} · {visibility}</Text>
 
       <View style={s.reviewScoreCard}>
@@ -289,7 +408,7 @@ export default function LogRound() {
           <Text style={[s.reviewCell, s.reviewHeaderText]}>GIR</Text>
         </View>
         {holeEntries.map((e, i) => (
-          <TouchableOpacity key={i} style={s.reviewRow} onPress={() => { setCurrentHole(i); setStep(3); }}>
+          <TouchableOpacity key={i} style={s.reviewRow} onPress={() => { setCurrentHole(i); setStep(4); }}>
             <Text style={[s.reviewCell, { flex: 0.5 }]}>{i + 1}</Text>
             <Text style={s.reviewCell}>{holes[i]?.par || '—'}</Text>
             <Text style={[s.reviewCell, s.reviewScore, e.score && holes[i] && e.score < holes[i].par ? s.under : e.score && holes[i] && e.score > holes[i].par ? s.over : {}]}>{e.score || '—'}</Text>
@@ -301,7 +420,7 @@ export default function LogRound() {
       </View>
 
       <View style={s.navRow}>
-        <TouchableOpacity style={s.backBtn} onPress={() => setStep(3)}><Text style={s.backBtnText}>← Edit Holes</Text></TouchableOpacity>
+        <TouchableOpacity style={s.backBtn} onPress={() => setStep(4)}><Text style={s.backBtnText}>← Edit Holes</Text></TouchableOpacity>
         <TouchableOpacity style={[s.goldBtn, saving && { opacity: 0.6 }]} onPress={saveRound} disabled={saving}>
           <Text style={s.goldBtnText}>{saving ? 'Saving...' : '✓ Save Round'}</Text>
         </TouchableOpacity>
@@ -331,6 +450,16 @@ const s = StyleSheet.create({
   backBtn: { padding: 14, marginTop: 16 },
   backBtnText: { color: colors.primary, fontWeight: '600', fontSize: 15 },
   selectedCourse: { fontSize: 18, fontWeight: '700', color: colors.primary, marginBottom: 4 },
+  selectedTeeLabel: { fontSize: 14, fontWeight: '600', color: colors.gold, marginBottom: 8 },
+  teeCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white, borderRadius: 10, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: colors.grayLight, gap: 12 },
+  teeDot: { width: 24, height: 24, borderRadius: 12 },
+  teeName: { fontSize: 15, fontWeight: '700', color: colors.black },
+  teeSub: { fontSize: 12, color: colors.grayDark, marginTop: 2 },
+  mixedBtn: { padding: 14, borderRadius: 10, borderWidth: 2, borderColor: colors.gold, alignItems: 'center', marginTop: 8 },
+  mixedBtnText: { color: colors.gold, fontWeight: '700', fontSize: 15 },
+  miniTeeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: colors.grayLight, backgroundColor: colors.white },
+  miniTeeDot: { width: 14, height: 14, borderRadius: 7 },
+  miniTeeText: { fontSize: 12, fontWeight: '600', color: colors.grayDark },
   visRow: { flexDirection: 'row', gap: 8 },
   visBtn: { flex: 1, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.grayLight, alignItems: 'center' },
   visBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
