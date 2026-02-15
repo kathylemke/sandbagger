@@ -18617,181 +18617,91 @@
   },
   "a0000044-0000-0000-0000-000000000001": {
     "1": {
-      "shape": "straight",
+      "shape": "slight_dogleg_right",
       "green_shape": "tiered",
       "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
+      "elevation_change": "downhill",
       "hazards": [
         {
           "type": "fairway_bunker",
-          "location": "left",
-          "distance_from_tee": 260
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_right"
-        },
-        {
-          "type": "trees",
-          "location": "right"
-        }
-      ],
-      "notes": "Indiana opener"
-    },
-    "2": {
-      "shape": "dogleg_left",
-      "green_shape": "oval",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
-      "hazards": [
-        {
-          "type": "trees",
-          "location": "left"
-        },
-        {
-          "type": "trees",
-          "location": "right"
-        },
-        {
-          "type": "fairway_bunker",
-          "location": "left",
-          "distance_from_tee": 260
+          "location": "right",
+          "distance_from_tee": 280
         },
         {
           "type": "greenside_bunker",
           "location": "front_left"
+        },
+        {
+          "type": "railroad_ties",
+          "location": "bunker_faces"
         }
       ],
-      "notes": "Par 4, maples"
+      "notes": "Downhill opener with mountain views; railroad-tie-faced bunkers frame the green"
+    },
+    "2": {
+      "shape": "dogleg_left",
+      "green_shape": "elongated",
+      "fairway_width": "25-40 yds",
+      "elevation_change": "uphill",
+      "hazards": [
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 270
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 290
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right"
+        },
+        {
+          "type": "pot_bunker",
+          "location": "front_left"
+        }
+      ],
+      "notes": "Long uphill par 4; pot bunker guards front-left approach"
     },
     "3": {
       "shape": "straight",
       "green_shape": "kidney",
-      "fairway_width": "<30 yds",
-      "elevation_change": "flat",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "downhill_to_uphill",
       "hazards": [
         {
           "type": "water",
-          "location": "front"
+          "location": "right",
+          "description": "New River"
         },
-        {
-          "type": "greenside_bunker",
-          "location": "left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "right"
-        },
-        {
-          "type": "forced_carry",
-          "location": "front",
-          "carry_distance": 160
-        }
-      ],
-      "notes": "Par 3 over water"
-    },
-    "4": {
-      "shape": "dogleg_right",
-      "green_shape": "tiered",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
-      "hazards": [
         {
           "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 270
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "trees",
-          "location": "left"
-        }
-      ],
-      "notes": "Par 4"
-    },
-    "5": {
-      "shape": "dogleg_left",
-      "green_shape": "oval",
-      "fairway_width": ">50 yds",
-      "elevation_change": "flat",
-      "hazards": [
-        {
-          "type": "water",
           "location": "left",
           "distance_from_tee": 280
         },
         {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 270
+          "type": "greenside_bunker",
+          "location": "left"
         },
         {
           "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "back_right"
+          "location": "right"
         }
       ],
-      "notes": "Par 5, water left"
+      "notes": "Signature par 5 along the New River; #1 handicap hole with river right the entire way"
     },
-    "6": {
-      "shape": "straight",
-      "green_shape": "long_narrow",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
+    "4": {
+      "shape": "dogleg_right",
+      "green_shape": "tiered",
+      "fairway_width": "25-40 yds",
+      "elevation_change": "uphill",
       "hazards": [
         {
           "type": "fairway_bunker",
           "location": "left",
-          "distance_from_tee": 260
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "right"
-        }
-      ],
-      "notes": "Par 4"
-    },
-    "7": {
-      "shape": "straight",
-      "green_shape": "tiered",
-      "fairway_width": "<30 yds",
-      "elevation_change": "flat",
-      "hazards": [
-        {
-          "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "right"
-        },
-        {
-          "type": "water",
-          "location": "right"
-        }
-      ],
-      "notes": "Par 3"
-    },
-    "8": {
-      "shape": "dogleg_right",
-      "green_shape": "kidney",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
-      "hazards": [
-        {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 260
+          "distance_from_tee": 265
         },
         {
           "type": "greenside_bunker",
@@ -18799,85 +18709,71 @@
         },
         {
           "type": "trees",
-          "location": "left"
+          "location": "right"
+        },
+        {
+          "type": "railroad_ties",
+          "location": "bunker_faces"
         }
       ],
-      "notes": "Par 4"
+      "notes": "Demanding uphill par 4 at nearly 500 yards from the tips; elevation gain masks true distance"
     },
-    "9": {
+    "5": {
       "shape": "straight",
       "green_shape": "oval",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
+      "fairway_width": "N/A",
+      "elevation_change": "downhill",
       "hazards": [
         {
-          "type": "fairway_bunker",
+          "type": "pot_bunker",
+          "location": "front_left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right"
+        },
+        {
+          "type": "water",
           "location": "left",
-          "distance_from_tee": 260
+          "description": "pond"
+        },
+        {
+          "type": "railroad_ties",
+          "location": "bunker_faces"
+        }
+      ],
+      "notes": "Long par 3 playing downhill to a green guarded by water left and pot bunkers"
+    },
+    "6": {
+      "shape": "slight_dogleg_left",
+      "green_shape": "undulating",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat_to_downhill",
+      "hazards": [
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 275
         },
         {
           "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "trees",
-          "location": "right"
-        }
-      ],
-      "notes": "Par 4"
-    },
-    "10": {
-      "shape": "dogleg_left",
-      "green_shape": "tiered",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
-      "hazards": [
-        {
-          "type": "water",
           "location": "left"
         },
         {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 260
-        },
-        {
           "type": "greenside_bunker",
-          "location": "front_left"
+          "location": "rear"
         }
       ],
-      "notes": "Par 4, creek left"
+      "notes": "Scenic mid-length par 4 with heavily contoured green; back pin positions are treacherous"
     },
-    "11": {
+    "7": {
       "shape": "straight",
-      "green_shape": "kidney",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
+      "green_shape": "small_round",
+      "fairway_width": "N/A",
+      "elevation_change": "downhill",
       "hazards": [
         {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 260
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "right"
-        }
-      ],
-      "notes": "Par 4"
-    },
-    "12": {
-      "shape": "straight",
-      "green_shape": "oval",
-      "fairway_width": "<30 yds",
-      "elevation_change": "flat",
-      "hazards": [
-        {
-          "type": "water",
+          "type": "pot_bunker",
           "location": "front"
         },
         {
@@ -18889,27 +18785,22 @@
           "location": "right"
         },
         {
-          "type": "forced_carry",
+          "type": "water",
           "location": "front",
-          "carry_distance": 165
+          "description": "creek"
         }
       ],
-      "notes": "Par 3"
+      "notes": "Short par 3 with a tiny target; creek fronts the green with Pete Dye pot bunkers surrounding"
     },
-    "13": {
-      "shape": "dogleg_right",
+    "8": {
+      "shape": "dogleg_left",
       "green_shape": "tiered",
-      "fairway_width": ">50 yds",
-      "elevation_change": "flat",
+      "fairway_width": "25-40 yds",
+      "elevation_change": "uphill",
       "hazards": [
         {
-          "type": "water",
-          "location": "right",
-          "distance_from_tee": 280
-        },
-        {
           "type": "fairway_bunker",
-          "location": "left",
+          "location": "right",
           "distance_from_tee": 270
         },
         {
@@ -18917,17 +18808,48 @@
           "location": "front_left"
         },
         {
-          "type": "greenside_bunker",
-          "location": "back_right"
+          "type": "trees",
+          "location": "left"
+        },
+        {
+          "type": "railroad_ties",
+          "location": "bunker_faces"
         }
       ],
-      "notes": "Par 5"
+      "notes": "Strong two-shot hole climbing uphill; railroad-tie bunkers punish misses"
     },
-    "14": {
-      "shape": "straight",
-      "green_shape": "long_narrow",
+    "9": {
+      "shape": "slight_dogleg_right",
+      "green_shape": "elongated",
       "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
+      "elevation_change": "downhill",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "right",
+          "description": "New River"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 290
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "rear_right"
+        }
+      ],
+      "notes": "Reachable par 5 sweeping downhill toward the New River; risk-reward second shot over water"
+    },
+    "10": {
+      "shape": "straight",
+      "green_shape": "undulating",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "uphill",
       "hazards": [
         {
           "type": "fairway_bunker",
@@ -18936,96 +18858,222 @@
         },
         {
           "type": "greenside_bunker",
-          "location": "front_left"
+          "location": "right"
         },
         {
-          "type": "greenside_bunker",
+          "type": "trees",
           "location": "right"
         }
       ],
-      "notes": "Par 4"
+      "notes": "Back nine opener climbs uphill through a chute of hardwoods"
     },
-    "15": {
-      "shape": "dogleg_left",
-      "green_shape": "kidney",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
+    "11": {
+      "shape": "dogleg_right",
+      "green_shape": "tiered",
+      "fairway_width": "25-40 yds",
+      "elevation_change": "downhill_to_uphill",
       "hazards": [
         {
-          "type": "water",
-          "location": "left"
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 275
         },
         {
           "type": "fairway_bunker",
           "location": "right",
-          "distance_from_tee": 260
+          "distance_from_tee": 295
         },
         {
           "type": "greenside_bunker",
-          "location": "front_left"
+          "location": "front_right"
+        },
+        {
+          "type": "pot_bunker",
+          "location": "left"
         }
       ],
-      "notes": "Par 4"
+      "notes": "Long par 4 that drops then rises; two-tiered green rejects weak approaches"
     },
-    "16": {
-      "shape": "straight",
-      "green_shape": "tiered",
-      "fairway_width": "<30 yds",
-      "elevation_change": "flat",
+    "12": {
+      "shape": "slight_dogleg_left",
+      "green_shape": "kidney",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "downhill",
       "hazards": [
         {
-          "type": "greenside_bunker",
-          "location": "front_left"
+          "type": "water",
+          "location": "left",
+          "description": "New River"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 285
         },
         {
           "type": "greenside_bunker",
           "location": "right"
+        },
+        {
+          "type": "railroad_ties",
+          "location": "bunker_faces"
         }
       ],
-      "notes": "Par 3"
+      "notes": "Par 5 along the New River; #2 handicap demands three precise shots with river lurking left"
     },
-    "17": {
+    "13": {
       "shape": "straight",
       "green_shape": "oval",
       "fairway_width": "30-50 yds",
       "elevation_change": "flat",
       "hazards": [
         {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 260
-        },
-        {
           "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "right"
-        }
-      ],
-      "notes": "Par 4"
-    },
-    "18": {
-      "shape": "straight",
-      "green_shape": "tiered",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
-      "hazards": [
-        {
-          "type": "water",
           "location": "left"
         },
         {
           "type": "greenside_bunker",
+          "location": "right"
+        },
+        {
+          "type": "pot_bunker",
+          "location": "front_right"
+        }
+      ],
+      "notes": "Straightforward par 4 in the river valley; pot bunker short-right gathers bail-outs"
+    },
+    "14": {
+      "shape": "straight",
+      "green_shape": "small_round",
+      "fairway_width": "N/A",
+      "elevation_change": "uphill",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "front",
+          "description": "creek"
+        },
+        {
+          "type": "pot_bunker",
           "location": "front_left"
         },
         {
           "type": "greenside_bunker",
           "location": "right"
+        },
+        {
+          "type": "railroad_ties",
+          "location": "bunker_faces"
         }
       ],
-      "notes": "Fighting Irish finish"
+      "notes": "Shortest par 3 on the course; uphill over a creek to a small, well-bunkered green"
+    },
+    "15": {
+      "shape": "dogleg_left",
+      "green_shape": "elongated",
+      "fairway_width": "25-40 yds",
+      "elevation_change": "downhill",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "left",
+          "description": "New River"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 280
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "rear"
+        }
+      ],
+      "notes": "Long par 4 sweeping left along the New River; big hitters tempted to cut the corner over water"
+    },
+    "16": {
+      "shape": "slight_dogleg_right",
+      "green_shape": "tiered",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "uphill",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "right",
+          "description": "pond"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 275
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "rear_right"
+        }
+      ],
+      "notes": "Long uphill par 5 with water right off the tee; three-shot strategy preferred"
+    },
+    "17": {
+      "shape": "straight",
+      "green_shape": "island_style",
+      "fairway_width": "N/A",
+      "elevation_change": "downhill",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "surrounds",
+          "description": "pond"
+        },
+        {
+          "type": "pot_bunker",
+          "location": "front"
+        },
+        {
+          "type": "railroad_ties",
+          "location": "bulkhead"
+        }
+      ],
+      "notes": "Pete Dye signature: long par 3 to a semi-island green with railroad-tie bulkheads; no bail-out"
+    },
+    "18": {
+      "shape": "dogleg_left",
+      "green_shape": "tiered",
+      "fairway_width": "25-40 yds",
+      "elevation_change": "uphill",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "left",
+          "description": "New River"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 280
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right"
+        },
+        {
+          "type": "railroad_ties",
+          "location": "bunker_faces"
+        }
+      ],
+      "notes": "Strong finishing hole climbing uphill with the New River left; demanding approach to tiered green"
     }
   },
   "a0000045-0000-0000-0000-000000000001": {
