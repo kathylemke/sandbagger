@@ -518,7 +518,7 @@ export default function LogRound() {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity style={s.goldBtn} onPress={() => { setCurrentHole(activeIndices[0] ?? 0); setStep(4); }}><Text style={s.goldBtnText}>Next: Score Entry →</Text></TouchableOpacity>
+        <TouchableOpacity style={s.goldBtn} onPress={() => { setCurrentHole(0); setStep(4); }}><Text style={s.goldBtnText}>Next: Score Entry →</Text></TouchableOpacity>
       </ScrollView>
     );
   }
@@ -656,15 +656,15 @@ export default function LogRound() {
         {trackingMode === 'mental' && renderMentalFields(actualHoleIdx)}
 
         <View style={s.holeNav}>
-          {currentActiveIdx > 0 && (
-            <TouchableOpacity style={s.backBtn} onPress={() => { setCurrentHole(activeIndices[currentActiveIdx - 1]); setExpandedSection(null); }}>
-              <Text style={s.backBtnText}>← Hole {activeIndices[currentActiveIdx - 1] + 1}</Text>
+          {safePos > 0 && (
+            <TouchableOpacity style={s.backBtn} onPress={() => { setCurrentHole(safePos - 1); setExpandedSection(null); }}>
+              <Text style={s.backBtnText}>← Hole {activeIndices[safePos - 1] + 1}</Text>
             </TouchableOpacity>
           )}
           <View style={{ flex: 1 }} />
-          {currentActiveIdx < activeIndices.length - 1 ? (
-            <TouchableOpacity style={s.goldBtn} onPress={() => { setCurrentHole(activeIndices[currentActiveIdx + 1]); setExpandedSection(null); }}>
-              <Text style={s.goldBtnText}>Hole {activeIndices[currentActiveIdx + 1] + 1} →</Text>
+          {safePos < activeIndices.length - 1 ? (
+            <TouchableOpacity style={s.goldBtn} onPress={() => { setCurrentHole(safePos + 1); setExpandedSection(null); }}>
+              <Text style={s.goldBtnText}>Hole {activeIndices[safePos + 1] + 1} →</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={s.goldBtn} onPress={() => setStep(5)}>
@@ -709,10 +709,10 @@ export default function LogRound() {
           <Text style={[s.reviewCell, s.reviewHeaderText]}>FW</Text>
           <Text style={[s.reviewCell, s.reviewHeaderText]}>GIR</Text>
         </View>
-        {activeIndices.map((i) => {
+        {activeIndices.map((i, pos) => {
           const e = holeEntries[i];
           return (
-            <TouchableOpacity key={i} style={s.reviewRow} onPress={() => { setCurrentHole(i); setStep(4); }}>
+            <TouchableOpacity key={i} style={s.reviewRow} onPress={() => { setCurrentHole(pos); setStep(4); }}>
               <Text style={[s.reviewCell, { flex: 0.5 }]}>{i + 1}</Text>
               <Text style={s.reviewCell}>{holes[i]?.par || '—'}</Text>
               <Text style={[s.reviewCell, s.reviewScore, e.score && holes[i] && e.score < holes[i].par ? s.under : e.score && holes[i] && e.score > holes[i].par ? s.over : {}]}>{e.score || '—'}</Text>

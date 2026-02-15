@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { colors, teeColors } from '../../lib/theme';
+import CourseGuide from '../../components/CourseGuide';
 
 interface Course { id: string; name: string; city: string; state: string; country: string; num_holes: number; created_at: string; }
 interface Hole { id: string; hole_number: number; par: number; distance_yards: number; shape: string; hazards: any[]; notes: string; }
@@ -17,6 +18,7 @@ export default function Courses() {
   const [expandedTee, setExpandedTee] = useState<string | null>(null);
   const [teeHoles, setTeeHoles] = useState<Record<string, TeeHole[]>>({});
   const [showDetail, setShowDetail] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     supabase.from('sb_courses').select('*').order('name').then(({ data }) => setCourses(data || []));
@@ -154,6 +156,17 @@ export default function Courses() {
                 </View>
               )}
 
+              <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+                <TouchableOpacity style={s.guideBtn} onPress={() => setShowGuide(true)}>
+                  <Text style={s.guideBtnIcon}>📋</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.guideBtnText}>Course Guide</Text>
+                    <Text style={s.guideBtnSub}>Hole details, hazards & strategy</Text>
+                  </View>
+                  <Text style={s.teeChevron}>▶</Text>
+                </TouchableOpacity>
+              </View>
+
               {holes.length > 0 && (
                 <View style={s.holeTable}>
                   <View style={s.holeTableHeader}>
@@ -179,6 +192,14 @@ export default function Courses() {
           </View>
         </View>
       </Modal>
+      {selected && (
+        <CourseGuide
+          courseId={selected.id}
+          courseName={selected.name}
+          visible={showGuide}
+          onClose={() => setShowGuide(false)}
+        />
+      )}
     </View>
   );
 }
@@ -225,4 +246,8 @@ const s = StyleSheet.create({
   holeTableCell: { flex: 1, textAlign: 'center', fontSize: 14 },
   closeBtn: { marginHorizontal: 16, backgroundColor: colors.primary, borderRadius: 10, padding: 14, alignItems: 'center' },
   closeBtnText: { color: colors.gold, fontWeight: '700', fontSize: 16 },
+  guideBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, borderRadius: 12, padding: 16, gap: 12 },
+  guideBtnIcon: { fontSize: 24 },
+  guideBtnText: { fontSize: 16, fontWeight: '800', color: colors.gold },
+  guideBtnSub: { fontSize: 12, color: colors.white, opacity: 0.8, marginTop: 2 },
 });
