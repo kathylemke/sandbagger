@@ -87,9 +87,9 @@ export const GREEN_SHAPE_OPTIONS = [
 ];
 
 export const FAIRWAY_WIDTH_OPTIONS = [
-  { value: 'narrow', label: 'Narrow', icon: '▎' },
-  { value: 'medium', label: 'Medium', icon: '▌' },
-  { value: 'wide', label: 'Wide', icon: '█' },
+  { value: '<30 yds', label: '<30 yds', icon: '▎' },
+  { value: '30-50 yds', label: '30-50 yds', icon: '▌' },
+  { value: '>50 yds', label: '>50 yds', icon: '█' },
 ];
 
 export const ELEVATION_OPTIONS = [

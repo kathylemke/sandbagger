@@ -3,224 +3,1095 @@
     "1": {
       "shape": "dogleg_right",
       "green_shape": "oval",
-      "fairway_width": "medium",
+      "fairway_width": "30-50 yds",
       "elevation_change": "downhill",
       "notes": "Opening hole, slight dogleg right with elevation drop",
       "hazards": [
-        { "type": "fairway_bunker", "location": "right", "distance_from_tee": 260, "notes": "Catches drives that follow the dogleg too much" },
-        { "type": "greenside_bunker", "location": "front_right", "notes": "Guards the approach" },
-        { "type": "trees", "location": "left", "notes": "Tree line along the left side" }
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 260,
+          "notes": "Catches drives that follow the dogleg too much"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Guards the approach"
+        },
+        {
+          "type": "trees",
+          "location": "left",
+          "notes": "Tree line along the left side"
+        }
       ]
     },
     "2": {
       "shape": "straight",
       "green_shape": "round",
-      "fairway_width": "medium",
+      "fairway_width": "30-50 yds",
       "elevation_change": "uphill",
       "notes": "Par 3 with uphill approach",
       "hazards": [
-        { "type": "greenside_bunker", "location": "front_left", "notes": "Deep bunker short left" },
-        { "type": "greenside_bunker", "location": "right", "notes": "Bunker right of green" }
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Deep bunker short left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right",
+          "notes": "Bunker right of green"
+        }
       ]
     },
     "3": {
       "shape": "dogleg_left",
       "green_shape": "kidney",
-      "fairway_width": "wide",
+      "fairway_width": ">50 yds",
       "elevation_change": "downhill",
       "notes": "Sweeping dogleg left, reachable par 5 for big hitters",
       "hazards": [
-        { "type": "water", "location": "left", "distance_from_tee": 280, "notes": "Pond along the left side" },
-        { "type": "fairway_bunker", "location": "right", "distance_from_tee": 270, "notes": "Fairway bunker for those playing safe" },
-        { "type": "greenside_bunker", "location": "front_left", "notes": "Greenside bunker complex" },
-        { "type": "greenside_bunker", "location": "back_right", "notes": "Back right bunker" }
+        {
+          "type": "water",
+          "location": "left",
+          "distance_from_tee": 280,
+          "notes": "Pond along the left side"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 270,
+          "notes": "Fairway bunker for those playing safe"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Greenside bunker complex"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_right",
+          "notes": "Back right bunker"
+        }
       ]
     },
     "4": {
       "shape": "straight",
       "green_shape": "tiered",
-      "fairway_width": "narrow",
+      "fairway_width": "<30 yds",
       "elevation_change": "uphill",
       "notes": "Challenging uphill par 4 with narrow landing area",
       "hazards": [
-        { "type": "fairway_bunker", "location": "left", "distance_from_tee": 245, "notes": "Fairway bunker left" },
-        { "type": "fairway_bunker", "location": "right", "distance_from_tee": 255, "notes": "Fairway bunker right" },
-        { "type": "greenside_bunker", "location": "front_left", "notes": "Deep pot bunker" },
-        { "type": "trees", "location": "right", "notes": "Trees right of fairway" }
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 245,
+          "notes": "Fairway bunker left"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 255,
+          "notes": "Fairway bunker right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Deep pot bunker"
+        },
+        {
+          "type": "trees",
+          "location": "right",
+          "notes": "Trees right of fairway"
+        }
       ]
     },
     "5": {
       "shape": "dogleg_right",
       "green_shape": "long_narrow",
-      "fairway_width": "medium",
+      "fairway_width": "30-50 yds",
       "elevation_change": "downhill",
       "notes": "Dogleg right with significant elevation drop to green",
       "hazards": [
-        { "type": "water", "location": "right", "distance_from_tee": 290, "notes": "Water hazard along the right side" },
-        { "type": "greenside_bunker", "location": "left", "notes": "Bunker left of green" },
-        { "type": "forced_carry", "location": "front", "carry_distance": 150, "notes": "Must carry water on approach" }
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_tee": 290,
+          "notes": "Water hazard along the right side"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "left",
+          "notes": "Bunker left of green"
+        },
+        {
+          "type": "forced_carry",
+          "location": "front",
+          "carry_distance": 150,
+          "notes": "Must carry water on approach"
+        }
       ]
     },
     "6": {
       "shape": "straight",
       "green_shape": "oval",
-      "fairway_width": "medium",
+      "fairway_width": "30-50 yds",
       "elevation_change": "flat",
       "notes": "Par 3 over water",
       "hazards": [
-        { "type": "water", "location": "front", "notes": "Water in front of green" },
-        { "type": "forced_carry", "location": "front", "carry_distance": 140, "notes": "Full carry over water to green" },
-        { "type": "greenside_bunker", "location": "back", "notes": "Back bunker catches long shots" }
+        {
+          "type": "water",
+          "location": "front",
+          "notes": "Water in front of green"
+        },
+        {
+          "type": "forced_carry",
+          "location": "front",
+          "carry_distance": 140,
+          "notes": "Full carry over water to green"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back",
+          "notes": "Back bunker catches long shots"
+        }
       ]
     },
     "7": {
       "shape": "dogleg_left",
       "green_shape": "wide_shallow",
-      "fairway_width": "wide",
+      "fairway_width": ">50 yds",
       "elevation_change": "undulating",
       "notes": "Gentle dogleg left with undulating fairway",
       "hazards": [
-        { "type": "fairway_bunker", "location": "left", "distance_from_tee": 250, "notes": "Bunker at the corner of the dogleg" },
-        { "type": "waste_area", "location": "right", "distance_from_tee": 230, "notes": "Waste bunker along the right" },
-        { "type": "greenside_bunker", "location": "front_right", "notes": "Greenside bunker" }
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 250,
+          "notes": "Bunker at the corner of the dogleg"
+        },
+        {
+          "type": "waste_area",
+          "location": "right",
+          "distance_from_tee": 230,
+          "notes": "Waste bunker along the right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Greenside bunker"
+        }
       ]
     },
     "8": {
       "shape": "straight",
       "green_shape": "tiered",
-      "fairway_width": "narrow",
+      "fairway_width": "<30 yds",
       "elevation_change": "uphill",
       "notes": "Demanding uphill par 4 with Pete Dye railroad ties",
       "hazards": [
-        { "type": "fairway_bunker", "location": "right", "distance_from_tee": 240, "notes": "Deep fairway bunker with railroad ties" },
-        { "type": "greenside_bunker", "location": "left", "notes": "Left greenside bunker" },
-        { "type": "greenside_bunker", "location": "right", "notes": "Right greenside bunker" },
-        { "type": "ob", "location": "left", "notes": "OB along the left side" }
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 240,
+          "notes": "Deep fairway bunker with railroad ties"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "left",
+          "notes": "Left greenside bunker"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right",
+          "notes": "Right greenside bunker"
+        },
+        {
+          "type": "ob",
+          "location": "left",
+          "notes": "OB along the left side"
+        }
       ]
     },
     "9": {
       "shape": "dogleg_right",
       "green_shape": "oval",
-      "fairway_width": "medium",
+      "fairway_width": "30-50 yds",
       "elevation_change": "downhill",
       "notes": "Finishing hole of the front, dogleg right downhill",
       "hazards": [
-        { "type": "water", "location": "right", "distance_from_tee": 275, "notes": "Lake along the right side" },
-        { "type": "fairway_bunker", "location": "left", "distance_from_tee": 260, "notes": "Fairway bunker left" },
-        { "type": "greenside_bunker", "location": "front_right", "notes": "Bunker guards water side" }
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_tee": 275,
+          "notes": "Lake along the right side"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 260,
+          "notes": "Fairway bunker left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Bunker guards water side"
+        }
       ]
     },
     "10": {
       "shape": "straight",
       "green_shape": "round",
-      "fairway_width": "wide",
+      "fairway_width": ">50 yds",
       "elevation_change": "downhill",
       "notes": "Wide open starting hole for the back nine",
       "hazards": [
-        { "type": "fairway_bunker", "location": "right", "distance_from_tee": 270, "notes": "Right side fairway bunker" },
-        { "type": "greenside_bunker", "location": "front_left", "notes": "Greenside bunker" }
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 270,
+          "notes": "Right side fairway bunker"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Greenside bunker"
+        }
       ]
     },
     "11": {
       "shape": "straight",
       "green_shape": "long_narrow",
-      "fairway_width": "medium",
+      "fairway_width": "30-50 yds",
       "elevation_change": "uphill",
       "notes": "Uphill par 3 with a long narrow green",
       "hazards": [
-        { "type": "greenside_bunker", "location": "left", "notes": "Deep bunker left" },
-        { "type": "greenside_bunker", "location": "right", "notes": "Bunker right" },
-        { "type": "trees", "location": "back", "notes": "Trees behind the green" }
+        {
+          "type": "greenside_bunker",
+          "location": "left",
+          "notes": "Deep bunker left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right",
+          "notes": "Bunker right"
+        },
+        {
+          "type": "trees",
+          "location": "back",
+          "notes": "Trees behind the green"
+        }
       ]
     },
     "12": {
       "shape": "dogleg_left",
       "green_shape": "kidney",
-      "fairway_width": "medium",
+      "fairway_width": "30-50 yds",
       "elevation_change": "undulating",
       "notes": "Strategic dogleg left par 5",
       "hazards": [
-        { "type": "water", "location": "left", "distance_from_tee": 300, "notes": "Water along left side of fairway" },
-        { "type": "fairway_bunker", "location": "right", "distance_from_tee": 265, "notes": "Fairway bunker right" },
-        { "type": "greenside_bunker", "location": "front_left", "notes": "Greenside bunker complex" },
-        { "type": "greenside_bunker", "location": "back_right", "notes": "Back bunker" }
+        {
+          "type": "water",
+          "location": "left",
+          "distance_from_tee": 300,
+          "notes": "Water along left side of fairway"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 265,
+          "notes": "Fairway bunker right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Greenside bunker complex"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_right",
+          "notes": "Back bunker"
+        }
       ]
     },
     "13": {
       "shape": "straight",
       "green_shape": "oval",
-      "fairway_width": "narrow",
+      "fairway_width": "<30 yds",
       "elevation_change": "downhill",
       "notes": "Tight par 4 with elevation change",
       "hazards": [
-        { "type": "trees", "location": "left", "notes": "Dense tree line left" },
-        { "type": "trees", "location": "right", "notes": "Trees right" },
-        { "type": "greenside_bunker", "location": "front_right", "notes": "Front right bunker" },
-        { "type": "fairway_bunker", "location": "left", "distance_from_tee": 250, "notes": "Left fairway bunker" }
+        {
+          "type": "trees",
+          "location": "left",
+          "notes": "Dense tree line left"
+        },
+        {
+          "type": "trees",
+          "location": "right",
+          "notes": "Trees right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Front right bunker"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 250,
+          "notes": "Left fairway bunker"
+        }
       ]
     },
     "14": {
       "shape": "dogleg_right",
       "green_shape": "tiered",
-      "fairway_width": "medium",
+      "fairway_width": "30-50 yds",
       "elevation_change": "uphill",
       "notes": "Dogleg right with severely tiered green",
       "hazards": [
-        { "type": "fairway_bunker", "location": "right", "distance_from_tee": 255, "notes": "Bunker at the dogleg" },
-        { "type": "waste_area", "location": "left", "notes": "Waste area along left side" },
-        { "type": "greenside_bunker", "location": "front_left", "notes": "Deep greenside bunker" }
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 255,
+          "notes": "Bunker at the dogleg"
+        },
+        {
+          "type": "waste_area",
+          "location": "left",
+          "notes": "Waste area along left side"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Deep greenside bunker"
+        }
       ]
     },
     "15": {
       "shape": "straight",
       "green_shape": "wide_shallow",
-      "fairway_width": "medium",
+      "fairway_width": "30-50 yds",
       "elevation_change": "downhill",
       "notes": "Par 3 with wide shallow green, club selection is key",
       "hazards": [
-        { "type": "water", "location": "front", "notes": "Water short of the green" },
-        { "type": "forced_carry", "location": "front", "carry_distance": 155, "notes": "Must carry water" },
-        { "type": "greenside_bunker", "location": "back_left", "notes": "Back left bunker" }
+        {
+          "type": "water",
+          "location": "front",
+          "notes": "Water short of the green"
+        },
+        {
+          "type": "forced_carry",
+          "location": "front",
+          "carry_distance": 155,
+          "notes": "Must carry water"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_left",
+          "notes": "Back left bunker"
+        }
       ]
     },
     "16": {
       "shape": "dogleg_left",
       "green_shape": "oval",
-      "fairway_width": "wide",
+      "fairway_width": ">50 yds",
       "elevation_change": "flat",
       "notes": "Reachable par 5 with risk-reward second shot",
       "hazards": [
-        { "type": "water", "location": "left", "distance_from_tee": 290, "notes": "Lake along the left" },
-        { "type": "fairway_bunker", "location": "right", "distance_from_tee": 275, "notes": "Right side bunker" },
-        { "type": "greenside_bunker", "location": "front_right", "notes": "Approach bunker" },
-        { "type": "water", "location": "left", "distance_from_green": 30, "notes": "Water guards left side of green" }
+        {
+          "type": "water",
+          "location": "left",
+          "distance_from_tee": 290,
+          "notes": "Lake along the left"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 275,
+          "notes": "Right side bunker"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Approach bunker"
+        },
+        {
+          "type": "water",
+          "location": "left",
+          "distance_from_green": 30,
+          "notes": "Water guards left side of green"
+        }
       ]
     },
     "17": {
       "shape": "straight",
       "green_shape": "round",
-      "fairway_width": "narrow",
+      "fairway_width": "<30 yds",
       "elevation_change": "uphill",
       "notes": "Tough uphill par 4, signature Pete Dye challenge",
       "hazards": [
-        { "type": "fairway_bunker", "location": "left", "distance_from_tee": 240, "notes": "Left fairway bunker with railroad ties" },
-        { "type": "fairway_bunker", "location": "right", "distance_from_tee": 260, "notes": "Right fairway bunker" },
-        { "type": "greenside_bunker", "location": "front_left", "notes": "Deep front bunker" },
-        { "type": "ob", "location": "right", "notes": "OB right" }
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 240,
+          "notes": "Left fairway bunker with railroad ties"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 260,
+          "notes": "Right fairway bunker"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Deep front bunker"
+        },
+        {
+          "type": "ob",
+          "location": "right",
+          "notes": "OB right"
+        }
       ]
     },
     "18": {
       "shape": "dogleg_right",
       "green_shape": "tiered",
-      "fairway_width": "medium",
+      "fairway_width": "30-50 yds",
       "elevation_change": "downhill",
       "notes": "Dramatic finishing hole with downhill approach to tiered green",
       "hazards": [
-        { "type": "water", "location": "right", "distance_from_tee": 280, "notes": "Water along right side" },
-        { "type": "fairway_bunker", "location": "left", "distance_from_tee": 265, "notes": "Left fairway bunker" },
-        { "type": "greenside_bunker", "location": "front_left", "notes": "Front left greenside bunker" },
-        { "type": "greenside_bunker", "location": "back_right", "notes": "Back right bunker" },
-        { "type": "water", "location": "right", "distance_from_green": 20, "notes": "Water guards right side of green" }
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_tee": 280,
+          "notes": "Water along right side"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 265,
+          "notes": "Left fairway bunker"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Front left greenside bunker"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_right",
+          "notes": "Back right bunker"
+        },
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_green": 20,
+          "notes": "Water guards right side of green"
+        }
+      ]
+    }
+  },
+  "a2000001-0000-0000-0000-000000000001": {
+    "1": {
+      "shape": "straight",
+      "green_shape": "oval",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 4, 404 yds. Straightforward opener with water right",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_tee": 200,
+          "notes": "Lake runs along right side from 200 yds out to green"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 250,
+          "notes": "Fairway bunker left side"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Greenside bunker guarding right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_left",
+          "notes": "Bunker back left of green"
+        }
+      ]
+    },
+    "2": {
+      "shape": "dogleg_left",
+      "green_shape": "kidney",
+      "fairway_width": ">50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 5, 563 yds. Gentle dogleg left, reachable in two for long hitters",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "left",
+          "distance_from_tee": 280,
+          "notes": "Pond guards inside of dogleg"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 260,
+          "notes": "Fairway bunker right side"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Bunker front left of green"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right",
+          "notes": "Large bunker right of green"
+        },
+        {
+          "type": "water",
+          "location": "back",
+          "notes": "Water behind green"
+        }
+      ]
+    },
+    "3": {
+      "shape": "straight",
+      "green_shape": "round",
+      "fairway_width": "<30 yds",
+      "elevation_change": "flat",
+      "notes": "Par 3, 178 yds. Water carry to green",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "front",
+          "notes": "Pond fronting the green"
+        },
+        {
+          "type": "forced_carry",
+          "location": "front",
+          "carry_distance": 160,
+          "notes": "Must carry water to reach green"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_left",
+          "notes": "Bunker behind left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right",
+          "notes": "Bunker right of green"
+        }
+      ]
+    },
+    "4": {
+      "shape": "dogleg_right",
+      "green_shape": "oval",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 4, 405 yds. Dogleg right with bunkers guarding the turn",
+      "hazards": [
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 240,
+          "notes": "Bunker at corner of dogleg"
+        },
+        {
+          "type": "trees",
+          "location": "right",
+          "notes": "Palm trees line the right side"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Bunker front left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_right",
+          "notes": "Bunker back right of green"
+        }
+      ]
+    },
+    "5": {
+      "shape": "dogleg_left",
+      "green_shape": "tiered",
+      "fairway_width": ">50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 5, 563 yds. Long dogleg left with water on the second shot",
+      "hazards": [
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 260,
+          "notes": "Fairway bunker right off the tee"
+        },
+        {
+          "type": "water",
+          "location": "left",
+          "distance_from_tee": 350,
+          "notes": "Lake left side from 350 yds to green"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Large bunker complex front right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "left",
+          "notes": "Bunker left of green near water"
+        }
+      ]
+    },
+    "6": {
+      "shape": "straight",
+      "green_shape": "wide_shallow",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 4, 354 yds. Short par 4 with risk/reward tee shot",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_tee": 230,
+          "notes": "Water right side from 230 yds in"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 240,
+          "notes": "Bunker left of fairway"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Bunker front right near water"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_left",
+          "notes": "Bunker behind left of green"
+        }
+      ]
+    },
+    "7": {
+      "shape": "straight",
+      "green_shape": "oval",
+      "fairway_width": "<30 yds",
+      "elevation_change": "flat",
+      "notes": "Par 3, 160 yds. Short iron over water",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "front",
+          "notes": "Water fronting the green"
+        },
+        {
+          "type": "forced_carry",
+          "location": "front",
+          "carry_distance": 140,
+          "notes": "Carry over water required"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "left",
+          "notes": "Bunker left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_right",
+          "notes": "Bunker back right"
+        }
+      ]
+    },
+    "8": {
+      "shape": "dogleg_right",
+      "green_shape": "kidney",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 4, 428 yds. Long dogleg right, one of the toughest holes",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_tee": 250,
+          "notes": "Canal along right side"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 250,
+          "notes": "Fairway bunker left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Deep greenside bunker"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right",
+          "notes": "Bunker right of green near water"
+        },
+        {
+          "type": "trees",
+          "location": "left",
+          "notes": "Palms lining left side"
+        }
+      ]
+    },
+    "9": {
+      "shape": "dogleg_left",
+      "green_shape": "tiered",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 4, 417 yds. Dogleg left finishing hole on the front nine",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "left",
+          "distance_from_tee": 220,
+          "notes": "Lake left from 220 yds to green"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 250,
+          "notes": "Fairway bunker right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Bunker guards left side"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_right",
+          "notes": "Bunker behind right"
+        }
+      ]
+    },
+    "10": {
+      "shape": "dogleg_right",
+      "green_shape": "oval",
+      "fairway_width": ">50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 5, 545 yds. Wide landing area off the tee, dogleg right to green",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_tee": 300,
+          "notes": "Water along right side from 300 yds"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 260,
+          "notes": "Fairway bunker left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Bunker front right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "left",
+          "notes": "Bunker left of green"
+        },
+        {
+          "type": "water",
+          "location": "right",
+          "notes": "Water close to right side of green"
+        }
+      ]
+    },
+    "11": {
+      "shape": "straight",
+      "green_shape": "round",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 4, 383 yds. Medium-length par 4 with water in play",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "left",
+          "distance_from_tee": 200,
+          "notes": "Water hazard left side"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 240,
+          "notes": "Bunker right of fairway"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Bunker front left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_right",
+          "notes": "Bunker back right of green"
+        }
+      ]
+    },
+    "12": {
+      "shape": "dogleg_right",
+      "green_shape": "long_narrow",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 4, 483 yds. Long and demanding dogleg right",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_tee": 270,
+          "notes": "Water along right side of fairway"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 260,
+          "notes": "Fairway bunker left"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 300,
+          "notes": "Bunker at corner of dogleg"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Bunker front left of green"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right",
+          "notes": "Deep bunker right"
+        }
+      ]
+    },
+    "13": {
+      "shape": "dogleg_left",
+      "green_shape": "kidney",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 4, 441 yds. Tough dogleg left with water on the approach",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "left",
+          "distance_from_tee": 280,
+          "notes": "Lake runs along left side"
+        },
+        {
+          "type": "trees",
+          "location": "right",
+          "notes": "Trees line the right side"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Bunker front right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_left",
+          "notes": "Bunker back left near water"
+        },
+        {
+          "type": "water",
+          "location": "left",
+          "notes": "Water left and behind green"
+        }
+      ]
+    },
+    "14": {
+      "shape": "straight",
+      "green_shape": "wide_shallow",
+      "fairway_width": "<30 yds",
+      "elevation_change": "flat",
+      "notes": "Par 3, 228 yds. Long par 3 over water, the signature hole",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "front",
+          "notes": "Large lake fronting the green"
+        },
+        {
+          "type": "forced_carry",
+          "location": "front",
+          "carry_distance": 200,
+          "notes": "Long carry over water"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "left",
+          "notes": "Bunker left of green"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_right",
+          "notes": "Bunker back right"
+        },
+        {
+          "type": "water",
+          "location": "right",
+          "notes": "Water wraps around right side"
+        }
+      ]
+    },
+    "15": {
+      "shape": "dogleg_right",
+      "green_shape": "oval",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 4, 409 yds. Dogleg right with water threatening the second shot",
+      "hazards": [
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 250,
+          "notes": "Bunker left of fairway"
+        },
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_tee": 300,
+          "notes": "Water right side near green"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Bunker front left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_right",
+          "notes": "Bunker behind right, near water"
+        }
+      ]
+    },
+    "16": {
+      "shape": "straight",
+      "green_shape": "round",
+      "fairway_width": "<30 yds",
+      "elevation_change": "flat",
+      "notes": "Par 3, 206 yds. Mid-length par 3 with bunkers surrounding green",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "left",
+          "notes": "Water left of green"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_right",
+          "notes": "Large bunker front right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_left",
+          "notes": "Bunker back left"
+        },
+        {
+          "type": "trees",
+          "location": "right",
+          "notes": "Palms right of green"
+        }
+      ]
+    },
+    "17": {
+      "shape": "dogleg_left",
+      "green_shape": "tiered",
+      "fairway_width": "30-50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 4, 401 yds. Dogleg left with water left off the tee",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "left",
+          "distance_from_tee": 220,
+          "notes": "Lake left side, in play off the tee"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 250,
+          "notes": "Fairway bunker right"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Bunker front left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "right",
+          "notes": "Bunker right of green"
+        },
+        {
+          "type": "trees",
+          "location": "right",
+          "notes": "Trees along right side"
+        }
+      ]
+    },
+    "18": {
+      "shape": "dogleg_right",
+      "green_shape": "kidney",
+      "fairway_width": ">50 yds",
+      "elevation_change": "flat",
+      "notes": "Par 5, 579 yds. Finishing hole, long dogleg right with water on approach",
+      "hazards": [
+        {
+          "type": "water",
+          "location": "right",
+          "distance_from_tee": 280,
+          "notes": "Water along right from 280 yds to green"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "left",
+          "distance_from_tee": 270,
+          "notes": "Fairway bunker left"
+        },
+        {
+          "type": "fairway_bunker",
+          "location": "right",
+          "distance_from_tee": 320,
+          "notes": "Bunker at corner of dogleg"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "front_left",
+          "notes": "Bunker complex front left"
+        },
+        {
+          "type": "greenside_bunker",
+          "location": "back_right",
+          "notes": "Bunker back right"
+        },
+        {
+          "type": "water",
+          "location": "right",
+          "notes": "Water right of green"
+        }
       ]
     }
   }
