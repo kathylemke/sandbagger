@@ -4,11 +4,73 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors, teeColors } from '../../lib/theme';
 
+type TrackingMode = 'basic' | 'advanced' | 'strategy' | 'mental';
+
 interface Course { id: string; name: string; city: string; state: string; num_holes: number; }
 interface Hole { id: string; hole_number: number; par: number; distance_yards: number; }
 interface TeeSet { id: string; course_id: string; color: string; name: string; total_yardage: number; total_par: number; rating: number; slope: number; }
 interface TeeHole { id: string; tee_set_id: string; hole_number: number; yardage: number; par: number; handicap_index: number; }
-interface HoleEntry { score: number; putts: number; fairway_hit: boolean | null; gir: boolean; penalties: number; tee_set_id?: string; custom_yardage?: number; }
+
+interface AdvancedData {
+  target: string;
+  shot_shape: string;
+  distance_to_target: string;
+  playing_distance: string;
+  club: string;
+  result_lie: string;
+  shot_result: string;
+}
+
+interface StrategyData {
+  lie_type: string;
+  distance: string;
+  intention: string;
+  executed: string;
+  notes: string;
+}
+
+interface MentalData {
+  pre_feeling: string;
+  difficulty_rating: number;
+  emotions_influenced: string;
+  commitment_level: number;
+  executed_plan: string;
+  post_reaction: string;
+  reaction_matched: string;
+}
+
+interface HoleEntry {
+  score: number;
+  putts: number;
+  fairway_hit: boolean | null;
+  gir: boolean;
+  penalties: number;
+  tee_set_id?: string;
+  custom_yardage?: number;
+  advanced?: AdvancedData;
+  strategy?: StrategyData;
+  mental?: MentalData;
+}
+
+const defaultAdvanced = (): AdvancedData => ({ target: '', shot_shape: '', distance_to_target: '', playing_distance: '', club: '', result_lie: '', shot_result: '' });
+const defaultStrategy = (): StrategyData => ({ lie_type: '', distance: '', intention: '', executed: '', notes: '' });
+const defaultMental = (): MentalData => ({ pre_feeling: '', difficulty_rating: 3, emotions_influenced: '', commitment_level: 3, executed_plan: '', post_reaction: '', reaction_matched: '' });
+
+const SHOT_SHAPES = ['Straight', 'Draw', 'Fade', 'Punch', 'Flop', 'Knockdown', 'High', 'Low'];
+const CLUBS = ['Driver', '3W', '5W', '7W', '2H', '3H', '4H', '5H', '3i', '4i', '5i', '6i', '7i', '8i', '9i', 'PW', 'GW', 'SW', 'LW', 'Putter'];
+const RESULT_LIES = ['Fairway', 'Rough', 'Green', 'Bunker', 'Water', 'OB', 'Fringe', 'Trees', 'Cart Path'];
+const SHOT_RESULTS = ['Pure', 'Push', 'Pull', 'Thin', 'Fat', 'Topped', 'Shank', 'Sky', 'Hook', 'Slice', 'OK'];
+const LIE_TYPES = ['Tee', 'Fairway', 'Rough', 'Bunker', 'Green', 'Fringe', 'Trees'];
+const FEELINGS = ['Confident', 'Nervous', 'Frustrated', 'Neutral', 'Excited', 'Anxious', 'Calm'];
+const REACTIONS = ['Positive', 'Negative', 'Neutral'];
+const EXECUTE_OPTIONS = ['Yes', 'No', 'Partial'];
+
+const TRACKING_MODES: { key: TrackingMode; label: string; emoji: string; desc: string }[] = [
+  { key: 'basic', label: 'Basic', emoji: '⛳', desc: 'Score, putts, fairways & GIR' },
+  { key: 'advanced', label: 'Advanced', emoji: '🎯', desc: 'Full shot data — club, shape, result' },
+  { key: 'strategy', label: 'Strategy', emoji: '🧠', desc: 'Intention & execution tracking' },
+  { key: 'mental', label: 'Mental Game', emoji: '🧘', desc: 'Psychology & emotional awareness' },
+];
 
 export default function LogRound() {
   const { user } = useAuth();
@@ -25,6 +87,7 @@ export default function LogRound() {
   const [weather, setWeather] = useState('');
   const [wind, setWind] = useState('');
   const [visibility, setVisibility] = useState('private');
+  const [trackingMode, setTrackingMode] = useState<TrackingMode>('basic');
   const [holeEntries, setHoleEntries] = useState<HoleEntry[]>([]);
   const [currentHole, setCurrentHole] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -34,12 +97,20 @@ export default function LogRound() {
   const [newCourseState, setNewCourseState] = useState('');
   const [newCourseHoles, setNewCourseHoles] = useState('18');
   const [newHolePars, setNewHolePars] = useState<number[]>([]);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.from('sb_courses').select('*').order('name').then(({ data }) => setCourses(data || []));
   }, []);
 
   const filteredCourses = courses.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+
+  const initHoleEntries = (numH: number) => {
+    return Array(numH).fill(null).map(() => ({
+      score: 0, putts: 0, fairway_hit: null as boolean | null, gir: false, penalties: 0,
+      advanced: defaultAdvanced(), strategy: defaultStrategy(), mental: defaultMental(),
+    }));
+  };
 
   const selectCourse = async (course: Course) => {
     setSelectedCourse(course);
@@ -50,10 +121,9 @@ export default function LogRound() {
     setHoles(holesRes.data || []);
     setTeeSets(teesRes.data || []);
     const numH = holesRes.data?.length || course.num_holes || 18;
-    setHoleEntries(Array(numH).fill(null).map(() => ({ score: 0, putts: 0, fairway_hit: null, gir: false, penalties: 0 })));
+    setHoleEntries(initHoleEntries(numH));
     setSelectedTee(null);
     setMixedTees(false);
-    // If tees exist, go to tee selection; otherwise skip to details
     if ((teesRes.data || []).length > 0) {
       setStep(2);
     } else {
@@ -72,9 +142,8 @@ export default function LogRound() {
   const selectMixedTees = () => {
     setMixedTees(true);
     setSelectedTee(null);
-    // Default each hole to the longest tee set
     if (teeSets.length > 0) {
-      const longest = teeSets[0]; // already sorted desc by yardage
+      const longest = teeSets[0];
       setHoleEntries(prev => prev.map(e => ({ ...e, tee_set_id: longest.id })));
     }
     setStep(3);
@@ -99,6 +168,18 @@ export default function LogRound() {
     setHoleEntries(prev => prev.map((e, i) => i === idx ? { ...e, [field]: value } : e));
   };
 
+  const updateAdvanced = (idx: number, field: keyof AdvancedData, value: string) => {
+    setHoleEntries(prev => prev.map((e, i) => i === idx ? { ...e, advanced: { ...(e.advanced || defaultAdvanced()), [field]: value } } : e));
+  };
+
+  const updateStrategy = (idx: number, field: keyof StrategyData, value: string) => {
+    setHoleEntries(prev => prev.map((e, i) => i === idx ? { ...e, strategy: { ...(e.strategy || defaultStrategy()), [field]: value } } : e));
+  };
+
+  const updateMental = (idx: number, field: keyof MentalData, value: any) => {
+    setHoleEntries(prev => prev.map((e, i) => i === idx ? { ...e, mental: { ...(e.mental || defaultMental()), [field]: value } } : e));
+  };
+
   const totalScore = holeEntries.reduce((s, e) => s + (e.score || 0), 0);
   const totalPutts = holeEntries.reduce((s, e) => s + (e.putts || 0), 0);
 
@@ -111,13 +192,25 @@ export default function LogRound() {
         total_score: totalScore, weather, wind, is_complete: true, visibility,
         tee_set_id: selectedTee?.id || null,
         mixed_tees: mixedTees,
+        notes: JSON.stringify({ tracking_mode: trackingMode }),
       }).select().single();
       if (error) throw error;
 
-      const scoreInserts = holeEntries.map((e, i) => ({
-        round_id: round.id, hole_id: holes[i]?.id || null, hole_number: i + 1,
-        score: e.score, putts: e.putts, fairway_hit: e.fairway_hit, gir: e.gir, penalties: e.penalties
-      }));
+      const scoreInserts = holeEntries.map((e, i) => {
+        const base: any = {
+          round_id: round.id, hole_id: holes[i]?.id || null, hole_number: i + 1,
+          score: e.score, putts: e.putts, fairway_hit: e.fairway_hit, gir: e.gir, penalties: e.penalties,
+        };
+        // Store mode-specific data as JSON in notes column
+        if (trackingMode === 'advanced' && e.advanced) {
+          base.notes = JSON.stringify({ mode: 'advanced', data: e.advanced });
+        } else if (trackingMode === 'strategy' && e.strategy) {
+          base.notes = JSON.stringify({ mode: 'strategy', data: e.strategy });
+        } else if (trackingMode === 'mental' && e.mental) {
+          base.notes = JSON.stringify({ mode: 'mental', data: e.mental });
+        }
+        return base;
+      });
       await supabase.from('sb_hole_scores').insert(scoreInserts);
       Alert.alert('Success', `Round saved! Total: ${totalScore}`);
       setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false);
@@ -142,6 +235,131 @@ export default function LogRound() {
         </View>
         <Text style={{ color: colors.gray }}>›</Text>
       </TouchableOpacity>
+    );
+  };
+
+  // Pill selector helper
+  const PillRow = ({ options, value, onChange, wrap }: { options: string[]; value: string; onChange: (v: string) => void; wrap?: boolean }) => (
+    <View style={[s.pillRow, wrap && { flexWrap: 'wrap' }]}>
+      {options.map(opt => (
+        <TouchableOpacity key={opt} style={[s.pill, value === opt && s.pillActive]} onPress={() => onChange(value === opt ? '' : opt)}>
+          <Text style={[s.pillText, value === opt && s.pillTextActive]}>{opt}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  // Scale selector (1-5)
+  const ScaleRow = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => (
+    <View style={s.scaleRow}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <TouchableOpacity key={n} style={[s.scaleBtn, value === n && s.scaleBtnActive]} onPress={() => onChange(n)}>
+          <Text style={[s.scaleBtnText, value === n && s.scaleBtnTextActive]}>{n}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  // Expandable section
+  const Section = ({ title, id, children }: { title: string; id: string; children: React.ReactNode }) => {
+    const isOpen = expandedSection === id;
+    return (
+      <View style={s.section}>
+        <TouchableOpacity style={s.sectionHeader} onPress={() => setExpandedSection(isOpen ? null : id)}>
+          <Text style={s.sectionTitle}>{title}</Text>
+          <Text style={s.sectionArrow}>{isOpen ? '▾' : '▸'}</Text>
+        </TouchableOpacity>
+        {isOpen && <View style={s.sectionBody}>{children}</View>}
+      </View>
+    );
+  };
+
+  // Advanced mode fields
+  const renderAdvancedFields = (idx: number) => {
+    const adv = holeEntries[idx]?.advanced || defaultAdvanced();
+    return (
+      <Section title="🎯 Advanced Shot Data" id="advanced">
+        <Text style={s.formLabel}>Target</Text>
+        <TextInput style={s.input} value={adv.target} onChangeText={v => updateAdvanced(idx, 'target', v)} placeholder="Center of fairway, pin, etc." placeholderTextColor={colors.gray} />
+
+        <Text style={s.formLabel}>Shot Shape Intention</Text>
+        <PillRow options={SHOT_SHAPES} value={adv.shot_shape} onChange={v => updateAdvanced(idx, 'shot_shape', v)} wrap />
+
+        <Text style={s.formLabel}>Distance to Target (yds)</Text>
+        <TextInput style={s.input} value={adv.distance_to_target} onChangeText={v => updateAdvanced(idx, 'distance_to_target', v)} keyboardType="number-pad" placeholder="150" placeholderTextColor={colors.gray} />
+
+        <Text style={s.formLabel}>Playing Distance (adjusted)</Text>
+        <TextInput style={s.input} value={adv.playing_distance} onChangeText={v => updateAdvanced(idx, 'playing_distance', v)} keyboardType="number-pad" placeholder="155" placeholderTextColor={colors.gray} />
+
+        <Text style={s.formLabel}>Club</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <PillRow options={CLUBS} value={adv.club} onChange={v => updateAdvanced(idx, 'club', v)} />
+        </ScrollView>
+
+        <Text style={s.formLabel}>Result Lie</Text>
+        <PillRow options={RESULT_LIES} value={adv.result_lie} onChange={v => updateAdvanced(idx, 'result_lie', v)} wrap />
+
+        <Text style={s.formLabel}>Shot Result</Text>
+        <PillRow options={SHOT_RESULTS} value={adv.shot_result} onChange={v => updateAdvanced(idx, 'shot_result', v)} wrap />
+      </Section>
+    );
+  };
+
+  // Strategy mode fields
+  const renderStrategyFields = (idx: number) => {
+    const strat = holeEntries[idx]?.strategy || defaultStrategy();
+    return (
+      <Section title="🧠 Strategy" id="strategy">
+        <Text style={s.formLabel}>Where Were You</Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flex: 1 }}>
+            <PillRow options={LIE_TYPES} value={strat.lie_type} onChange={v => updateStrategy(idx, 'lie_type', v)} wrap />
+          </View>
+          <TextInput style={[s.input, { width: 80 }]} value={strat.distance} onChangeText={v => updateStrategy(idx, 'distance', v)} keyboardType="number-pad" placeholder="yds" placeholderTextColor={colors.gray} />
+        </View>
+
+        <Text style={s.formLabel}>Intention / Plan</Text>
+        <TextInput style={[s.input, { minHeight: 60 }]} value={strat.intention} onChangeText={v => updateStrategy(idx, 'intention', v)} placeholder="What were you trying to do?" placeholderTextColor={colors.gray} multiline />
+
+        <Text style={s.formLabel}>Did You Execute?</Text>
+        <PillRow options={EXECUTE_OPTIONS} value={strat.executed} onChange={v => updateStrategy(idx, 'executed', v)} />
+
+        <Text style={s.formLabel}>Notes (optional)</Text>
+        <TextInput style={s.input} value={strat.notes} onChangeText={v => updateStrategy(idx, 'notes', v)} placeholder="Any observations..." placeholderTextColor={colors.gray} multiline />
+      </Section>
+    );
+  };
+
+  // Mental game mode fields
+  const renderMentalFields = (idx: number) => {
+    const m = holeEntries[idx]?.mental || defaultMental();
+    return (
+      <>
+        <Section title="🧘 Pre-Shot" id="mental-pre">
+          <Text style={s.formLabel}>How did you feel?</Text>
+          <PillRow options={FEELINGS} value={m.pre_feeling} onChange={v => updateMental(idx, 'pre_feeling', v)} wrap />
+
+          <Text style={s.formLabel}>Perceived Difficulty (1-5)</Text>
+          <ScaleRow value={m.difficulty_rating} onChange={v => updateMental(idx, 'difficulty_rating', v)} />
+
+          <Text style={s.formLabel}>Did emotions influence your decision?</Text>
+          <PillRow options={['Yes', 'No', 'Somewhat']} value={m.emotions_influenced} onChange={v => updateMental(idx, 'emotions_influenced', v)} />
+
+          <Text style={s.formLabel}>Commitment Level (1-5)</Text>
+          <ScaleRow value={m.commitment_level} onChange={v => updateMental(idx, 'commitment_level', v)} />
+        </Section>
+
+        <Section title="🏌️ Post-Shot" id="mental-post">
+          <Text style={s.formLabel}>Did you execute your plan?</Text>
+          <PillRow options={EXECUTE_OPTIONS} value={m.executed_plan} onChange={v => updateMental(idx, 'executed_plan', v)} />
+
+          <Text style={s.formLabel}>How did you react?</Text>
+          <PillRow options={REACTIONS} value={m.post_reaction} onChange={v => updateMental(idx, 'post_reaction', v)} />
+
+          <Text style={s.formLabel}>Did your reaction match the result?</Text>
+          <PillRow options={['Yes', 'No', 'Overreacted', 'Underreacted']} value={m.reaction_matched} onChange={v => updateMental(idx, 'reaction_matched', v)} />
+        </Section>
+      </>
     );
   };
 
@@ -210,7 +428,7 @@ export default function LogRound() {
     );
   }
 
-  // Step 3: Round details
+  // Step 3: Round details + tracking mode
   if (step === 3) {
     return (
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
@@ -220,6 +438,22 @@ export default function LogRound() {
           <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color} ({selectedTee.total_yardage} yds)</Text>
         )}
         {mixedTees && <Text style={s.selectedTeeLabel}>Mixed Tees</Text>}
+
+        <Text style={s.formLabel}>Tracking Mode</Text>
+        <View style={s.modeGrid}>
+          {TRACKING_MODES.map(m => (
+            <TouchableOpacity
+              key={m.key}
+              style={[s.modeCard, trackingMode === m.key && s.modeCardActive]}
+              onPress={() => setTrackingMode(m.key)}
+            >
+              <Text style={s.modeEmoji}>{m.emoji}</Text>
+              <Text style={[s.modeLabel, trackingMode === m.key && s.modeLabelActive]}>{m.label}</Text>
+              <Text style={[s.modeDesc, trackingMode === m.key && s.modeDescActive]}>{m.desc}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <Text style={s.formLabel}>Date</Text>
         <TextInput style={s.input} value={datePlayed} onChangeText={setDatePlayed} placeholder="YYYY-MM-DD" placeholderTextColor={colors.gray} />
         <Text style={s.formLabel}>Weather</Text>
@@ -248,15 +482,22 @@ export default function LogRound() {
     const hole = holes[currentHole];
     const teeHole = teeHolesData.find(th => th.hole_number === currentHole + 1);
     const yardage = teeHole?.yardage || hole?.distance_yards;
+    const modeInfo = TRACKING_MODES.find(m => m.key === trackingMode);
 
     return (
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
-        <Text style={s.stepTitle}>Step 4: Hole-by-Hole</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <Text style={s.stepTitle}>Hole-by-Hole</Text>
+          <View style={s.modeBadge}>
+            <Text style={s.modeBadgeText}>{modeInfo?.emoji} {modeInfo?.label}</Text>
+          </View>
+        </View>
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
           <View style={s.holeSelector}>
             {holeEntries.map((e, i) => (
               <TouchableOpacity key={i} style={[s.holePill, currentHole === i && s.holePillActive, e.score > 0 && s.holePillDone]}
-                onPress={() => setCurrentHole(i)}>
+                onPress={() => { setCurrentHole(i); setExpandedSection(null); }}>
                 <Text style={[s.holePillText, currentHole === i && s.holePillTextActive]}>{i + 1}</Text>
               </TouchableOpacity>
             ))}
@@ -304,6 +545,7 @@ export default function LogRound() {
           </View>
         )}
 
+        {/* Basic fields — always shown */}
         <Text style={s.formLabel}>Score</Text>
         <View style={s.counterRow}>
           <TouchableOpacity style={s.counterBtn} onPress={() => entry.score > 0 && updateHoleEntry(currentHole, 'score', entry.score - 1)}>
@@ -357,15 +599,20 @@ export default function LogRound() {
           </TouchableOpacity>
         </View>
 
+        {/* Mode-specific fields */}
+        {trackingMode === 'advanced' && renderAdvancedFields(currentHole)}
+        {trackingMode === 'strategy' && renderStrategyFields(currentHole)}
+        {trackingMode === 'mental' && renderMentalFields(currentHole)}
+
         <View style={s.holeNav}>
           {currentHole > 0 && (
-            <TouchableOpacity style={s.backBtn} onPress={() => setCurrentHole(currentHole - 1)}>
+            <TouchableOpacity style={s.backBtn} onPress={() => { setCurrentHole(currentHole - 1); setExpandedSection(null); }}>
               <Text style={s.backBtnText}>← Hole {currentHole}</Text>
             </TouchableOpacity>
           )}
           <View style={{ flex: 1 }} />
           {currentHole < holeEntries.length - 1 ? (
-            <TouchableOpacity style={s.goldBtn} onPress={() => setCurrentHole(currentHole + 1)}>
+            <TouchableOpacity style={s.goldBtn} onPress={() => { setCurrentHole(currentHole + 1); setExpandedSection(null); }}>
               <Text style={s.goldBtnText}>Hole {currentHole + 2} →</Text>
             </TouchableOpacity>
           ) : (
@@ -381,11 +628,14 @@ export default function LogRound() {
   // Step 5: Review
   return (
     <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
-      <Text style={s.stepTitle}>Step 5: Review & Save</Text>
+      <Text style={s.stepTitle}>Review & Save</Text>
       <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
       {selectedTee && <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color}</Text>}
       {mixedTees && <Text style={s.selectedTeeLabel}>Mixed Tees</Text>}
       <Text style={s.reviewDate}>{datePlayed} · {weather || 'No weather'} · {visibility}</Text>
+      <View style={s.modeBadge}>
+        <Text style={s.modeBadgeText}>{TRACKING_MODES.find(m => m.key === trackingMode)?.emoji} {TRACKING_MODES.find(m => m.key === trackingMode)?.label} Mode</Text>
+      </View>
 
       <View style={s.reviewScoreCard}>
         <View style={s.reviewBig}>
@@ -498,4 +748,33 @@ const s = StyleSheet.create({
   reviewScore: { fontWeight: '700' },
   under: { color: colors.green },
   over: { color: colors.red },
+  // Mode selection
+  modeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  modeCard: { width: '48%' as any, backgroundColor: colors.white, borderRadius: 12, padding: 14, borderWidth: 2, borderColor: colors.grayLight, alignItems: 'center' },
+  modeCardActive: { borderColor: colors.gold, backgroundColor: colors.primaryDark },
+  modeEmoji: { fontSize: 24, marginBottom: 4 },
+  modeLabel: { fontSize: 14, fontWeight: '700', color: colors.primary },
+  modeLabelActive: { color: colors.gold },
+  modeDesc: { fontSize: 11, color: colors.grayDark, textAlign: 'center', marginTop: 2 },
+  modeDescActive: { color: colors.grayLight },
+  modeBadge: { backgroundColor: colors.primaryDark, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', marginBottom: 12 },
+  modeBadgeText: { color: colors.gold, fontSize: 12, fontWeight: '600' },
+  // Pills
+  pillRow: { flexDirection: 'row', gap: 6, marginBottom: 4 },
+  pill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.grayLight },
+  pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  pillText: { fontSize: 13, fontWeight: '600', color: colors.grayDark },
+  pillTextActive: { color: colors.white },
+  // Scale
+  scaleRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
+  scaleBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.grayLight, alignItems: 'center', justifyContent: 'center' },
+  scaleBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  scaleBtnText: { fontSize: 16, fontWeight: '700', color: colors.grayDark },
+  scaleBtnTextActive: { color: colors.gold },
+  // Sections
+  section: { backgroundColor: colors.white, borderRadius: 12, marginTop: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.grayLight },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, backgroundColor: colors.primaryDark },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.gold },
+  sectionArrow: { fontSize: 16, color: colors.gold },
+  sectionBody: { padding: 14 },
 });
