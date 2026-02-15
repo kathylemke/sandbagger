@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "sandbagger",
+    "name": "Sandbagger",
     "slug": "sandbagger",
     "version": "1.0.0",
+    "scheme": "sandbagger",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -10,21 +11,20 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1a472a"
     },
-    "ios": {
-      "supportsTablet": true
-    },
+    "ios": { "supportsTablet": true },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+        "backgroundColor": "#1a472a"
+      }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"]
   }
 }
