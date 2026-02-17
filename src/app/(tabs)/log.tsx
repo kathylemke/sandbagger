@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors, teeColors } from '../../lib/theme';
@@ -11,14 +12,25 @@ interface Hole { id: string; hole_number: number; par: number; distance_yards: n
 interface TeeSet { id: string; course_id: string; color: string; name: string; total_yardage: number; total_par: number; rating: number; slope: number; }
 interface TeeHole { id: string; tee_set_id: string; hole_number: number; yardage: number; par: number; handicap_index: number; }
 
-interface AdvancedData {
-  target: string;
-  shot_shape: string;
-  distance_to_target: string;
-  playing_distance: string;
+interface ShotData {
+  shot_number: number;
   club: string;
+  shot_shape: string;
+  intention: string;
+  layup_target_distance?: number;
+  pin_position?: string;
+  aim_point?: string;
   result_lie: string;
-  shot_result: string;
+  miss_direction: string;
+  green_position?: string;
+  // Putt-specific fields
+  is_putt?: boolean;
+  putt_distance?: string; // feet
+  putt_break?: string; // 'left-to-right' | 'right-to-left' | 'straight' | 'double-break'
+  putt_break_amount?: string; // 'slight' | 'moderate' | 'heavy'
+  putt_slope?: string; // 'uphill' | 'downhill' | 'flat'
+  putt_result?: string; // 'made' | 'miss-left' | 'miss-right' | 'miss-short' | 'miss-long' | 'lip-out-left' | 'lip-out-right'
+  putt_distance_remaining?: string; // feet remaining after miss
 }
 
 interface StrategyData {
@@ -45,29 +57,93 @@ interface HoleEntry {
   fairway_hit: boolean | null;
   gir: boolean;
   penalties: number;
+  wedge_and_in: boolean | null;
   tee_set_id?: string;
   custom_yardage?: number;
-  advanced?: AdvancedData;
+  shots: ShotData[];
   strategy?: StrategyData;
   mental?: MentalData;
 }
 
-const defaultAdvanced = (): AdvancedData => ({ target: '', shot_shape: '', distance_to_target: '', playing_distance: '', club: '', result_lie: '', shot_result: '' });
+const defaultShot = (n: number): ShotData => ({
+  shot_number: n, club: '', shot_shape: '', intention: '', result_lie: '', miss_direction: '',
+});
 const defaultStrategy = (): StrategyData => ({ lie_type: '', distance: '', intention: '', executed: '', notes: '' });
 const defaultMental = (): MentalData => ({ pre_feeling: '', difficulty_rating: 3, emotions_influenced: '', commitment_level: 3, executed_plan: '', post_reaction: '', reaction_matched: '' });
 
 const SHOT_SHAPES = ['Straight', 'Draw', 'Fade', 'Punch', 'Flop', 'Knockdown', 'High', 'Low'];
 const CLUBS = ['Driver', '3W', '5W', '7W', '2H', '3H', '4H', '5H', '3i', '4i', '5i', '6i', '7i', '8i', '9i', 'PW', 'GW', 'SW', 'LW', 'Putter'];
-const RESULT_LIES = ['Fairway', 'Rough', 'Green', 'Bunker', 'Water', 'OB', 'Fringe', 'Trees', 'Cart Path'];
-const SHOT_RESULTS = ['Pure', 'Push', 'Pull', 'Thin', 'Fat', 'Topped', 'Shank', 'Sky', 'Hook', 'Slice', 'OK'];
+const RESULT_LIES = ['Fairway', 'Rough', 'Bunker', 'Green', 'Fringe', 'Water', 'OB', 'Trees', 'Cart Path'];
+const MISS_DIRECTIONS = ['Left', 'Right', 'Short', 'Long', 'On Target'];
+const INTENTIONS = [
+  { key: 'hit_fairway', label: 'Hit Fairway' },
+  { key: 'lay_up', label: 'Lay Up' },
+  { key: 'hit_green', label: 'Hit Green' },
+  { key: 'recovery', label: 'Recovery' },
+  { key: 'punch_out', label: 'Punch Out' },
+  { key: 'chip_pitch', label: 'Chip/Pitch' },
+];
+const PUTT_BREAKS = ['Left-to-Right', 'Right-to-Left', 'Straight', 'Double Break'];
+const PUTT_BREAK_AMOUNTS = ['Slight', 'Moderate', 'Heavy'];
+const PUTT_SLOPES = ['Uphill', 'Downhill', 'Flat'];
+const PUTT_RESULTS = [
+  { key: 'made', label: '✓ Made It' },
+  { key: 'miss-left', label: 'Miss Left' },
+  { key: 'miss-right', label: 'Miss Right' },
+  { key: 'miss-short', label: 'Miss Short' },
+  { key: 'miss-long', label: 'Miss Long' },
+  { key: 'lip-out-left', label: 'Lip Out Left' },
+  { key: 'lip-out-right', label: 'Lip Out Right' },
+];
 const LIE_TYPES = ['Tee', 'Fairway', 'Rough', 'Bunker', 'Green', 'Fringe', 'Trees'];
 const FEELINGS = ['Confident', 'Nervous', 'Frustrated', 'Neutral', 'Excited', 'Anxious', 'Calm'];
 const REACTIONS = ['Positive', 'Negative', 'Neutral'];
 const EXECUTE_OPTIONS = ['Yes', 'No', 'Partial'];
 
+const GRID_3X3_LABELS = [
+  'front-left', 'front-center', 'front-right',
+  'mid-left', 'center', 'mid-right',
+  'back-left', 'back-center', 'back-right',
+];
+const GRID_3X3_DISPLAY = [
+  ['FL', 'FC', 'FR'],
+  ['ML', 'C', 'MR'],
+  ['BL', 'BC', 'BR'],
+];
+
+// 5x5 green grid: outer ring = miss, inner 3x3 = on green
+const GRID_5X5: { key: string; onGreen: boolean; label: string }[][] = (() => {
+  const rows = ['long', 'front', 'mid', 'back', 'short'];
+  const cols = ['left', 'left', 'center', 'right', 'right'];
+  const grid: { key: string; onGreen: boolean; label: string }[][] = [];
+  const outerLabels = [
+    ['miss-long-left','miss-long-left','miss-long','miss-long-right','miss-long-right'],
+    ['miss-left','on-front-left','on-front-center','on-front-right','miss-right'],
+    ['miss-left','on-mid-left','on-center','on-mid-right','miss-right'],
+    ['miss-left','on-back-left','on-back-center','on-back-right','miss-right'],
+    ['miss-short-left','miss-short-left','miss-short','miss-short-right','miss-short-right'],
+  ];
+  const displayLabels = [
+    ['↖','⬆','⬆','⬆','↗'],
+    ['⬅','FL','FC','FR','➡'],
+    ['⬅','ML','C','MR','➡'],
+    ['⬅','BL','BC','BR','➡'],
+    ['↙','⬇','⬇','⬇','↘'],
+  ];
+  for (let r = 0; r < 5; r++) {
+    const row: { key: string; onGreen: boolean; label: string }[] = [];
+    for (let c = 0; c < 5; c++) {
+      const onGreen = r >= 1 && r <= 3 && c >= 1 && c <= 3;
+      row.push({ key: outerLabels[r][c], onGreen, label: displayLabels[r][c] });
+    }
+    grid.push(row);
+  }
+  return grid;
+})();
+
 const TRACKING_MODES: { key: TrackingMode; label: string; emoji: string; desc: string }[] = [
   { key: 'basic', label: 'Basic', emoji: '⛳', desc: 'Score, putts, fairways & GIR' },
-  { key: 'advanced', label: 'Advanced', emoji: '🎯', desc: 'Full shot data — club, shape, result' },
+  { key: 'advanced', label: 'Advanced', emoji: '🎯', desc: 'Per-shot club, intention & result' },
   { key: 'strategy', label: 'Strategy', emoji: '🧠', desc: 'Intention & execution tracking' },
   { key: 'mental', label: 'Mental Game', emoji: '🧘', desc: 'Psychology & emotional awareness' },
 ];
@@ -82,6 +158,7 @@ export default function LogRound() {
   const [teeSets, setTeeSets] = useState<TeeSet[]>([]);
   const [selectedTee, setSelectedTee] = useState<TeeSet | null>(null);
   const [teeHolesData, setTeeHolesData] = useState<TeeHole[]>([]);
+  const [allTeeHolesData, setAllTeeHolesData] = useState<TeeHole[]>([]);
   const [mixedTees, setMixedTees] = useState(false);
   const [datePlayed, setDatePlayed] = useState(new Date().toISOString().split('T')[0]);
   const [weather, setWeather] = useState('');
@@ -98,19 +175,28 @@ export default function LogRound() {
   const [newCourseHoles, setNewCourseHoles] = useState('18');
   const [newHolePars, setNewHolePars] = useState<number[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [expandedShots, setExpandedShots] = useState<Record<string, boolean>>({});
   const [holeSelection, setHoleSelection] = useState<'all' | 'front9' | 'back9' | 'custom'>('all');
   const [selectedHoles, setSelectedHoles] = useState<number[]>([]);
+  const [userBag, setUserBag] = useState<string[] | null>(null);
+  const [trackWedgeAndIn, setTrackWedgeAndIn] = useState(false);
 
   useEffect(() => {
     supabase.from('sb_courses').select('*').order('name').then(({ data }) => setCourses(data || []));
+    // Load user's bag
+    if (user?.id) {
+      AsyncStorage.getItem(`sandbagger_bag_${user.id}`).then(stored => {
+        if (stored) { try { setUserBag(JSON.parse(stored)); } catch {} }
+      });
+    }
   }, []);
 
   const filteredCourses = courses.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
   const initHoleEntries = (numH: number) => {
     return Array(numH).fill(null).map(() => ({
-      score: 0, putts: 0, fairway_hit: null as boolean | null, gir: false, penalties: 0,
-      advanced: defaultAdvanced(), strategy: defaultStrategy(), mental: defaultMental(),
+      score: 0, putts: 0, fairway_hit: null as boolean | null, gir: false, penalties: 0, wedge_and_in: null as boolean | null,
+      shots: [] as ShotData[], strategy: defaultStrategy(), mental: defaultMental(),
     }));
   };
 
@@ -128,11 +214,15 @@ export default function LogRound() {
     setSelectedHoles(Array.from({ length: numH }, (_, i) => i + 1));
     setSelectedTee(null);
     setMixedTees(false);
-    if ((teesRes.data || []).length > 0) {
-      setStep(2);
+    const teeIds = (teesRes.data || []).map((t: TeeSet) => t.id);
+    if (teeIds.length > 0) {
+      const { data: allTH } = await supabase.from('sb_tee_holes').select('*').in('tee_set_id', teeIds).order('hole_number');
+      setAllTeeHolesData(allTH || []);
     } else {
-      setStep(3);
+      setAllTeeHolesData([]);
     }
+    if ((teesRes.data || []).length > 0) setStep(2);
+    else setStep(3);
   };
 
   const selectTee = async (tee: TeeSet) => {
@@ -169,11 +259,33 @@ export default function LogRound() {
   };
 
   const updateHoleEntry = (idx: number, field: keyof HoleEntry, value: any) => {
-    setHoleEntries(prev => prev.map((e, i) => i === idx ? { ...e, [field]: value } : e));
+    setHoleEntries(prev => prev.map((e, i) => {
+      if (i !== idx) return e;
+      const updated = { ...e, [field]: value };
+      // Sync shots array when score changes in advanced mode
+      if (field === 'score' && trackingMode === 'advanced') {
+        const newScore = value as number;
+        const currentShots = [...e.shots];
+        if (newScore > currentShots.length) {
+          for (let s = currentShots.length; s < newScore; s++) {
+            currentShots.push(defaultShot(s + 1));
+          }
+        } else if (newScore < currentShots.length) {
+          currentShots.length = newScore;
+        }
+        updated.shots = currentShots;
+      }
+      return updated;
+    }));
   };
 
-  const updateAdvanced = (idx: number, field: keyof AdvancedData, value: string) => {
-    setHoleEntries(prev => prev.map((e, i) => i === idx ? { ...e, advanced: { ...(e.advanced || defaultAdvanced()), [field]: value } } : e));
+  const updateShot = (holeIdx: number, shotIdx: number, field: keyof ShotData, value: any) => {
+    setHoleEntries(prev => prev.map((e, i) => {
+      if (i !== holeIdx) return e;
+      const shots = [...e.shots];
+      shots[shotIdx] = { ...shots[shotIdx], [field]: value };
+      return { ...e, shots };
+    }));
   };
 
   const updateStrategy = (idx: number, field: keyof StrategyData, value: string) => {
@@ -197,7 +309,6 @@ export default function LogRound() {
     if (mode === 'all') setSelectedHoles(Array.from({ length: numH }, (_, i) => i + 1));
     else if (mode === 'front9') setSelectedHoles(Array.from({ length: Math.min(9, numH) }, (_, i) => i + 1));
     else if (mode === 'back9') setSelectedHoles(Array.from({ length: Math.min(9, numH - 9) }, (_, i) => i + 10));
-    // custom: keep current selectedHoles
   };
 
   const toggleCustomHole = (holeNum: number) => {
@@ -206,6 +317,10 @@ export default function LogRound() {
 
   const totalScore = activeIndices.reduce((s, i) => s + (holeEntries[i]?.score || 0), 0);
   const totalPutts = activeIndices.reduce((s, i) => s + (holeEntries[i]?.putts || 0), 0);
+
+  const toggleShotExpanded = (key: string) => {
+    setExpandedShots(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const saveRound = async () => {
     if (!user || !selectedCourse) return;
@@ -216,7 +331,7 @@ export default function LogRound() {
         total_score: totalScore, weather, wind, is_complete: true, visibility,
         tee_set_id: selectedTee?.id || null,
         mixed_tees: mixedTees,
-        notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers }),
+        notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn }),
       }).select().single();
       if (error) throw error;
 
@@ -224,11 +339,10 @@ export default function LogRound() {
         const e = holeEntries[i];
         const base: any = {
           round_id: round.id, hole_id: holes[i]?.id || null, hole_number: i + 1,
-          score: e.score, putts: e.putts, fairway_hit: e.fairway_hit, gir: e.gir, penalties: e.penalties,
+          score: e.score, putts: e.putts, fairway_hit: e.fairway_hit, gir: e.gir, penalties: e.penalties, wedge_and_in: trackWedgeAndIn ? e.wedge_and_in : null,
         };
-        // Store mode-specific data as JSON in notes column
-        if (trackingMode === 'advanced' && e.advanced) {
-          base.notes = JSON.stringify({ mode: 'advanced', data: e.advanced });
+        if (trackingMode === 'advanced' && e.shots.length > 0) {
+          base.notes = JSON.stringify({ mode: 'advanced', shots: e.shots });
         } else if (trackingMode === 'strategy' && e.strategy) {
           base.notes = JSON.stringify({ mode: 'strategy', data: e.strategy });
         } else if (trackingMode === 'mental' && e.mental) {
@@ -237,10 +351,18 @@ export default function LogRound() {
         return base;
       });
       await supabase.from('sb_hole_scores').insert(scoreInserts);
-      Alert.alert('Success', `Round saved! Total: ${totalScore}`);
-      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1));
+      if (Platform.OS === 'web') {
+        window.alert(`Round saved! Total: ${totalScore}`);
+      } else {
+        Alert.alert('Success', `Round saved! Total: ${totalScore}`);
+      }
+      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false);
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      if (Platform.OS === 'web') {
+        window.alert(`Error: ${e.message}`);
+      } else {
+        Alert.alert('Error', e.message);
+      }
     } finally {
       setSaving(false);
     }
@@ -299,34 +421,228 @@ export default function LogRound() {
     );
   };
 
-  // Advanced mode fields
-  const renderAdvancedFields = (idx: number) => {
-    const adv = holeEntries[idx]?.advanced || defaultAdvanced();
+  // 3x3 grid component for pin position / aim point
+  const Grid3x3 = ({ value, onChange, markerType }: { value: string; onChange: (v: string) => void; markerType: 'pin' | 'aim' }) => (
+    <View style={s.grid3x3}>
+      {GRID_3X3_DISPLAY.map((row, ri) => (
+        <View key={ri} style={s.gridRow}>
+          {row.map((label, ci) => {
+            const key = GRID_3X3_LABELS[ri * 3 + ci];
+            const isSelected = value === key;
+            return (
+              <TouchableOpacity key={key} style={[s.grid3Cell, isSelected && s.gridCellSelected]}
+                onPress={() => onChange(value === key ? '' : key)}>
+                <Text style={[s.grid3CellText, isSelected && s.gridCellTextSelected]}>
+                  {isSelected ? (markerType === 'pin' ? '🚩' : '🎯') : label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+
+  // 5x5 green result grid
+  const Grid5x5 = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    <View style={s.grid5x5}>
+      {GRID_5X5.map((row, ri) => (
+        <View key={ri} style={s.gridRow}>
+          {row.map((cell, ci) => {
+            const isSelected = value === cell.key;
+            return (
+              <TouchableOpacity key={`${ri}-${ci}`}
+                style={[
+                  s.grid5Cell,
+                  cell.onGreen ? s.grid5OnGreen : s.grid5OffGreen,
+                  isSelected && s.gridCellSelected,
+                ]}
+                onPress={() => onChange(value === cell.key ? '' : cell.key)}>
+                <Text style={[
+                  s.grid5CellText,
+                  cell.onGreen ? s.grid5OnGreenText : s.grid5OffGreenText,
+                  isSelected && s.gridCellTextSelected,
+                ]}>{cell.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+
+  // Per-shot section for advanced mode
+  // Determine if a shot is a putt based on previous shot's result
+  const isPuttShot = (holeIdx: number, shotIdx: number): boolean => {
+    const entry = holeEntries[holeIdx];
+    if (!entry) return false;
+    // If previous shot landed on Green, this is a putt
+    if (shotIdx > 0) {
+      const prevShot = entry.shots[shotIdx - 1];
+      if (prevShot?.result_lie === 'Green') return true;
+    }
+    // Also check if manually flagged
+    return entry.shots[shotIdx]?.is_putt ?? false;
+  };
+
+  const renderPuttSection = (holeIdx: number, shotIdx: number) => {
+    const entry = holeEntries[holeIdx];
+    const shot = entry?.shots[shotIdx];
+    if (!shot) return null;
+    const puttNum = (() => {
+      let count = 0;
+      for (let i = 0; i <= shotIdx; i++) {
+        if (isPuttShot(holeIdx, i)) count++;
+      }
+      return count;
+    })();
+    const sectionKey = `shot-${holeIdx}-${shotIdx}`;
+    const isOpen = expandedShots[sectionKey] ?? (shotIdx === 0);
+    const resultLabel = PUTT_RESULTS.find(r => r.key === shot.putt_result)?.label || '';
+    const summary = [shot.putt_distance ? `${shot.putt_distance}ft` : '', shot.putt_break || '', resultLabel].filter(Boolean).join(' · ');
+
     return (
-      <Section title="🎯 Advanced Shot Data" id="advanced">
-        <Text style={s.formLabel}>Target</Text>
-        <TextInput style={s.input} value={adv.target} onChangeText={v => updateAdvanced(idx, 'target', v)} placeholder="Center of fairway, pin, etc." placeholderTextColor={colors.gray} />
+      <View key={shotIdx} style={s.section}>
+        <TouchableOpacity style={s.sectionHeader} onPress={() => toggleShotExpanded(sectionKey)}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.sectionTitle}>🏌️ Putt {puttNum}{summary ? `: ${summary}` : ''}</Text>
+          </View>
+          <Text style={s.sectionArrow}>{isOpen ? '▾' : '▸'}</Text>
+        </TouchableOpacity>
+        {isOpen && (
+          <View style={s.sectionBody}>
+            <Text style={s.formLabel}>Distance (feet)</Text>
+            <TextInput style={s.input}
+              value={shot.putt_distance || ''}
+              onChangeText={v => updateShot(holeIdx, shotIdx, 'putt_distance', v)}
+              keyboardType="number-pad" placeholder="15" placeholderTextColor={colors.gray} />
 
-        <Text style={s.formLabel}>Shot Shape Intention</Text>
-        <PillRow options={SHOT_SHAPES} value={adv.shot_shape} onChange={v => updateAdvanced(idx, 'shot_shape', v)} wrap />
+            <Text style={s.formLabel}>Break</Text>
+            <PillRow options={PUTT_BREAKS} value={shot.putt_break || ''} onChange={v => updateShot(holeIdx, shotIdx, 'putt_break', v)} wrap />
 
-        <Text style={s.formLabel}>Distance to Target (yds)</Text>
-        <TextInput style={s.input} value={adv.distance_to_target} onChangeText={v => updateAdvanced(idx, 'distance_to_target', v)} keyboardType="number-pad" placeholder="150" placeholderTextColor={colors.gray} />
+            <Text style={s.formLabel}>Break Amount</Text>
+            <PillRow options={PUTT_BREAK_AMOUNTS} value={shot.putt_break_amount || ''} onChange={v => updateShot(holeIdx, shotIdx, 'putt_break_amount', v)} />
 
-        <Text style={s.formLabel}>Playing Distance (adjusted)</Text>
-        <TextInput style={s.input} value={adv.playing_distance} onChangeText={v => updateAdvanced(idx, 'playing_distance', v)} keyboardType="number-pad" placeholder="155" placeholderTextColor={colors.gray} />
+            <Text style={s.formLabel}>Slope</Text>
+            <PillRow options={PUTT_SLOPES} value={shot.putt_slope || ''} onChange={v => updateShot(holeIdx, shotIdx, 'putt_slope', v)} />
 
-        <Text style={s.formLabel}>Club</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <PillRow options={CLUBS} value={adv.club} onChange={v => updateAdvanced(idx, 'club', v)} />
-        </ScrollView>
+            <Text style={s.formLabel}>Result</Text>
+            <View style={[s.pillRow, { flexWrap: 'wrap' }]}>
+              {PUTT_RESULTS.map(opt => (
+                <TouchableOpacity key={opt.key} style={[s.pill, shot.putt_result === opt.key && (opt.key === 'made' ? s.pillMade : s.pillActive)]}
+                  onPress={() => updateShot(holeIdx, shotIdx, 'putt_result', shot.putt_result === opt.key ? '' : opt.key)}>
+                  <Text style={[s.pillText, shot.putt_result === opt.key && s.pillTextActive]}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-        <Text style={s.formLabel}>Result Lie</Text>
-        <PillRow options={RESULT_LIES} value={adv.result_lie} onChange={v => updateAdvanced(idx, 'result_lie', v)} wrap />
+            {shot.putt_result && shot.putt_result !== 'made' && (
+              <>
+                <Text style={s.formLabel}>Distance Remaining (feet)</Text>
+                <TextInput style={s.input}
+                  value={shot.putt_distance_remaining || ''}
+                  onChangeText={v => updateShot(holeIdx, shotIdx, 'putt_distance_remaining', v)}
+                  keyboardType="number-pad" placeholder="3" placeholderTextColor={colors.gray} />
+              </>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
 
-        <Text style={s.formLabel}>Shot Result</Text>
-        <PillRow options={SHOT_RESULTS} value={adv.shot_result} onChange={v => updateAdvanced(idx, 'shot_result', v)} wrap />
-      </Section>
+  const renderShotSection = (holeIdx: number, shotIdx: number) => {
+    // Check if this is a putt
+    if (isPuttShot(holeIdx, shotIdx)) {
+      return renderPuttSection(holeIdx, shotIdx);
+    }
+
+    const shot = holeEntries[holeIdx]?.shots[shotIdx];
+    if (!shot) return null;
+    const sectionKey = `shot-${holeIdx}-${shotIdx}`;
+    const isOpen = expandedShots[sectionKey] ?? (shotIdx === 0);
+    const summary = [shot.club, INTENTIONS.find(i => i.key === shot.intention)?.label, shot.result_lie].filter(Boolean).join(' · ');
+    const showGreenGrid = shot.intention === 'hit_green' || shot.result_lie === 'Green' || shot.result_lie === 'Fringe';
+
+    return (
+      <View key={shotIdx} style={s.section}>
+        <TouchableOpacity style={s.sectionHeader} onPress={() => toggleShotExpanded(sectionKey)}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.sectionTitle}>Shot {shotIdx + 1}{summary ? `: ${summary}` : ''}</Text>
+          </View>
+          <Text style={s.sectionArrow}>{isOpen ? '▾' : '▸'}</Text>
+        </TouchableOpacity>
+        {isOpen && (
+          <View style={s.sectionBody}>
+            <Text style={s.formLabel}>Club</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <PillRow options={userBag && userBag.length > 0 ? userBag.filter(c => c !== 'Putter') : CLUBS.filter(c => c !== 'Putter')} value={shot.club} onChange={v => updateShot(holeIdx, shotIdx, 'club', v)} />
+            </ScrollView>
+            {(!userBag || userBag.length === 0) && <Text style={{ fontSize: 11, color: colors.grayDark, marginTop: 2 }}>Edit your bag in Profile</Text>}
+
+            <Text style={s.formLabel}>Intention</Text>
+            <View style={[s.pillRow, { flexWrap: 'wrap' }]}>
+              {INTENTIONS.map(opt => (
+                <TouchableOpacity key={opt.key} style={[s.pill, shot.intention === opt.key && s.pillActive]}
+                  onPress={() => updateShot(holeIdx, shotIdx, 'intention', shot.intention === opt.key ? '' : opt.key)}>
+                  <Text style={[s.pillText, shot.intention === opt.key && s.pillTextActive]}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {shot.intention === 'lay_up' && (
+              <>
+                <Text style={s.formLabel}>Target Distance (yards)</Text>
+                <TextInput style={s.input}
+                  value={shot.layup_target_distance ? String(shot.layup_target_distance) : ''}
+                  onChangeText={v => updateShot(holeIdx, shotIdx, 'layup_target_distance', parseInt(v) || 0)}
+                  keyboardType="number-pad" placeholder="100" placeholderTextColor={colors.gray} />
+              </>
+            )}
+
+            {shot.intention === 'hit_green' && (
+              <>
+                <Text style={s.formLabel}>Pin Position</Text>
+                <Grid3x3 value={shot.pin_position || ''} onChange={v => updateShot(holeIdx, shotIdx, 'pin_position', v)} markerType="pin" />
+                <Text style={s.formLabel}>Aim Point (relative to pin)</Text>
+                <Grid3x3 value={shot.aim_point || ''} onChange={v => updateShot(holeIdx, shotIdx, 'aim_point', v)} markerType="aim" />
+              </>
+            )}
+
+            <Text style={s.formLabel}>Shot Shape</Text>
+            <PillRow options={SHOT_SHAPES} value={shot.shot_shape} onChange={v => updateShot(holeIdx, shotIdx, 'shot_shape', v)} wrap />
+
+            <Text style={s.formLabel}>Result — Where Did You End Up?</Text>
+            <PillRow options={RESULT_LIES} value={shot.result_lie} onChange={v => updateShot(holeIdx, shotIdx, 'result_lie', v)} wrap />
+
+            <Text style={s.formLabel}>Miss Direction</Text>
+            <PillRow options={MISS_DIRECTIONS} value={shot.miss_direction} onChange={v => updateShot(holeIdx, shotIdx, 'miss_direction', v)} wrap />
+
+            {showGreenGrid && (
+              <>
+                <Text style={s.formLabel}>Green Position</Text>
+                <Text style={{ fontSize: 11, color: colors.grayDark, marginBottom: 6 }}>Inner = on green, outer = missed in that direction</Text>
+                <Grid5x5 value={shot.green_position || ''} onChange={v => updateShot(holeIdx, shotIdx, 'green_position', v)} />
+              </>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Advanced mode: render all shots
+  const renderAdvancedShots = (holeIdx: number) => {
+    const entry = holeEntries[holeIdx];
+    if (!entry || entry.score === 0) return (
+      <View style={{ marginTop: 16, padding: 14, backgroundColor: colors.white, borderRadius: 12, borderWidth: 1, borderColor: colors.grayLight }}>
+        <Text style={{ color: colors.grayDark, textAlign: 'center' }}>Set your score above to track individual shots</Text>
+      </View>
+    );
+    return (
+      <View style={{ marginTop: 8 }}>
+        {entry.shots.map((_, si) => renderShotSection(holeIdx, si))}
+      </View>
     );
   };
 
@@ -342,13 +658,10 @@ export default function LogRound() {
           </View>
           <TextInput style={[s.input, { width: 80 }]} value={strat.distance} onChangeText={v => updateStrategy(idx, 'distance', v)} keyboardType="number-pad" placeholder="yds" placeholderTextColor={colors.gray} />
         </View>
-
         <Text style={s.formLabel}>Intention / Plan</Text>
         <TextInput style={[s.input, { minHeight: 60 }]} value={strat.intention} onChangeText={v => updateStrategy(idx, 'intention', v)} placeholder="What were you trying to do?" placeholderTextColor={colors.gray} multiline />
-
         <Text style={s.formLabel}>Did You Execute?</Text>
         <PillRow options={EXECUTE_OPTIONS} value={strat.executed} onChange={v => updateStrategy(idx, 'executed', v)} />
-
         <Text style={s.formLabel}>Notes (optional)</Text>
         <TextInput style={s.input} value={strat.notes} onChangeText={v => updateStrategy(idx, 'notes', v)} placeholder="Any observations..." placeholderTextColor={colors.gray} multiline />
       </Section>
@@ -363,24 +676,18 @@ export default function LogRound() {
         <Section title="🧘 Pre-Shot" id="mental-pre">
           <Text style={s.formLabel}>How did you feel?</Text>
           <PillRow options={FEELINGS} value={m.pre_feeling} onChange={v => updateMental(idx, 'pre_feeling', v)} wrap />
-
           <Text style={s.formLabel}>Perceived Difficulty (1-5)</Text>
           <ScaleRow value={m.difficulty_rating} onChange={v => updateMental(idx, 'difficulty_rating', v)} />
-
           <Text style={s.formLabel}>Did emotions influence your decision?</Text>
           <PillRow options={['Yes', 'No', 'Somewhat']} value={m.emotions_influenced} onChange={v => updateMental(idx, 'emotions_influenced', v)} />
-
           <Text style={s.formLabel}>Commitment Level (1-5)</Text>
           <ScaleRow value={m.commitment_level} onChange={v => updateMental(idx, 'commitment_level', v)} />
         </Section>
-
         <Section title="🏌️ Post-Shot" id="mental-post">
           <Text style={s.formLabel}>Did you execute your plan?</Text>
           <PillRow options={EXECUTE_OPTIONS} value={m.executed_plan} onChange={v => updateMental(idx, 'executed_plan', v)} />
-
           <Text style={s.formLabel}>How did you react?</Text>
           <PillRow options={REACTIONS} value={m.post_reaction} onChange={v => updateMental(idx, 'post_reaction', v)} />
-
           <Text style={s.formLabel}>Did your reaction match the result?</Text>
           <PillRow options={['Yes', 'No', 'Overreacted', 'Underreacted']} value={m.reaction_matched} onChange={v => updateMental(idx, 'reaction_matched', v)} />
         </Section>
@@ -466,19 +773,13 @@ export default function LogRound() {
         <BackArrow onPress={() => teeSets.length > 0 ? setStep(2) : setStep(1)} label={teeSets.length > 0 ? 'Tees' : 'Courses'} />
         <Text style={s.stepTitle}>Step 3: Round Details</Text>
         <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
-        {selectedTee && (
-          <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color} ({selectedTee.total_yardage} yds)</Text>
-        )}
+        {selectedTee && <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color} ({selectedTee.total_yardage} yds)</Text>}
         {mixedTees && <Text style={s.selectedTeeLabel}>Mixed Tees</Text>}
 
         <Text style={s.formLabel}>Tracking Mode</Text>
         <View style={s.modeGrid}>
           {TRACKING_MODES.map(m => (
-            <TouchableOpacity
-              key={m.key}
-              style={[s.modeCard, trackingMode === m.key && s.modeCardActive]}
-              onPress={() => setTrackingMode(m.key)}
-            >
+            <TouchableOpacity key={m.key} style={[s.modeCard, trackingMode === m.key && s.modeCardActive]} onPress={() => setTrackingMode(m.key)}>
               <Text style={s.modeEmoji}>{m.emoji}</Text>
               <Text style={[s.modeLabel, trackingMode === m.key && s.modeLabelActive]}>{m.label}</Text>
               <Text style={[s.modeDesc, trackingMode === m.key && s.modeDescActive]}>{m.desc}</Text>
@@ -504,6 +805,16 @@ export default function LogRound() {
           </View>
         )}
 
+        <Text style={s.formLabel}>Track Wedge & In</Text>
+        <View style={s.toggleRow}>
+          <TouchableOpacity style={[s.toggleBtn, trackWedgeAndIn && s.toggleBtnActive]} onPress={() => setTrackWedgeAndIn(true)}>
+            <Text style={[s.toggleBtnText, trackWedgeAndIn && s.toggleBtnTextActive]}>Yes</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.toggleBtn, !trackWedgeAndIn && s.toggleBtnActive]} onPress={() => setTrackWedgeAndIn(false)}>
+            <Text style={[s.toggleBtnText, !trackWedgeAndIn && s.toggleBtnTextActive]}>No</Text>
+          </TouchableOpacity>
+        </View>
+
         <Text style={s.formLabel}>Date</Text>
         <TextInput style={s.input} value={datePlayed} onChangeText={setDatePlayed} placeholder="YYYY-MM-DD" placeholderTextColor={colors.gray} />
         <Text style={s.formLabel}>Weather</Text>
@@ -525,13 +836,15 @@ export default function LogRound() {
 
   // Step 4: Hole-by-hole
   if (step === 4) {
-    // currentHole is a position within activeIndices (0-based)
     const safePos = Math.min(currentHole, activeIndices.length - 1);
     const actualHoleIdx = activeIndices[safePos] ?? 0;
     const entry = holeEntries[actualHoleIdx];
     const hole = holes[actualHoleIdx];
-    const teeHole = teeHolesData.find(th => th.hole_number === actualHoleIdx + 1);
-    const yardage = teeHole?.yardage || hole?.distance_yards;
+    const holeNum = actualHoleIdx + 1;
+    const teeHole = mixedTees && entry.tee_set_id
+      ? allTeeHolesData.find(th => th.tee_set_id === entry.tee_set_id && th.hole_number === holeNum)
+      : teeHolesData.find(th => th.hole_number === holeNum);
+    const yardage = entry.custom_yardage || teeHole?.yardage || hole?.distance_yards;
     const modeInfo = TRACKING_MODES.find(m => m.key === trackingMode);
 
     return (
@@ -548,7 +861,7 @@ export default function LogRound() {
           <View style={s.holeSelector}>
             {activeIndices.map((idx, pos) => (
               <TouchableOpacity key={idx} style={[s.holePill, safePos === pos && s.holePillActive, holeEntries[idx]?.score > 0 && s.holePillDone]}
-                onPress={() => { setCurrentHole(pos); setExpandedSection(null); }}>
+                onPress={() => { setCurrentHole(pos); setExpandedSection(null); setExpandedShots({}); }}>
                 <Text style={[s.holePillText, safePos === pos && s.holePillTextActive]}>{idx + 1}</Text>
               </TouchableOpacity>
             ))}
@@ -639,6 +952,20 @@ export default function LogRound() {
           </TouchableOpacity>
         </View>
 
+        {trackWedgeAndIn && (
+          <>
+            <Text style={s.formLabel}>Wedge & In?</Text>
+            <View style={s.toggleRow}>
+              <TouchableOpacity style={[s.toggleBtn, entry.wedge_and_in === true && s.toggleBtnActive]} onPress={() => updateHoleEntry(actualHoleIdx, 'wedge_and_in', true)}>
+                <Text style={[s.toggleBtnText, entry.wedge_and_in === true && s.toggleBtnTextActive]}>Yes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.toggleBtn, entry.wedge_and_in === false && s.toggleBtnActive]} onPress={() => updateHoleEntry(actualHoleIdx, 'wedge_and_in', false)}>
+                <Text style={[s.toggleBtnText, entry.wedge_and_in === false && s.toggleBtnTextActive]}>No</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
         <Text style={s.formLabel}>Penalties</Text>
         <View style={s.counterRow}>
           <TouchableOpacity style={s.counterBtn} onPress={() => entry.penalties > 0 && updateHoleEntry(actualHoleIdx, 'penalties', entry.penalties - 1)}>
@@ -651,19 +978,19 @@ export default function LogRound() {
         </View>
 
         {/* Mode-specific fields */}
-        {trackingMode === 'advanced' && renderAdvancedFields(actualHoleIdx)}
+        {trackingMode === 'advanced' && renderAdvancedShots(actualHoleIdx)}
         {trackingMode === 'strategy' && renderStrategyFields(actualHoleIdx)}
         {trackingMode === 'mental' && renderMentalFields(actualHoleIdx)}
 
         <View style={s.holeNav}>
           {safePos > 0 && (
-            <TouchableOpacity style={s.backBtn} onPress={() => { setCurrentHole(safePos - 1); setExpandedSection(null); }}>
+            <TouchableOpacity style={s.backBtn} onPress={() => { setCurrentHole(safePos - 1); setExpandedSection(null); setExpandedShots({}); }}>
               <Text style={s.backBtnText}>← Hole {activeIndices[safePos - 1] + 1}</Text>
             </TouchableOpacity>
           )}
           <View style={{ flex: 1 }} />
           {safePos < activeIndices.length - 1 ? (
-            <TouchableOpacity style={s.goldBtn} onPress={() => { setCurrentHole(safePos + 1); setExpandedSection(null); }}>
+            <TouchableOpacity style={s.goldBtn} onPress={() => { setCurrentHole(safePos + 1); setExpandedSection(null); setExpandedShots({}); }}>
               <Text style={s.goldBtnText}>Hole {activeIndices[safePos + 1] + 1} →</Text>
             </TouchableOpacity>
           ) : (
@@ -708,6 +1035,7 @@ export default function LogRound() {
           <Text style={[s.reviewCell, s.reviewHeaderText]}>Putts</Text>
           <Text style={[s.reviewCell, s.reviewHeaderText]}>FW</Text>
           <Text style={[s.reviewCell, s.reviewHeaderText]}>GIR</Text>
+          {trackWedgeAndIn && <Text style={[s.reviewCell, s.reviewHeaderText]}>W&I</Text>}
         </View>
         {activeIndices.map((i, pos) => {
           const e = holeEntries[i];
@@ -719,6 +1047,7 @@ export default function LogRound() {
               <Text style={s.reviewCell}>{e.putts || '—'}</Text>
               <Text style={s.reviewCell}>{e.fairway_hit === null ? '—' : e.fairway_hit ? '✓' : '✗'}</Text>
               <Text style={s.reviewCell}>{e.gir ? '✓' : '✗'}</Text>
+              {trackWedgeAndIn && <Text style={s.reviewCell}>{e.wedge_and_in === null ? '—' : e.wedge_and_in ? '✓' : '✗'}</Text>}
             </TouchableOpacity>
           );
         })}
@@ -803,7 +1132,6 @@ const s = StyleSheet.create({
   reviewScore: { fontWeight: '700' },
   under: { color: colors.green },
   over: { color: colors.red },
-  // Hole selection
   holeSelRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   holeSelPill: { flex: 1, paddingVertical: 10, borderRadius: 20, borderWidth: 2, borderColor: colors.grayLight, alignItems: 'center', backgroundColor: colors.white },
   holeSelPillActive: { backgroundColor: colors.primary, borderColor: colors.gold },
@@ -814,7 +1142,6 @@ const s = StyleSheet.create({
   customHoleBtnActive: { backgroundColor: colors.primary, borderColor: colors.gold },
   customHoleBtnText: { fontSize: 15, fontWeight: '700', color: colors.grayDark },
   customHoleBtnTextActive: { color: colors.gold },
-  // Mode selection
   modeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   modeCard: { width: '48%' as any, backgroundColor: colors.white, borderRadius: 12, padding: 14, borderWidth: 2, borderColor: colors.grayLight, alignItems: 'center' },
   modeCardActive: { borderColor: colors.gold, backgroundColor: colors.primaryDark },
@@ -825,22 +1152,35 @@ const s = StyleSheet.create({
   modeDescActive: { color: colors.grayLight },
   modeBadge: { backgroundColor: colors.primaryDark, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', marginBottom: 12 },
   modeBadgeText: { color: colors.gold, fontSize: 12, fontWeight: '600' },
-  // Pills
   pillRow: { flexDirection: 'row', gap: 6, marginBottom: 4 },
   pill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.grayLight },
   pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  pillMade: { backgroundColor: colors.green, borderColor: colors.green },
   pillText: { fontSize: 13, fontWeight: '600', color: colors.grayDark },
   pillTextActive: { color: colors.white },
-  // Scale
   scaleRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
   scaleBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.grayLight, alignItems: 'center', justifyContent: 'center' },
   scaleBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   scaleBtnText: { fontSize: 16, fontWeight: '700', color: colors.grayDark },
   scaleBtnTextActive: { color: colors.gold },
-  // Sections
   section: { backgroundColor: colors.white, borderRadius: 12, marginTop: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.grayLight },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, backgroundColor: colors.primaryDark },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.gold },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.gold, flex: 1 },
   sectionArrow: { fontSize: 16, color: colors.gold },
   sectionBody: { padding: 14 },
+  // 3x3 grid
+  grid3x3: { alignSelf: 'center', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.grayLight },
+  gridRow: { flexDirection: 'row' },
+  grid3Cell: { width: 52, height: 52, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight, borderWidth: 0.5, borderColor: colors.primary },
+  grid3CellText: { fontSize: 12, fontWeight: '700', color: colors.white },
+  gridCellSelected: { backgroundColor: colors.gold, borderColor: colors.gold, borderWidth: 2 },
+  gridCellTextSelected: { color: colors.primaryDark, fontWeight: '800' },
+  // 5x5 grid
+  grid5x5: { alignSelf: 'center', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.grayLight },
+  grid5Cell: { width: 52, height: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: colors.grayLight },
+  grid5OnGreen: { backgroundColor: colors.primaryLight },
+  grid5OffGreen: { backgroundColor: colors.offWhite },
+  grid5CellText: { fontSize: 12, fontWeight: '700' },
+  grid5OnGreenText: { color: colors.white },
+  grid5OffGreenText: { color: colors.grayDark },
 });

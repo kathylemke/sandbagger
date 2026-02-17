@@ -34,6 +34,8 @@ export default function Stats() {
   const [avgPutts, setAvgPutts] = useState(0);
   const [clubs, setClubs] = useState<ClubStat[]>([]);
   const [scoreData, setScoreData] = useState<{ label: string; value: number }[]>([]);
+  const [wedgeInMade, setWedgeInMade] = useState(0);
+  const [wedgeInTotal, setWedgeInTotal] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -64,7 +66,7 @@ export default function Stats() {
     const roundIds = rds.map(r => r.id);
     if (roundIds.length) {
       const { data: scores } = await supabase.from('sb_hole_scores')
-        .select('fairway_hit, gir, putts')
+        .select('fairway_hit, gir, putts, wedge_and_in')
         .in('round_id', roundIds);
 
       if (scores?.length) {
@@ -74,6 +76,11 @@ export default function Stats() {
         if (fwHoles.length) setFwPct(Math.round(fwHoles.filter(s => s.fairway_hit).length / fwHoles.length * 100));
         if (girHoles.length) setGirPct(Math.round(girHoles.filter(s => s.gir).length / girHoles.length * 100));
         if (puttHoles.length) setAvgPutts(Math.round(puttHoles.reduce((s, h) => s + h.putts, 0) / rds.length * 10) / 10);
+
+        // Wedge & In stats
+        const wedgeHoles = scores.filter((sc: any) => sc.wedge_and_in !== null && sc.wedge_and_in !== undefined);
+        setWedgeInTotal(wedgeHoles.length);
+        setWedgeInMade(wedgeHoles.filter((sc: any) => sc.wedge_and_in === true).length);
       }
 
       // Club distances
@@ -132,6 +139,26 @@ export default function Stats() {
 
           <Text style={s.sectionTitle}>Rounds Played</Text>
           <Text style={s.roundCount}>{rounds.length} rounds</Text>
+
+          {wedgeInTotal > 0 && (
+            <>
+              <Text style={s.sectionTitle}>Wedge & In</Text>
+              <View style={s.summaryRow}>
+                <View style={s.summaryCard}>
+                  <Text style={s.summaryNum}>{wedgeInMade}</Text>
+                  <Text style={s.summaryLabel}>Made</Text>
+                </View>
+                <View style={s.summaryCard}>
+                  <Text style={s.summaryNum}>{wedgeInTotal > 0 ? Math.round(wedgeInMade / wedgeInTotal * 100) : 0}%</Text>
+                  <Text style={s.summaryLabel}>Avg/Hole</Text>
+                </View>
+                <View style={s.summaryCard}>
+                  <Text style={s.summaryNum}>{wedgeInTotal}</Text>
+                  <Text style={s.summaryLabel}>Tracked</Text>
+                </View>
+              </View>
+            </>
+          )}
 
           {clubs.length > 0 && (
             <>

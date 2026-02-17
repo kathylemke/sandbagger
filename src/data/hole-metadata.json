@@ -1,405 +1,148 @@
 {
   "a0000001-0000-0000-0000-000000000001": {
     "1": {
-      "shape": "dogleg_right",
-      "green_shape": "oval",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "downhill",
-      "hazards": [
-        {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 260
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "trees",
-          "location": "left"
-        }
-      ],
-      "notes": "Downhill opener, dogleg right"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "2": {
-      "shape": "straight",
-      "green_shape": "tiered",
-      "fairway_width": "<30 yds",
-      "elevation_change": "uphill",
-      "hazards": [
-        {
-          "type": "greenside_bunker",
-          "location": "left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "right"
-        },
-        {
-          "type": "forced_carry",
-          "location": "front",
-          "carry_distance": 150
-        }
-      ],
-      "notes": "Uphill par 3, bunkers both sides"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "3": {
-      "shape": "dogleg_left",
-      "green_shape": "kidney",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "downhill",
-      "hazards": [
-        {
-          "type": "water",
-          "location": "left",
-          "distance_from_tee": 280
-        },
-        {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 250
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "back_left"
-        }
-      ],
-      "notes": "Par 5, water left off tee"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "4": {
-      "shape": "straight",
-      "green_shape": "oval",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "flat",
-      "hazards": [
-        {
-          "type": "fairway_bunker",
-          "location": "left",
-          "distance_from_tee": 240
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_right"
-        },
-        {
-          "type": "trees",
-          "location": "right"
-        }
-      ],
-      "notes": "Straightaway par 4"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "5": {
-      "shape": "dogleg_right",
-      "green_shape": "tiered",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "uphill",
-      "hazards": [
-        {
-          "type": "greenside_bunker",
-          "location": "left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "back_right"
-        },
-        {
-          "type": "trees",
-          "location": "left"
-        }
-      ],
-      "notes": "Uphill dogleg right"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "6": {
-      "shape": "straight",
-      "green_shape": "long_narrow",
-      "fairway_width": "<30 yds",
-      "elevation_change": "downhill",
-      "hazards": [
-        {
-          "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "right"
-        },
-        {
-          "type": "water",
-          "location": "front"
-        }
-      ],
-      "notes": "Par 3 over water"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "7": {
-      "shape": "dogleg_left",
-      "green_shape": "wide_shallow",
-      "fairway_width": ">50 yds",
-      "elevation_change": "downhill",
-      "hazards": [
-        {
-          "type": "fairway_bunker",
-          "location": "left",
-          "distance_from_tee": 270
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "left"
-        },
-        {
-          "type": "trees",
-          "location": "right"
-        }
-      ],
-      "notes": "Wide fairway, downhill"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "8": {
-      "shape": "straight",
-      "green_shape": "kidney",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "undulating",
-      "hazards": [
-        {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 250
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "back_right"
-        }
-      ],
-      "notes": "Undulating par 4"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "9": {
-      "shape": "dogleg_left",
-      "green_shape": "tiered",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "uphill",
-      "hazards": [
-        {
-          "type": "water",
-          "location": "left",
-          "distance_from_tee": 300
-        },
-        {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 270
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "surrounds"
-        }
-      ],
-      "notes": "Turn for home, water left"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "10": {
-      "shape": "straight",
-      "green_shape": "oval",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "downhill",
-      "hazards": [
-        {
-          "type": "fairway_bunker",
-          "location": "left",
-          "distance_from_tee": 260
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_right"
-        },
-        {
-          "type": "trees",
-          "location": "left"
-        }
-      ],
-      "notes": "Downhill par 4"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "11": {
-      "shape": "dogleg_right",
-      "green_shape": "tiered",
-      "fairway_width": ">50 yds",
-      "elevation_change": "flat",
-      "hazards": [
-        {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 280
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "back_left"
-        },
-        {
-          "type": "trees",
-          "location": "right"
-        }
-      ],
-      "notes": "Wide par 5"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "12": {
-      "shape": "straight",
-      "green_shape": "long_narrow",
-      "fairway_width": "<30 yds",
-      "elevation_change": "uphill",
-      "hazards": [
-        {
-          "type": "greenside_bunker",
-          "location": "left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "right"
-        },
-        {
-          "type": "forced_carry",
-          "location": "front",
-          "carry_distance": 170
-        }
-      ],
-      "notes": "Uphill par 3, narrow green"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "13": {
-      "shape": "dogleg_left",
-      "green_shape": "kidney",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "downhill",
-      "hazards": [
-        {
-          "type": "water",
-          "location": "left",
-          "distance_from_tee": 250
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_left"
-        },
-        {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 240
-        }
-      ],
-      "notes": "Water in play off tee"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "14": {
-      "shape": "straight",
-      "green_shape": "oval",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "undulating",
-      "hazards": [
-        {
-          "type": "fairway_bunker",
-          "location": "left",
-          "distance_from_tee": 260
-        },
-        {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 270
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_right"
-        }
-      ],
-      "notes": "Two fairway bunkers"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "15": {
-      "shape": "dogleg_right",
-      "green_shape": "tiered",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "uphill",
-      "hazards": [
-        {
-          "type": "greenside_bunker",
-          "location": "left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "back_right"
-        },
-        {
-          "type": "trees",
-          "location": "left"
-        }
-      ],
-      "notes": "Dogleg right uphill"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "16": {
-      "shape": "straight",
-      "green_shape": "wide_shallow",
-      "fairway_width": "<30 yds",
-      "elevation_change": "downhill",
-      "hazards": [
-        {
-          "type": "water",
-          "location": "front"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "right"
-        }
-      ],
-      "notes": "Par 3 over ravine"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "17": {
-      "shape": "dogleg_left",
-      "green_shape": "kidney",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "downhill",
-      "hazards": [
-        {
-          "type": "water",
-          "location": "left",
-          "distance_from_tee": 280
-        },
-        {
-          "type": "fairway_bunker",
-          "location": "right",
-          "distance_from_tee": 260
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "front_left"
-        }
-      ],
-      "notes": "Signature hole, water left"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     },
     "18": {
-      "shape": "straight",
-      "green_shape": "tiered",
-      "fairway_width": "30-50 yds",
-      "elevation_change": "uphill",
-      "hazards": [
-        {
-          "type": "water",
-          "location": "left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "left"
-        },
-        {
-          "type": "greenside_bunker",
-          "location": "right"
-        },
-        {
-          "type": "forced_carry",
-          "location": "front",
-          "carry_distance": 200
-        }
-      ],
-      "notes": "Finishing hole, water left of green"
+      "shape": "",
+      "green_shape": "",
+      "fairway_width": "",
+      "elevation_change": "",
+      "hazards": [],
+      "notes": ""
     }
   },
   "a0000002-0000-0000-0000-000000000001": {

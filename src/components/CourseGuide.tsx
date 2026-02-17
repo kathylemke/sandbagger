@@ -229,7 +229,8 @@ export default function CourseGuide({ courseId, courseName, visible, onClose }: 
                           <View style={{ flex: 1 }}>
                             <Text style={g.hazardText}>{getHazardLabel(h.type)} — {getLocationLabel(h.location)}</Text>
                             <View style={{ flexDirection: 'row', gap: 8 }}>
-                              {h.distance_from_tee && <Text style={g.hazardDist}>{h.distance_from_tee} yds from tee</Text>}
+                              {h.distance_from_green && <Text style={g.hazardDist}>{h.distance_from_green} yds to green</Text>}
+                              {!h.distance_from_green && h.distance_from_tee && <Text style={g.hazardDist}>{h.distance_from_tee} yds from tee</Text>}
                               {h.distance_from_green && <Text style={g.hazardDist}>{h.distance_from_green} yds from green</Text>}
                               {h.carry_distance && <Text style={g.hazardDist}>Carry: {h.carry_distance} yds</Text>}
                             </View>
