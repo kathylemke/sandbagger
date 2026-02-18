@@ -40,6 +40,10 @@ export default function Stats() {
   const [wedgeInMade, setWedgeInMade] = useState(0);
   const [wedgeInTotal, setWedgeInTotal] = useState(0);
   const [recentRounds, setRecentRounds] = useState<RecentRound[]>([]);
+  const [onePutts, setOnePutts] = useState(0);
+  const [threePutts, setThreePutts] = useState(0);
+  const [missLPct, setMissLPct] = useState(0);
+  const [missRPct, setMissRPct] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -70,7 +74,7 @@ export default function Stats() {
     const roundIds = rds.map(r => r.id);
     if (roundIds.length) {
       const { data: scores } = await supabase.from('sb_hole_scores')
-        .select('fairway_hit, gir, putts, wedge_and_in')
+        .select('fairway_hit, fairway_miss_dir, gir, putts, wedge_and_in')
         .in('round_id', roundIds);
 
       if (scores?.length) {
@@ -80,6 +84,19 @@ export default function Stats() {
         if (fwHoles.length) setFwPct(Math.round(fwHoles.filter(s => s.fairway_hit).length / fwHoles.length * 100));
         if (girHoles.length) setGirPct(Math.round(girHoles.filter(s => s.gir).length / girHoles.length * 100));
         if (puttHoles.length) setAvgPutts(Math.round(puttHoles.reduce((s, h) => s + h.putts, 0) / rds.length * 10) / 10);
+
+        // 1-putts and 3-putts
+        setOnePutts(puttHoles.filter(s => s.putts === 1).length);
+        setThreePutts(puttHoles.filter(s => s.putts >= 3).length);
+
+        // Fairway miss direction
+        const fwMisses = scores.filter((sc: any) => sc.fairway_hit === false && sc.fairway_miss_dir);
+        if (fwMisses.length) {
+          const missL = fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'L').length;
+          const missR = fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'R').length;
+          setMissLPct(Math.round(missL / fwMisses.length * 100));
+          setMissRPct(Math.round(missR / fwMisses.length * 100));
+        }
 
         // Wedge & In stats
         const wedgeHoles = scores.filter((sc: any) => sc.wedge_and_in !== null && sc.wedge_and_in !== undefined && typeof sc.wedge_and_in === 'number');
@@ -172,6 +189,30 @@ export default function Stats() {
               <Text style={s.summaryNum}>{avgPutts || '—'}</Text>
               <Text style={s.summaryLabel}>Putts/Rnd</Text>
             </View>
+          </View>
+
+          {/* Putting & Miss Direction */}
+          <View style={s.summaryRow}>
+            <View style={s.summaryCard}>
+              <Text style={s.summaryNum}>{onePutts}</Text>
+              <Text style={s.summaryLabel}>1-Putts</Text>
+            </View>
+            <View style={s.summaryCard}>
+              <Text style={s.summaryNum}>{threePutts}</Text>
+              <Text style={s.summaryLabel}>3-Putts</Text>
+            </View>
+            {(missLPct > 0 || missRPct > 0) && (
+              <>
+                <View style={s.summaryCard}>
+                  <Text style={s.summaryNum}>{missLPct}%</Text>
+                  <Text style={s.summaryLabel}>Miss L</Text>
+                </View>
+                <View style={s.summaryCard}>
+                  <Text style={s.summaryNum}>{missRPct}%</Text>
+                  <Text style={s.summaryLabel}>Miss R</Text>
+                </View>
+              </>
+            )}
           </View>
 
           <Text style={s.sectionTitle}>Scoring Trend (Last 10)</Text>

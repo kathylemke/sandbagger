@@ -56,6 +56,7 @@ interface HoleEntry {
   score: number;
   putts: number;
   fairway_hit: boolean | null;
+  fairway_miss_dir: string | null;
   gir: boolean;
   penalties: number;
   wedge_and_in: number | null;
@@ -196,7 +197,7 @@ export default function LogRound() {
 
   const initHoleEntries = (numH: number) => {
     return Array(numH).fill(null).map(() => ({
-      score: 0, putts: 0, fairway_hit: null as boolean | null, gir: false, penalties: 0, wedge_and_in: null as number | null,
+      score: 0, putts: 0, fairway_hit: null as boolean | null, fairway_miss_dir: null as string | null, gir: false, penalties: 0, wedge_and_in: null as number | null,
       shots: [] as ShotData[], strategy: defaultStrategy(), mental: defaultMental(),
     }));
   };
@@ -263,6 +264,10 @@ export default function LogRound() {
     setHoleEntries(prev => prev.map((e, i) => {
       if (i !== idx) return e;
       const updated = { ...e, [field]: value };
+      // Reset fairway_miss_dir when fairway_hit changes to non-false
+      if (field === 'fairway_hit' && value !== false) {
+        updated.fairway_miss_dir = null;
+      }
       // Sync shots array when score changes in advanced mode
       if (field === 'score' && trackingMode === 'advanced') {
         const newScore = value as number;
@@ -340,7 +345,7 @@ export default function LogRound() {
         const e = holeEntries[i];
         const base: any = {
           round_id: round.id, hole_id: holes[i]?.id || null, hole_number: i + 1,
-          score: e.score, putts: e.putts, fairway_hit: e.fairway_hit, gir: e.gir, penalties: e.penalties, wedge_and_in: trackWedgeAndIn ? e.wedge_and_in : null,
+          score: e.score, putts: e.putts, fairway_hit: e.fairway_hit, fairway_miss_dir: e.fairway_hit === false ? e.fairway_miss_dir : null, gir: e.gir, penalties: e.penalties, wedge_and_in: trackWedgeAndIn ? e.wedge_and_in : null,
         };
         if (trackingMode === 'advanced' && e.shots.length > 0) {
           base.notes = JSON.stringify({ mode: 'advanced', shots: e.shots });
@@ -942,6 +947,34 @@ export default function LogRound() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {entry.fairway_hit === false && (
+          <>
+            <Text style={s.formLabel}>Miss Direction</Text>
+            <View style={s.toggleRow}>
+              <TouchableOpacity style={[s.toggleBtn, entry.fairway_miss_dir === 'L' && s.toggleBtnActive]} onPress={() => updateHoleEntry(actualHoleIdx, 'fairway_miss_dir', entry.fairway_miss_dir === 'L' ? null : 'L')}>
+                <Text style={[s.toggleBtnText, entry.fairway_miss_dir === 'L' && s.toggleBtnTextActive]}>← L</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.toggleBtn, entry.fairway_miss_dir === 'R' && s.toggleBtnActive]} onPress={() => updateHoleEntry(actualHoleIdx, 'fairway_miss_dir', entry.fairway_miss_dir === 'R' ? null : 'R')}>
+                <Text style={[s.toggleBtnText, entry.fairway_miss_dir === 'R' && s.toggleBtnTextActive]}>R →</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        {entry.fairway_hit === false && (
+          <>
+            <Text style={s.formLabel}>Miss Direction</Text>
+            <View style={s.toggleRow}>
+              {[{ label: 'L', val: 'L' }, { label: 'R', val: 'R' }].map(opt => (
+                <TouchableOpacity key={opt.val} style={[s.toggleBtn, entry.fairway_miss_dir === opt.val && s.toggleBtnActive]}
+                  onPress={() => updateHoleEntry(actualHoleIdx, 'fairway_miss_dir', entry.fairway_miss_dir === opt.val ? null : opt.val)}>
+                  <Text style={[s.toggleBtnText, entry.fairway_miss_dir === opt.val && s.toggleBtnTextActive]}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         <Text style={s.formLabel}>Green in Regulation</Text>
         <View style={s.toggleRow}>
