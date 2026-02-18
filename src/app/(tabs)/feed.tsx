@@ -72,7 +72,7 @@ export default function Feed() {
     const visibleUserIds = [user.id, ...followingIds];
 
     const { data: roundsData } = await supabase.from('sb_rounds')
-      .select('*, caption, photo_url, sb_courses(id, name, city, state)')
+      .select('*, sb_courses(id, name, city, state)')
       .eq('is_complete', true)
       .in('user_id', visibleUserIds)
       .order('date_played', { ascending: false })
@@ -132,8 +132,8 @@ export default function Feed() {
           birdies: hs.filter((h: any) => h.score && h.par && h.score === h.par - 1).length,
           eagles: hs.filter((h: any) => h.score && h.par && h.score <= h.par - 2).length,
           wedge_total: wedgeTotalsByRound.has(r.id) ? wedgeTotalsByRound.get(r.id)! : null,
-          caption: r.caption || null,
-          photo_url: r.photo_url || null,
+          caption: (() => { try { const n = JSON.parse(r.notes); return n?.caption || null; } catch { return null; } })(),
+          photo_url: (() => { try { const n = JSON.parse(r.notes); return n?.photo_url || null; } catch { return null; } })(),
         };
       });
 

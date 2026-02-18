@@ -340,9 +340,7 @@ export default function LogRound() {
         total_score: totalScore, weather, wind, is_complete: true, visibility, round_type: roundType,
         tee_set_id: selectedTee?.id || null,
         mixed_tees: mixedTees,
-        notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn }),
-        caption: roundCaption || null,
-        photo_url: roundPhoto || null,
+        notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn, caption: roundCaption || null, photo_url: roundPhoto || null }),
       }).select().single();
       if (error) throw error;
 
