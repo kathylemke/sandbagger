@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors, teeColors } from '../../lib/theme';
+import ScoreCell from '../../components/ScoreCell';
 
 type TrackingMode = 'basic' | 'advanced' | 'strategy' | 'mental';
 
@@ -1028,6 +1029,22 @@ export default function LogRound() {
         </View>
       </View>
 
+      {/* Summary Stats */}
+      {(() => {
+        const fwHoles = activeIndices.filter(i => holeEntries[i]?.fairway_hit !== null);
+        const fwHit = fwHoles.filter(i => holeEntries[i]?.fairway_hit === true).length;
+        const girHit = activeIndices.filter(i => holeEntries[i]?.gir).length;
+        const totalWedge = trackWedgeAndIn ? activeIndices.reduce((s, i) => s + (holeEntries[i]?.wedge_and_in || 0), 0) : 0;
+        return (
+          <View style={s.summaryPills}>
+            <View style={s.summaryPill}><Text style={s.summaryPillLabel}>FW</Text><Text style={s.summaryPillValue}>{fwHit}/{fwHoles.length}</Text></View>
+            <View style={s.summaryPill}><Text style={s.summaryPillLabel}>GIR</Text><Text style={s.summaryPillValue}>{girHit}/{activeIndices.length}</Text></View>
+            <View style={s.summaryPill}><Text style={s.summaryPillLabel}>Putts</Text><Text style={s.summaryPillValue}>{totalPutts}</Text></View>
+            {trackWedgeAndIn && <View style={s.summaryPill}><Text style={s.summaryPillLabel}>W&I</Text><Text style={s.summaryPillValue}>{totalWedge}</Text></View>}
+          </View>
+        );
+      })()}
+
       <View style={s.reviewTable}>
         <View style={s.reviewHeaderRow}>
           <Text style={[s.reviewCell, s.reviewHeaderText, { flex: 0.5 }]}>Hole</Text>
@@ -1044,7 +1061,9 @@ export default function LogRound() {
             <TouchableOpacity key={i} style={s.reviewRow} onPress={() => { setCurrentHole(pos); setStep(4); }}>
               <Text style={[s.reviewCell, { flex: 0.5 }]}>{i + 1}</Text>
               <Text style={s.reviewCell}>{holes[i]?.par || '—'}</Text>
-              <Text style={[s.reviewCell, s.reviewScore, e.score && holes[i] && e.score < holes[i].par ? s.under : e.score && holes[i] && e.score > holes[i].par ? s.over : {}]}>{e.score || '—'}</Text>
+              <View style={[{ flex: 1, alignItems: 'center' }]}>
+                <ScoreCell score={e.score} par={holes[i]?.par || 0} size={14} />
+              </View>
               <Text style={s.reviewCell}>{e.putts || '—'}</Text>
               <Text style={s.reviewCell}>{e.fairway_hit === null ? '—' : e.fairway_hit ? '✓' : '✗'}</Text>
               <Text style={s.reviewCell}>{e.gir ? '✓' : '✗'}</Text>
@@ -1125,6 +1144,10 @@ const s = StyleSheet.create({
   reviewBig: { flex: 1, backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center' },
   reviewBigNum: { fontSize: 36, fontWeight: '800', color: colors.gold },
   reviewBigLabel: { fontSize: 12, color: colors.white, opacity: 0.8 },
+  summaryPills: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
+  summaryPill: { flex: 1, minWidth: 70, backgroundColor: colors.primaryDark, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center' },
+  summaryPillLabel: { fontSize: 11, color: colors.grayLight, fontWeight: '600' },
+  summaryPillValue: { fontSize: 18, fontWeight: '800', color: colors.gold, marginTop: 2 },
   reviewTable: { backgroundColor: colors.white, borderRadius: 12, overflow: 'hidden' },
   reviewHeaderRow: { flexDirection: 'row', backgroundColor: colors.primary, padding: 10 },
   reviewHeaderText: { color: colors.white, fontWeight: '700' },

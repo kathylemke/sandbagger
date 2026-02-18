@@ -3,9 +3,12 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
+import ScoreCell from '../../components/ScoreCell';
 
-interface RoundStat { id: string; date_played: string; total_score: number; }
+interface RoundStat { id: string; date_played: string; total_score: number; course_name?: string; }
+interface HoleScore { round_id: string; hole_number: number; score: number; par?: number; }
 interface ClubStat { club: string; avgDistance: number; count: number; }
+interface RecentRound { id: string; date_played: string; total_score: number; course_name: string; holes: { hole_number: number; score: number; par: number }[]; }
 
 function BarChart({ data, maxVal, label }: { data: { label: string; value: number }[]; maxVal: number; label: string }) {
   if (!data.length) return null;
@@ -36,6 +39,7 @@ export default function Stats() {
   const [scoreData, setScoreData] = useState<{ label: string; value: number }[]>([]);
   const [wedgeInMade, setWedgeInMade] = useState(0);
   const [wedgeInTotal, setWedgeInTotal] = useState(0);
+  const [recentRounds, setRecentRounds] = useState<RecentRound[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -81,6 +85,42 @@ export default function Stats() {
         const wedgeHoles = scores.filter((sc: any) => sc.wedge_and_in !== null && sc.wedge_and_in !== undefined && typeof sc.wedge_and_in === 'number');
         setWedgeInTotal(wedgeHoles.length);
         setWedgeInMade(wedgeHoles.reduce((s: number, sc: any) => s + (sc.wedge_and_in || 0), 0));
+      }
+
+      // Recent rounds with hole scores
+      const recentRds = rds.slice(-10).reverse();
+      if (recentRds.length) {
+        // Get course names
+        const courseIds = [...new Set(recentRds.map(() => ''))]; // we need course data
+        const { data: recentFull } = await supabase.from('sb_rounds')
+          .select('id, date_played, total_score, sb_courses(name)')
+          .eq('user_id', user.id).eq('is_complete', true)
+          .order('date_played', { ascending: false })
+          .limit(10);
+        
+        const recentIds = (recentFull || []).map(r => r.id);
+        const { data: holeScores } = await supabase.from('sb_hole_scores')
+          .select('round_id, hole_number, score, sb_holes(par)')
+          .in('round_id', recentIds)
+          .order('hole_number');
+
+        const scoresByRound = new Map<string, { hole_number: number; score: number; par: number }[]>();
+        (holeScores || []).forEach((hs: any) => {
+          if (!scoresByRound.has(hs.round_id)) scoresByRound.set(hs.round_id, []);
+          scoresByRound.get(hs.round_id)!.push({
+            hole_number: hs.hole_number,
+            score: hs.score,
+            par: hs.sb_holes?.par || 4,
+          });
+        });
+
+        setRecentRounds((recentFull || []).map((r: any) => ({
+          id: r.id,
+          date_played: r.date_played,
+          total_score: r.total_score,
+          course_name: r.sb_courses?.name || 'Unknown',
+          holes: (scoresByRound.get(r.id) || []).sort((a, b) => a.hole_number - b.hole_number),
+        })));
       }
 
       // Club distances
@@ -136,6 +176,35 @@ export default function Stats() {
 
           <Text style={s.sectionTitle}>Scoring Trend (Last 10)</Text>
           <BarChart data={scoreData} maxVal={Math.max(...scoreData.map(d => d.value), 72)} label="" />
+
+          {recentRounds.length > 0 && (
+            <>
+              <Text style={s.sectionTitle}>Recent Rounds</Text>
+              {recentRounds.map(r => (
+                <View key={r.id} style={s.recentCard}>
+                  <View style={s.recentHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.recentCourse}>{r.course_name}</Text>
+                      <Text style={s.recentDate}>{new Date(r.date_played).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
+                    </View>
+                    <Text style={s.recentScore}>{r.total_score}</Text>
+                  </View>
+                  {r.holes.length > 0 && (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.miniScorecard}>
+                      <View style={{ flexDirection: 'row', gap: 2 }}>
+                        {r.holes.map((h, idx) => (
+                          <View key={idx} style={s.miniScoreCell}>
+                            <Text style={s.miniHoleNum}>{h.hole_number}</Text>
+                            <ScoreCell score={h.score} par={h.par} size={11} mini />
+                          </View>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  )}
+                </View>
+              ))}
+            </>
+          )}
 
           <Text style={s.sectionTitle}>Rounds Played</Text>
           <Text style={s.roundCount}>{rounds.length} rounds</Text>
@@ -207,4 +276,12 @@ const s = StyleSheet.create({
   clubBarContainer: { flex: 1, height: 20, backgroundColor: colors.grayLight, borderRadius: 10, overflow: 'hidden' },
   clubBar: { height: '100%', backgroundColor: colors.gold, borderRadius: 10 },
   clubDist: { fontSize: 13, fontWeight: '700', color: colors.primary, width: 60, textAlign: 'right' },
+  recentCard: { backgroundColor: colors.white, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.grayLight },
+  recentHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  recentCourse: { fontSize: 15, fontWeight: '700', color: colors.primary },
+  recentDate: { fontSize: 12, color: colors.grayDark, marginTop: 2 },
+  recentScore: { fontSize: 28, fontWeight: '800', color: colors.gold },
+  miniScorecard: { marginTop: 4 },
+  miniScoreCell: { alignItems: 'center', width: 26 },
+  miniHoleNum: { fontSize: 8, color: colors.gray, marginBottom: 1 },
 });
