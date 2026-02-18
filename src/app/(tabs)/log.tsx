@@ -150,9 +150,13 @@ const TRACKING_MODES: { key: TrackingMode; label: string; emoji: string; desc: s
   { key: 'mental', label: 'Mental Game', emoji: '🧘', desc: 'Psychology & emotional awareness' },
 ];
 
+const OPENAI_API_KEY = 'sk-proj-ceUGQnbSF4ZoZXbl0HXNiAaW';
+
 export default function LogRound() {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
+  const [scanning, setScanning] = useState(false);
+  const [scannedFromPhoto, setScannedFromPhoto] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -195,6 +199,83 @@ export default function LogRound() {
       });
     }
   }, []);
+
+  const scanScorecard = async (imageBase64: string) => {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: [
+          { type: 'text', text: 'Extract golf scorecard data from this image. Return ONLY valid JSON with this exact structure: {"course_name": "string", "date": "YYYY-MM-DD", "round_type": "practice|tournament|casual", "caption": "string or null", "holes": [{"hole": 1, "par": 4, "score": 5, "putts": 2, "fairway_hit": true, "gir": false, "wedge_and_in": null},...]} Include all 18 holes. Use null for empty/unclear values. fairway_hit and gir should be true/false/null.' },
+          { type: 'image_url', image_url: { url: imageBase64 } }
+        ] }],
+        max_tokens: 2000,
+      }),
+    });
+    const data = await response.json();
+    const content = data.choices[0].message.content.replace(/```json\n?|```\n?/g, '').trim();
+    return JSON.parse(content);
+  };
+
+  const handleScanScorecard = async (e: any) => {
+    const file = e.target?.files?.[0];
+    if (!file) return;
+    setScanning(true);
+    try {
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev: any) => resolve(ev.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+      const result = await scanScorecard(base64);
+
+      // Try to match course
+      if (result.course_name) {
+        const match = courses.find(c => c.name.toLowerCase().includes(result.course_name.toLowerCase()) || result.course_name.toLowerCase().includes(c.name.toLowerCase()));
+        if (match) {
+          await selectCourse(match);
+        } else {
+          setSearch(result.course_name);
+        }
+      }
+
+      // Set date and round type
+      if (result.date) setDatePlayed(result.date);
+      if (result.round_type) setRoundType(result.round_type as any);
+      if (result.caption) setRoundCaption(result.caption);
+
+      // Fill hole entries
+      if (result.holes && Array.isArray(result.holes)) {
+        const numH = result.holes.length || 18;
+        const entries = initHoleEntries(numH);
+        result.holes.forEach((h: any, i: number) => {
+          if (i < entries.length) {
+            entries[i].score = h.score || 0;
+            entries[i].putts = h.putts || 0;
+            entries[i].fairway_hit = h.fairway_hit ?? null;
+            entries[i].gir = h.gir ?? false;
+            entries[i].wedge_and_in = h.wedge_and_in ?? null;
+          }
+        });
+        setHoleEntries(entries);
+        if (result.holes.some((h: any) => h.wedge_and_in !== null && h.wedge_and_in !== undefined)) {
+          setTrackWedgeAndIn(true);
+        }
+      }
+
+      setScannedFromPhoto(true);
+      setStep(5);
+    } catch (err: any) {
+      if (Platform.OS === 'web') {
+        window.alert(`Scan failed: ${err.message}`);
+      } else {
+        Alert.alert('Scan Error', err.message);
+      }
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const filteredCourses = courses.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -366,7 +447,7 @@ export default function LogRound() {
       } else {
         Alert.alert('Success', `Round saved! Total: ${totalScore}`);
       }
-      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false); setRoundType('practice'); setRoundCaption(''); setRoundPhoto(null);
+      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false); setRoundType('practice'); setRoundCaption(''); setRoundPhoto(null); setScannedFromPhoto(false);
     } catch (e: any) {
       if (Platform.OS === 'web') {
         window.alert(`Error: ${e.message}`);
@@ -710,6 +791,23 @@ export default function LogRound() {
     return (
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
         <Text style={s.stepTitle}>Step 1: Select Course</Text>
+        {Platform.OS === 'web' && (
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            id="scan-scorecard-input"
+            style={{ display: 'none' } as any}
+            onChange={handleScanScorecard}
+          />
+        )}
+        <TouchableOpacity
+          style={[s.goldBtn, { marginTop: 0, marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8 }]}
+          onPress={() => { if (Platform.OS === 'web') document.getElementById('scan-scorecard-input')?.click(); }}
+          disabled={scanning}
+        >
+          <Text style={s.goldBtnText}>{scanning ? '⏳ Scanning scorecard...' : '📷 Scan Scorecard'}</Text>
+        </TouchableOpacity>
         <TextInput style={s.searchInput} placeholder="Search courses..." placeholderTextColor={colors.gray} value={search} onChangeText={setSearch} />
         {filteredCourses.map(c => (
           <TouchableOpacity key={c.id} style={s.courseCard} onPress={() => selectCourse(c)}>
@@ -1041,7 +1139,12 @@ export default function LogRound() {
   // Step 5: Review
   return (
     <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
-      <BackArrow onPress={() => setStep(4)} label="Edit Holes" />
+      <BackArrow onPress={() => scannedFromPhoto ? setStep(4) : setStep(4)} label="Edit Holes" />
+      {scannedFromPhoto && (
+        <View style={{ backgroundColor: '#FEF3C7', borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#F59E0B' }}>
+          <Text style={{ color: '#92400E', fontWeight: '700', fontSize: 14, textAlign: 'center' }}>📷 Scanned from photo — tap any hole to edit</Text>
+        </View>
+      )}
       <Text style={s.stepTitle}>Review & Save</Text>
       <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
       {selectedTee && <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color}</Text>}
