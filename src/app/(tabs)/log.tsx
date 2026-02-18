@@ -938,6 +938,21 @@ export default function LogRound() {
           </TouchableOpacity>
         </View>
 
+        {trackWedgeAndIn && (
+          <>
+            <Text style={s.formLabel}>Wedge & In Shots</Text>
+            <View style={s.counterRow}>
+              <TouchableOpacity style={s.counterBtn} onPress={() => (entry.wedge_and_in || 0) > 0 && updateHoleEntry(actualHoleIdx, 'wedge_and_in', (entry.wedge_and_in || 0) - 1)}>
+                <Text style={s.counterBtnText}>−</Text>
+              </TouchableOpacity>
+              <Text style={s.counterVal}>{entry.wedge_and_in || 0}</Text>
+              <TouchableOpacity style={s.counterBtn} onPress={() => updateHoleEntry(actualHoleIdx, 'wedge_and_in', (entry.wedge_and_in || 0) + 1)}>
+                <Text style={s.counterBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
         <Text style={s.formLabel}>Putts</Text>
         <View style={s.counterRow}>
           <TouchableOpacity style={s.counterBtn} onPress={() => entry.putts > 0 && updateHoleEntry(actualHoleIdx, 'putts', entry.putts - 1)}>
@@ -983,20 +998,6 @@ export default function LogRound() {
           </TouchableOpacity>
         </View>
 
-        {trackWedgeAndIn && (
-          <>
-            <Text style={s.formLabel}>Wedge & In Shots</Text>
-            <View style={s.counterRow}>
-              <TouchableOpacity style={s.counterBtn} onPress={() => (entry.wedge_and_in || 0) > 0 && updateHoleEntry(actualHoleIdx, 'wedge_and_in', (entry.wedge_and_in || 0) - 1)}>
-                <Text style={s.counterBtnText}>−</Text>
-              </TouchableOpacity>
-              <Text style={s.counterVal}>{entry.wedge_and_in || 0}</Text>
-              <TouchableOpacity style={s.counterBtn} onPress={() => updateHoleEntry(actualHoleIdx, 'wedge_and_in', (entry.wedge_and_in || 0) + 1)}>
-                <Text style={s.counterBtnText}>+</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
 
         <Text style={s.formLabel}>Penalties</Text>
         <View style={s.counterRow}>
