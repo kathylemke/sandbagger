@@ -171,6 +171,8 @@ export default function LogRound() {
   const [holeEntries, setHoleEntries] = useState<HoleEntry[]>([]);
   const [currentHole, setCurrentHole] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [roundCaption, setRoundCaption] = useState('');
+  const [roundPhoto, setRoundPhoto] = useState<string | null>(null);
   const [showNewCourse, setShowNewCourse] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
   const [newCourseCity, setNewCourseCity] = useState('');
@@ -339,6 +341,8 @@ export default function LogRound() {
         tee_set_id: selectedTee?.id || null,
         mixed_tees: mixedTees,
         notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn }),
+        caption: roundCaption || null,
+        photo_url: roundPhoto || null,
       }).select().single();
       if (error) throw error;
 
@@ -364,7 +368,7 @@ export default function LogRound() {
       } else {
         Alert.alert('Success', `Round saved! Total: ${totalScore}`);
       }
-      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false); setRoundType('practice');
+      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false); setRoundType('practice'); setRoundCaption(''); setRoundPhoto(null);
     } catch (e: any) {
       if (Platform.OS === 'web') {
         window.alert(`Error: ${e.message}`);
@@ -1048,6 +1052,58 @@ export default function LogRound() {
       <View style={s.modeBadge}>
         <Text style={s.modeBadgeText}>{TRACKING_MODES.find(m => m.key === trackingMode)?.emoji} {TRACKING_MODES.find(m => m.key === trackingMode)?.label} Mode</Text>
       </View>
+
+      {visibility !== 'private' && (
+        <View style={{ marginBottom: 16 }}>
+          <Text style={s.formLabel}>Caption</Text>
+          <TextInput
+            style={[s.input, { minHeight: 60 }]}
+            value={roundCaption}
+            onChangeText={setRoundCaption}
+            placeholder="Add a caption to your round..."
+            placeholderTextColor={colors.gray}
+            multiline
+          />
+          <Text style={s.formLabel}>Photo</Text>
+          {Platform.OS === 'web' && (
+            <input
+              type="file"
+              accept="image/*"
+              id="round-photo-input"
+              style={{ display: 'none' } as any}
+              onChange={(e: any) => {
+                const file = e.target?.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev: any) => setRoundPhoto(ev.target?.result as string);
+                reader.readAsDataURL(file);
+              }}
+            />
+          )}
+          {!roundPhoto ? (
+            <TouchableOpacity
+              style={{ backgroundColor: colors.gold, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16, alignSelf: 'flex-start' }}
+              onPress={() => {
+                if (Platform.OS === 'web') {
+                  document.getElementById('round-photo-input')?.click();
+                }
+              }}
+            >
+              <Text style={{ color: colors.primaryDark, fontWeight: '700', fontSize: 14 }}>📷 Add Photo</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ position: 'relative', alignSelf: 'flex-start' }}>
+              <img src={roundPhoto} style={{ width: 120, height: 120, borderRadius: 10, objectFit: 'cover' } as any} />
+              <TouchableOpacity
+                style={{ position: 'absolute', top: -8, right: -8, backgroundColor: colors.red, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
+                onPress={() => setRoundPhoto(null)}
+              >
+                <Text style={{ color: colors.white, fontWeight: '700', fontSize: 14 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
 
       <View style={s.reviewScoreCard}>
         <View style={s.reviewBig}>

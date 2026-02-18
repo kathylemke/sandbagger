@@ -20,6 +20,8 @@ interface FeedRound {
   birdies: number;
   eagles: number;
   wedge_total: number | null;
+  caption: string | null;
+  photo_url: string | null;
 }
 
 interface HoleScore {
@@ -70,7 +72,7 @@ export default function Feed() {
     const visibleUserIds = [user.id, ...followingIds];
 
     const { data: roundsData } = await supabase.from('sb_rounds')
-      .select('*, sb_courses(id, name, city, state)')
+      .select('*, caption, photo_url, sb_courses(id, name, city, state)')
       .eq('is_complete', true)
       .in('user_id', visibleUserIds)
       .order('date_played', { ascending: false })
@@ -130,6 +132,8 @@ export default function Feed() {
           birdies: hs.filter((h: any) => h.score && h.par && h.score === h.par - 1).length,
           eagles: hs.filter((h: any) => h.score && h.par && h.score <= h.par - 2).length,
           wedge_total: wedgeTotalsByRound.has(r.id) ? wedgeTotalsByRound.get(r.id)! : null,
+          caption: r.caption || null,
+          photo_url: r.photo_url || null,
         };
       });
 
@@ -247,6 +251,8 @@ export default function Feed() {
             </View>
           </View>
           {item.weather && <Text style={s.weather}>🌤 {item.weather}</Text>}
+          {item.caption && <Text style={{ fontSize: 14, color: colors.black, marginTop: 8, fontStyle: 'italic' }}>"{item.caption}"</Text>}
+          {item.photo_url && <img src={item.photo_url} style={{ width: '100%', maxWidth: 300, borderRadius: 10, marginTop: 8, objectFit: 'cover' } as any} />}
 
           {/* Expanded scorecard */}
           {isExpanded && (
