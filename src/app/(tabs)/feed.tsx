@@ -18,6 +18,7 @@ interface FeedRound {
   avg_putts: number | null;
   birdies: number;
   eagles: number;
+  wedge_total: number | null;
 }
 
 interface HoleScore {
@@ -94,6 +95,19 @@ export default function Feed() {
       scoresByRound.get(s.round_id)!.push(s);
     });
 
+    // Also fetch wedge_and_in for totals
+    const { data: wedgeScores } = await supabase.from('sb_hole_scores')
+      .select('round_id, wedge_and_in')
+      .in('round_id', roundIds)
+      .not('wedge_and_in', 'is', null);
+
+    const wedgeTotalsByRound = new Map<string, number>();
+    (wedgeScores || []).forEach((ws: any) => {
+      if (typeof ws.wedge_and_in === 'number') {
+        wedgeTotalsByRound.set(ws.round_id, (wedgeTotalsByRound.get(ws.round_id) || 0) + ws.wedge_and_in);
+      }
+    });
+
     const feed: FeedRound[] = roundsData
       .map(r => {
         const hs = scoresByRound.get(r.id) || [];
@@ -114,6 +128,7 @@ export default function Feed() {
           avg_putts: puttHoles.length ? Math.round(puttHoles.reduce((s, h) => s + h.putts, 0) / puttHoles.length * 10) / 10 : null,
           birdies: hs.filter((h: any) => h.score && h.sb_holes?.par && h.score === h.sb_holes.par - 1).length,
           eagles: hs.filter((h: any) => h.score && h.sb_holes?.par && h.score <= h.sb_holes.par - 2).length,
+          wedge_total: wedgeTotalsByRound.has(r.id) ? wedgeTotalsByRound.get(r.id)! : null,
         };
       });
 
@@ -224,6 +239,9 @@ export default function Feed() {
               )}
               {item.birdies > 0 && (
                 <View style={s.statRow}><Text style={s.statLabel}>🐦 Birdies</Text><Text style={[s.statVal, { color: colors.gold }]}>{item.birdies}</Text></View>
+              )}
+              {item.wedge_total != null && (
+                <View style={s.statRow}><Text style={s.statLabel}>W&I</Text><Text style={s.statVal}>{item.wedge_total}</Text></View>
               )}
             </View>
           </View>

@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
 import ScoreCell from '../../components/ScoreCell';
 
+type RangeOption = 'all' | '3' | '5' | '10' | '25';
+
 interface RoundStat { id: string; date_played: string; total_score: number; course_name?: string; }
 interface HoleScore { round_id: string; hole_number: number; score: number; par?: number; }
 interface ClubStat { club: string; avgDistance: number; count: number; }
-interface RecentRound { id: string; date_played: string; total_score: number; course_name: string; holes: { hole_number: number; score: number; par: number }[]; }
+interface RecentRound { id: string; date_played: string; total_score: number; course_name: string; holes: { hole_number: number; score: number; par: number }[]; wedge_total?: number | null; }
 
 function BarChart({ data, maxVal, label }: { data: { label: string; value: number }[]; maxVal: number; label: string }) {
   if (!data.length) return null;
@@ -30,20 +32,12 @@ function BarChart({ data, maxVal, label }: { data: { label: string; value: numbe
 
 export default function Stats() {
   const { user } = useAuth();
-  const [rounds, setRounds] = useState<RoundStat[]>([]);
-  const [avgScore, setAvgScore] = useState(0);
-  const [fwPct, setFwPct] = useState(0);
-  const [girPct, setGirPct] = useState(0);
-  const [avgPutts, setAvgPutts] = useState(0);
+  const [allRounds, setAllRounds] = useState<RoundStat[]>([]);
+  const [range, setRange] = useState<RangeOption>('all');
+  const [allScoresByRound, setAllScoresByRound] = useState<Map<string, any[]>>(new Map());
   const [clubs, setClubs] = useState<ClubStat[]>([]);
-  const [scoreData, setScoreData] = useState<{ label: string; value: number }[]>([]);
-  const [wedgeInMade, setWedgeInMade] = useState(0);
-  const [wedgeInTotal, setWedgeInTotal] = useState(0);
   const [recentRounds, setRecentRounds] = useState<RecentRound[]>([]);
-  const [onePutts, setOnePutts] = useState(0);
-  const [threePutts, setThreePutts] = useState(0);
-  const [missLPct, setMissLPct] = useState(0);
-  const [missRPct, setMissRPct] = useState(0);
+  const [wedgeTotalsByRound, setWedgeTotalsByRound] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!user) return;
@@ -52,93 +46,58 @@ export default function Stats() {
 
   const loadStats = async () => {
     if (!user) return;
-    // Rounds
     const { data: roundsData } = await supabase.from('sb_rounds')
-      .select('id, date_played, total_score')
+      .select('id, date_played, total_score, notes')
       .eq('user_id', user.id).eq('is_complete', true)
       .order('date_played', { ascending: true });
 
     const rds = roundsData || [];
-    setRounds(rds);
+    setAllRounds(rds);
 
-    if (rds.length) {
-      setAvgScore(Math.round(rds.reduce((s, r) => s + (r.total_score || 0), 0) / rds.length * 10) / 10);
-      const last10 = rds.slice(-10);
-      setScoreData(last10.map(r => ({
-        label: new Date(r.date_played).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        value: r.total_score || 0,
-      })));
-    }
-
-    // Hole scores
     const roundIds = rds.map(r => r.id);
     if (roundIds.length) {
       const { data: scores } = await supabase.from('sb_hole_scores')
-        .select('fairway_hit, fairway_miss_dir, gir, putts, wedge_and_in')
-        .in('round_id', roundIds);
+        .select('round_id, fairway_hit, fairway_miss_dir, gir, putts, wedge_and_in, hole_number, score, sb_holes(par)')
+        .in('round_id', roundIds)
+        .order('hole_number');
 
-      if (scores?.length) {
-        const fwHoles = scores.filter(s => s.fairway_hit !== null);
-        const girHoles = scores.filter(s => s.gir !== null);
-        const puttHoles = scores.filter(s => s.putts !== null);
-        if (fwHoles.length) setFwPct(Math.round(fwHoles.filter(s => s.fairway_hit).length / fwHoles.length * 100));
-        if (girHoles.length) setGirPct(Math.round(girHoles.filter(s => s.gir).length / girHoles.length * 100));
-        if (puttHoles.length) setAvgPutts(Math.round(puttHoles.reduce((s, h) => s + h.putts, 0) / rds.length * 10) / 10);
+      const byRound = new Map<string, any[]>();
+      (scores || []).forEach((sc: any) => {
+        if (!byRound.has(sc.round_id)) byRound.set(sc.round_id, []);
+        byRound.get(sc.round_id)!.push(sc);
+      });
+      setAllScoresByRound(byRound);
 
-        // 1-putts and 3-putts
-        setOnePutts(puttHoles.filter(s => s.putts === 1).length);
-        setThreePutts(puttHoles.filter(s => s.putts >= 3).length);
-
-        // Fairway miss direction
-        const fwMisses = scores.filter((sc: any) => sc.fairway_hit === false && sc.fairway_miss_dir);
-        if (fwMisses.length) {
-          const missL = fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'L').length;
-          const missR = fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'R').length;
-          setMissLPct(Math.round(missL / fwMisses.length * 100));
-          setMissRPct(Math.round(missR / fwMisses.length * 100));
+      // Wedge totals per round
+      const wTotals = new Map<string, number>();
+      byRound.forEach((holes, roundId) => {
+        const wedgeHoles = holes.filter((h: any) => h.wedge_and_in !== null && h.wedge_and_in !== undefined && typeof h.wedge_and_in === 'number');
+        if (wedgeHoles.length > 0) {
+          wTotals.set(roundId, wedgeHoles.reduce((s: number, h: any) => s + (h.wedge_and_in || 0), 0));
         }
-
-        // Wedge & In stats
-        const wedgeHoles = scores.filter((sc: any) => sc.wedge_and_in !== null && sc.wedge_and_in !== undefined && typeof sc.wedge_and_in === 'number');
-        setWedgeInTotal(wedgeHoles.length);
-        setWedgeInMade(wedgeHoles.reduce((s: number, sc: any) => s + (sc.wedge_and_in || 0), 0));
-      }
+      });
+      setWedgeTotalsByRound(wTotals);
 
       // Recent rounds with hole scores
-      const recentRds = rds.slice(-10).reverse();
-      if (recentRds.length) {
-        // Get course names
-        const courseIds = [...new Set(recentRds.map(() => ''))]; // we need course data
-        const { data: recentFull } = await supabase.from('sb_rounds')
-          .select('id, date_played, total_score, sb_courses(name)')
-          .eq('user_id', user.id).eq('is_complete', true)
-          .order('date_played', { ascending: false })
-          .limit(10);
-        
-        const recentIds = (recentFull || []).map(r => r.id);
-        const { data: holeScores } = await supabase.from('sb_hole_scores')
-          .select('round_id, hole_number, score, sb_holes(par)')
-          .in('round_id', recentIds)
-          .order('hole_number');
+      const { data: recentFull } = await supabase.from('sb_rounds')
+        .select('id, date_played, total_score, notes, sb_courses(name)')
+        .eq('user_id', user.id).eq('is_complete', true)
+        .order('date_played', { ascending: false })
+        .limit(10);
 
-        const scoresByRound = new Map<string, { hole_number: number; score: number; par: number }[]>();
-        (holeScores || []).forEach((hs: any) => {
-          if (!scoresByRound.has(hs.round_id)) scoresByRound.set(hs.round_id, []);
-          scoresByRound.get(hs.round_id)!.push({
-            hole_number: hs.hole_number,
-            score: hs.score,
-            par: hs.sb_holes?.par || 4,
-          });
-        });
-
-        setRecentRounds((recentFull || []).map((r: any) => ({
+      setRecentRounds((recentFull || []).map((r: any) => {
+        const rScores = byRound.get(r.id) || [];
+        const wedgeHoles = rScores.filter((h: any) => h.wedge_and_in !== null && typeof h.wedge_and_in === 'number');
+        const wTotal = wedgeHoles.length > 0 ? wedgeHoles.reduce((s: number, h: any) => s + (h.wedge_and_in || 0), 0) : null;
+        return {
           id: r.id,
           date_played: r.date_played,
           total_score: r.total_score,
           course_name: r.sb_courses?.name || 'Unknown',
-          holes: (scoresByRound.get(r.id) || []).sort((a, b) => a.hole_number - b.hole_number),
-        })));
-      }
+          holes: rScores.map((h: any) => ({ hole_number: h.hole_number, score: h.score, par: h.sb_holes?.par || 4 })).sort((a: any, b: any) => a.hole_number - b.hole_number),
+          wedge_total: wTotal,
+        };
+      }));
 
       // Club distances
       const { data: shots } = await supabase.from('sb_shots')
@@ -161,9 +120,49 @@ export default function Stats() {
     }
   };
 
+  // Compute filtered stats based on range
+  const filteredRounds = range === 'all' ? allRounds : allRounds.slice(-parseInt(range));
+  const filteredIds = new Set(filteredRounds.map(r => r.id));
+  const filteredScores = (() => {
+    const arr: any[] = [];
+    allScoresByRound.forEach((scores, roundId) => {
+      if (filteredIds.has(roundId)) arr.push(...scores);
+    });
+    return arr;
+  })();
+
+  const rounds = filteredRounds;
+  const avgScore = rounds.length ? Math.round(rounds.reduce((s, r) => s + (r.total_score || 0), 0) / rounds.length * 10) / 10 : 0;
+  const fwHoles = filteredScores.filter((s: any) => s.fairway_hit !== null);
+  const fwPct = fwHoles.length ? Math.round(fwHoles.filter((s: any) => s.fairway_hit).length / fwHoles.length * 100) : 0;
+  const girHoles = filteredScores.filter((s: any) => s.gir !== null);
+  const girPct = girHoles.length ? Math.round(girHoles.filter((s: any) => s.gir).length / girHoles.length * 100) : 0;
+  const puttHoles = filteredScores.filter((s: any) => s.putts !== null);
+  const avgPutts = puttHoles.length && rounds.length ? Math.round(puttHoles.reduce((s: number, h: any) => s + h.putts, 0) / rounds.length * 10) / 10 : 0;
+  const onePutts = puttHoles.filter((s: any) => s.putts === 1).length;
+  const threePutts = puttHoles.filter((s: any) => s.putts >= 3).length;
+  const fwMisses = filteredScores.filter((sc: any) => sc.fairway_hit === false && sc.fairway_miss_dir);
+  const missLPct = fwMisses.length ? Math.round(fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'L').length / fwMisses.length * 100) : 0;
+  const missRPct = fwMisses.length ? Math.round(fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'R').length / fwMisses.length * 100) : 0;
+  const wedgeHolesFiltered = filteredScores.filter((sc: any) => sc.wedge_and_in !== null && typeof sc.wedge_and_in === 'number');
+  const wedgeInTotal = wedgeHolesFiltered.length;
+  const wedgeInMade = wedgeHolesFiltered.reduce((s: number, sc: any) => s + (sc.wedge_and_in || 0), 0);
+  const scoreData = rounds.slice(-10).map(r => ({
+    label: new Date(r.date_played).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    value: r.total_score || 0,
+  }));
+
+  const RANGE_OPTIONS: { key: RangeOption; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: '3', label: 'Last 3' },
+    { key: '5', label: 'Last 5' },
+    { key: '10', label: 'Last 10' },
+    { key: '25', label: 'Last 25' },
+  ];
+
   return (
     <ScrollView style={s.container} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-      {rounds.length === 0 ? (
+      {allRounds.length === 0 ? (
         <View style={s.empty}>
           <Text style={s.emptyIcon}>📊</Text>
           <Text style={s.emptyText}>No stats yet</Text>
@@ -171,6 +170,15 @@ export default function Stats() {
         </View>
       ) : (
         <>
+          {/* Range Filter */}
+          <View style={s.rangePillRow}>
+            {RANGE_OPTIONS.map(opt => (
+              <TouchableOpacity key={opt.key} style={[s.rangePill, range === opt.key && s.rangePillActive]} onPress={() => setRange(opt.key)}>
+                <Text style={[s.rangePillText, range === opt.key && s.rangePillTextActive]}>{opt.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           {/* Summary Cards */}
           <View style={s.summaryRow}>
             <View style={s.summaryCard}>
@@ -228,7 +236,12 @@ export default function Stats() {
                       <Text style={s.recentCourse}>{r.course_name}</Text>
                       <Text style={s.recentDate}>{new Date(r.date_played).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
                     </View>
-                    <Text style={s.recentScore}>{r.total_score}</Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={s.recentScore}>{r.total_score}</Text>
+                      {r.wedge_total != null && (
+                        <Text style={{ fontSize: 11, color: colors.gold, fontWeight: '600' }}>W&I: {r.wedge_total}</Text>
+                      )}
+                    </View>
                   </View>
                   {r.holes.length > 0 && (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.miniScorecard}>
@@ -325,4 +338,9 @@ const s = StyleSheet.create({
   miniScorecard: { marginTop: 4 },
   miniScoreCell: { alignItems: 'center', width: 26 },
   miniHoleNum: { fontSize: 8, color: colors.gray, marginBottom: 1 },
+  rangePillRow: { flexDirection: 'row', gap: 6, marginBottom: 20 },
+  rangePill: { flex: 1, paddingVertical: 10, borderRadius: 20, borderWidth: 2, borderColor: colors.grayLight, alignItems: 'center', backgroundColor: colors.white },
+  rangePillActive: { backgroundColor: colors.primary, borderColor: colors.gold },
+  rangePillText: { fontSize: 12, fontWeight: '700', color: colors.grayDark },
+  rangePillTextActive: { color: colors.gold },
 });

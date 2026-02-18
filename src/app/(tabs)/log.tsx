@@ -962,20 +962,6 @@ export default function LogRound() {
           </>
         )}
 
-        {entry.fairway_hit === false && (
-          <>
-            <Text style={s.formLabel}>Miss Direction</Text>
-            <View style={s.toggleRow}>
-              {[{ label: 'L', val: 'L' }, { label: 'R', val: 'R' }].map(opt => (
-                <TouchableOpacity key={opt.val} style={[s.toggleBtn, entry.fairway_miss_dir === opt.val && s.toggleBtnActive]}
-                  onPress={() => updateHoleEntry(actualHoleIdx, 'fairway_miss_dir', entry.fairway_miss_dir === opt.val ? null : opt.val)}>
-                  <Text style={[s.toggleBtnText, entry.fairway_miss_dir === opt.val && s.toggleBtnTextActive]}>{opt.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-
         <Text style={s.formLabel}>Green in Regulation</Text>
         <View style={s.toggleRow}>
           <TouchableOpacity style={[s.toggleBtn, entry.gir && s.toggleBtnActive]} onPress={() => updateHoleEntry(actualHoleIdx, 'gir', true)}>
