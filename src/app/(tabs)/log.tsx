@@ -57,7 +57,7 @@ interface HoleEntry {
   fairway_hit: boolean | null;
   gir: boolean;
   penalties: number;
-  wedge_and_in: boolean | null;
+  wedge_and_in: number | null;
   tee_set_id?: string;
   custom_yardage?: number;
   shots: ShotData[];
@@ -195,7 +195,7 @@ export default function LogRound() {
 
   const initHoleEntries = (numH: number) => {
     return Array(numH).fill(null).map(() => ({
-      score: 0, putts: 0, fairway_hit: null as boolean | null, gir: false, penalties: 0, wedge_and_in: null as boolean | null,
+      score: 0, putts: 0, fairway_hit: null as boolean | null, gir: false, penalties: 0, wedge_and_in: null as number | null,
       shots: [] as ShotData[], strategy: defaultStrategy(), mental: defaultMental(),
     }));
   };
@@ -954,13 +954,14 @@ export default function LogRound() {
 
         {trackWedgeAndIn && (
           <>
-            <Text style={s.formLabel}>Wedge & In?</Text>
-            <View style={s.toggleRow}>
-              <TouchableOpacity style={[s.toggleBtn, entry.wedge_and_in === true && s.toggleBtnActive]} onPress={() => updateHoleEntry(actualHoleIdx, 'wedge_and_in', true)}>
-                <Text style={[s.toggleBtnText, entry.wedge_and_in === true && s.toggleBtnTextActive]}>Yes</Text>
+            <Text style={s.formLabel}>Wedge & In Shots</Text>
+            <View style={s.counterRow}>
+              <TouchableOpacity style={s.counterBtn} onPress={() => (entry.wedge_and_in || 0) > 0 && updateHoleEntry(actualHoleIdx, 'wedge_and_in', (entry.wedge_and_in || 0) - 1)}>
+                <Text style={s.counterBtnText}>−</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.toggleBtn, entry.wedge_and_in === false && s.toggleBtnActive]} onPress={() => updateHoleEntry(actualHoleIdx, 'wedge_and_in', false)}>
-                <Text style={[s.toggleBtnText, entry.wedge_and_in === false && s.toggleBtnTextActive]}>No</Text>
+              <Text style={s.counterVal}>{entry.wedge_and_in || 0}</Text>
+              <TouchableOpacity style={s.counterBtn} onPress={() => updateHoleEntry(actualHoleIdx, 'wedge_and_in', (entry.wedge_and_in || 0) + 1)}>
+                <Text style={s.counterBtnText}>+</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -1047,7 +1048,7 @@ export default function LogRound() {
               <Text style={s.reviewCell}>{e.putts || '—'}</Text>
               <Text style={s.reviewCell}>{e.fairway_hit === null ? '—' : e.fairway_hit ? '✓' : '✗'}</Text>
               <Text style={s.reviewCell}>{e.gir ? '✓' : '✗'}</Text>
-              {trackWedgeAndIn && <Text style={s.reviewCell}>{e.wedge_and_in === null ? '—' : e.wedge_and_in ? '✓' : '✗'}</Text>}
+              {trackWedgeAndIn && <Text style={s.reviewCell}>{e.wedge_and_in === null ? '—' : e.wedge_and_in}</Text>}
             </TouchableOpacity>
           );
         })}

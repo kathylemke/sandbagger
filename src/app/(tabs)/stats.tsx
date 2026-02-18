@@ -78,9 +78,9 @@ export default function Stats() {
         if (puttHoles.length) setAvgPutts(Math.round(puttHoles.reduce((s, h) => s + h.putts, 0) / rds.length * 10) / 10);
 
         // Wedge & In stats
-        const wedgeHoles = scores.filter((sc: any) => sc.wedge_and_in !== null && sc.wedge_and_in !== undefined);
+        const wedgeHoles = scores.filter((sc: any) => sc.wedge_and_in !== null && sc.wedge_and_in !== undefined && typeof sc.wedge_and_in === 'number');
         setWedgeInTotal(wedgeHoles.length);
-        setWedgeInMade(wedgeHoles.filter((sc: any) => sc.wedge_and_in === true).length);
+        setWedgeInMade(wedgeHoles.reduce((s: number, sc: any) => s + (sc.wedge_and_in || 0), 0));
       }
 
       // Club distances
@@ -146,15 +146,15 @@ export default function Stats() {
               <View style={s.summaryRow}>
                 <View style={s.summaryCard}>
                   <Text style={s.summaryNum}>{wedgeInMade}</Text>
-                  <Text style={s.summaryLabel}>Made</Text>
+                  <Text style={s.summaryLabel}>Total Shots</Text>
                 </View>
                 <View style={s.summaryCard}>
-                  <Text style={s.summaryNum}>{wedgeInTotal > 0 ? Math.round(wedgeInMade / wedgeInTotal * 100) : 0}%</Text>
+                  <Text style={s.summaryNum}>{wedgeInTotal > 0 ? (wedgeInMade / wedgeInTotal).toFixed(1) : '0'}</Text>
                   <Text style={s.summaryLabel}>Avg/Hole</Text>
                 </View>
                 <View style={s.summaryCard}>
                   <Text style={s.summaryNum}>{wedgeInTotal}</Text>
-                  <Text style={s.summaryLabel}>Tracked</Text>
+                  <Text style={s.summaryLabel}>Holes Tracked</Text>
                 </View>
               </View>
             </>
