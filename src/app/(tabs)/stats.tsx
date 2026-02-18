@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
@@ -10,7 +10,8 @@ type RangeOption = 'all' | '3' | '5' | '10' | '25';
 interface RoundStat { id: string; date_played: string; total_score: number; course_name?: string; }
 interface HoleScore { round_id: string; hole_number: number; score: number; par?: number; }
 interface ClubStat { club: string; avgDistance: number; count: number; }
-interface RecentRound { id: string; date_played: string; total_score: number; course_name: string; holes: { hole_number: number; score: number; par: number }[]; wedge_total?: number | null; }
+interface RecentHole { hole_number: number; score: number; par: number; putts: number; fairway_hit: boolean | null; gir: boolean; wedge_and_in: number | null; }
+interface RecentRound { id: string; date_played: string; total_score: number; course_name: string; holes: RecentHole[]; wedge_total?: number | null; }
 
 function BarChart({ data, maxVal, label }: { data: { label: string; value: number }[]; maxVal: number; label: string }) {
   if (!data.length) return null;
@@ -38,6 +39,7 @@ export default function Stats() {
   const [clubs, setClubs] = useState<ClubStat[]>([]);
   const [recentRounds, setRecentRounds] = useState<RecentRound[]>([]);
   const [wedgeTotalsByRound, setWedgeTotalsByRound] = useState<Map<string, number>>(new Map());
+  const [expandedRoundId, setExpandedRoundId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -94,7 +96,7 @@ export default function Stats() {
           date_played: r.date_played,
           total_score: r.total_score,
           course_name: r.sb_courses?.name || 'Unknown',
-          holes: rScores.map((h: any) => ({ hole_number: h.hole_number, score: h.score, par: h.sb_holes?.par || 4 })).sort((a: any, b: any) => a.hole_number - b.hole_number),
+          holes: rScores.map((h: any) => ({ hole_number: h.hole_number, score: h.score, par: h.sb_holes?.par || 4, putts: h.putts ?? 0, fairway_hit: h.fairway_hit, gir: !!h.gir, wedge_and_in: h.wedge_and_in })).sort((a: any, b: any) => a.hole_number - b.hole_number),
           wedge_total: wTotal,
         };
       }));
@@ -229,34 +231,95 @@ export default function Stats() {
           {recentRounds.length > 0 && (
             <>
               <Text style={s.sectionTitle}>Recent Rounds</Text>
-              {recentRounds.map(r => (
-                <View key={r.id} style={s.recentCard}>
-                  <View style={s.recentHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.recentCourse}>{r.course_name}</Text>
-                      <Text style={s.recentDate}>{new Date(r.date_played).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={s.recentScore}>{r.total_score}</Text>
-                      {r.wedge_total != null && (
-                        <Text style={{ fontSize: 11, color: colors.gold, fontWeight: '600' }}>W&I: {r.wedge_total}</Text>
+              {recentRounds.map(r => {
+                const isExpanded = expandedRoundId === r.id;
+                const hasWedge = r.holes.some(h => h.wedge_and_in != null);
+                // Summary stats for expanded view
+                const fwTracked = r.holes.filter(h => h.fairway_hit !== null);
+                const fwHitCount = fwTracked.filter(h => h.fairway_hit === true).length;
+                const girCount = r.holes.filter(h => h.gir).length;
+                const totalPutts = r.holes.reduce((sum, h) => sum + h.putts, 0);
+                const birdies = r.holes.filter(h => h.score && h.par && h.score < h.par).length;
+                const bogeys = r.holes.filter(h => h.score && h.par && h.score > h.par).length;
+
+                return (
+                  <TouchableOpacity key={r.id} activeOpacity={0.7} onPress={() => setExpandedRoundId(isExpanded ? null : r.id)}>
+                    <View style={s.recentCard}>
+                      <View style={s.recentHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.recentCourse}>{r.course_name}</Text>
+                          <Text style={s.recentDate}>{new Date(r.date_played).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={s.recentScore}>{r.total_score}</Text>
+                          {r.wedge_total != null && (
+                            <Text style={{ fontSize: 11, color: colors.gold, fontWeight: '600' }}>W&I: {r.wedge_total}</Text>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* Collapsed: mini scorecard */}
+                      {!isExpanded && r.holes.length > 0 && (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.miniScorecard}>
+                          <View style={{ flexDirection: 'row', gap: 2 }}>
+                            {r.holes.map((h, idx) => (
+                              <View key={idx} style={s.miniScoreCell}>
+                                <Text style={s.miniHoleNum}>{h.hole_number}</Text>
+                                <ScoreCell score={h.score} par={h.par} size={11} mini />
+                              </View>
+                            ))}
+                          </View>
+                        </ScrollView>
+                      )}
+
+                      {/* Expanded: full scorecard + summary */}
+                      {isExpanded && r.holes.length > 0 && (
+                        <View style={s.expandedDetail}>
+                          {/* Round summary pills */}
+                          <View style={s.detailPillRow}>
+                            <View style={s.detailPill}><Text style={s.detailPillLabel}>FW</Text><Text style={s.detailPillValue}>{fwHitCount}/{fwTracked.length}</Text></View>
+                            <View style={s.detailPill}><Text style={s.detailPillLabel}>GIR</Text><Text style={s.detailPillValue}>{girCount}/{r.holes.length}</Text></View>
+                            <View style={s.detailPill}><Text style={s.detailPillLabel}>Putts</Text><Text style={s.detailPillValue}>{totalPutts}</Text></View>
+                            <View style={s.detailPill}><Text style={s.detailPillLabel}>🐦</Text><Text style={s.detailPillValue}>{birdies}</Text></View>
+                            <View style={s.detailPill}><Text style={s.detailPillLabel}>Bogey+</Text><Text style={s.detailPillValue}>{bogeys}</Text></View>
+                            {hasWedge && r.wedge_total != null && (
+                              <View style={s.detailPill}><Text style={s.detailPillLabel}>W&I</Text><Text style={s.detailPillValue}>{r.wedge_total}</Text></View>
+                            )}
+                          </View>
+
+                          {/* Full scorecard table */}
+                          <View style={s.detailTable}>
+                            <View style={s.detailHeaderRow}>
+                              <Text style={[s.detailCell, s.detailHeaderText, { flex: 0.5 }]}>Hole</Text>
+                              <Text style={[s.detailCell, s.detailHeaderText]}>Par</Text>
+                              <Text style={[s.detailCell, s.detailHeaderText]}>Score</Text>
+                              <Text style={[s.detailCell, s.detailHeaderText]}>Putts</Text>
+                              <Text style={[s.detailCell, s.detailHeaderText]}>FW</Text>
+                              <Text style={[s.detailCell, s.detailHeaderText]}>GIR</Text>
+                              {hasWedge && <Text style={[s.detailCell, s.detailHeaderText]}>W&I</Text>}
+                            </View>
+                            {r.holes.map((h, idx) => (
+                              <View key={h.hole_number} style={[s.detailRow, idx % 2 === 0 && { backgroundColor: colors.offWhite }]}>
+                                <Text style={[s.detailCell, { flex: 0.5, fontWeight: '700', color: colors.primary }]}>{h.hole_number}</Text>
+                                <Text style={s.detailCell}>{h.par}</Text>
+                                <View style={{ flex: 1, alignItems: 'center' }}>
+                                  <ScoreCell score={h.score} par={h.par} size={13} />
+                                </View>
+                                <Text style={s.detailCell}>{h.putts || '—'}</Text>
+                                <Text style={s.detailCell}>{h.fairway_hit === null ? '—' : h.fairway_hit ? '✓' : '✗'}</Text>
+                                <Text style={s.detailCell}>{h.gir ? '✓' : '✗'}</Text>
+                                {hasWedge && <Text style={s.detailCell}>{h.wedge_and_in != null ? h.wedge_and_in : '—'}</Text>}
+                              </View>
+                            ))}
+                          </View>
+
+                          <Text style={{ fontSize: 11, color: colors.gray, textAlign: 'center', marginTop: 8 }}>Tap to collapse</Text>
+                        </View>
                       )}
                     </View>
-                  </View>
-                  {r.holes.length > 0 && (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.miniScorecard}>
-                      <View style={{ flexDirection: 'row', gap: 2 }}>
-                        {r.holes.map((h, idx) => (
-                          <View key={idx} style={s.miniScoreCell}>
-                            <Text style={s.miniHoleNum}>{h.hole_number}</Text>
-                            <ScoreCell score={h.score} par={h.par} size={11} mini />
-                          </View>
-                        ))}
-                      </View>
-                    </ScrollView>
-                  )}
-                </View>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </>
           )}
 
@@ -343,4 +406,14 @@ const s = StyleSheet.create({
   rangePillActive: { backgroundColor: colors.primary, borderColor: colors.gold },
   rangePillText: { fontSize: 12, fontWeight: '700', color: colors.grayDark },
   rangePillTextActive: { color: colors.gold },
+  expandedDetail: { marginTop: 10, borderTopWidth: 1, borderTopColor: colors.grayLight, paddingTop: 12 },
+  detailPillRow: { flexDirection: 'row', gap: 6, marginBottom: 12, flexWrap: 'wrap' },
+  detailPill: { flex: 1, minWidth: 50, backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 4, alignItems: 'center' },
+  detailPillLabel: { fontSize: 10, color: colors.white, opacity: 0.8, fontWeight: '600' },
+  detailPillValue: { fontSize: 15, fontWeight: '800', color: colors.gold, marginTop: 1 },
+  detailTable: { backgroundColor: colors.white, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.grayLight },
+  detailHeaderRow: { flexDirection: 'row', backgroundColor: colors.primary, paddingVertical: 8, paddingHorizontal: 4 },
+  detailHeaderText: { color: colors.white, fontWeight: '700', fontSize: 11 },
+  detailRow: { flexDirection: 'row', paddingVertical: 6, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: colors.grayLight },
+  detailCell: { flex: 1, textAlign: 'center', fontSize: 12, color: colors.black },
 });
