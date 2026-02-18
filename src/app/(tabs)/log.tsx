@@ -344,7 +344,7 @@ export default function LogRound() {
       const scoreInserts = activeIndices.map((i) => {
         const e = holeEntries[i];
         const base: any = {
-          round_id: round.id, hole_id: holes[i]?.id || null, hole_number: i + 1,
+          round_id: round.id, hole_id: holes[i]?.id || null, hole_number: i + 1, par: holes[i]?.par || null,
           score: e.score, putts: e.putts, fairway_hit: e.fairway_hit, fairway_miss_dir: e.fairway_hit === false ? e.fairway_miss_dir : null, gir: e.gir, penalties: e.penalties, wedge_and_in: trackWedgeAndIn ? e.wedge_and_in : null,
         };
         if (trackingMode === 'advanced' && e.shots.length > 0) {

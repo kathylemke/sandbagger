@@ -151,19 +151,10 @@ export default function Feed() {
     setEditing(false);
     setLoadingScores(true);
     const { data } = await supabase.from('sb_hole_scores')
-      .select('id, round_id, hole_number, score, putts, fairway_hit, gir, penalties')
+      .select('id, round_id, hole_number, score, putts, fairway_hit, gir, penalties, par')
       .eq('round_id', roundId)
       .order('hole_number', { ascending: true });
-    // Get par from the course holes
-    const round = rounds.find(r => r.id === roundId);
-    let parMap = new Map<number, number>();
-    if (round?.course?.id) {
-      const { data: courseHoles } = await supabase.from('sb_holes')
-        .select('hole_number, par')
-        .eq('course_id', round.course.id);
-      (courseHoles || []).forEach((h: any) => parMap.set(h.hole_number, h.par));
-    }
-    setHoleScores((data || []).map((h: any) => ({ ...h, par: parMap.get(h.hole_number) ?? undefined })));
+    setHoleScores(data || []);
     setLoadingScores(false);
   };
 
