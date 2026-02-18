@@ -59,7 +59,7 @@ export default function Stats() {
     const roundIds = rds.map(r => r.id);
     if (roundIds.length) {
       const { data: scores } = await supabase.from('sb_hole_scores')
-        .select('round_id, fairway_hit, fairway_miss_dir, gir, putts, wedge_and_in, hole_number, score, sb_holes(par)')
+        .select('round_id, fairway_hit, fairway_miss_dir, gir, putts, wedge_and_in, hole_number, score, par')
         .in('round_id', roundIds)
         .order('hole_number');
 
@@ -96,7 +96,7 @@ export default function Stats() {
           date_played: r.date_played,
           total_score: r.total_score,
           course_name: r.sb_courses?.name || 'Unknown',
-          holes: rScores.map((h: any) => ({ hole_number: h.hole_number, score: h.score, par: h.sb_holes?.par || 4, putts: h.putts ?? 0, fairway_hit: h.fairway_hit, gir: !!h.gir, wedge_and_in: h.wedge_and_in })).sort((a: any, b: any) => a.hole_number - b.hole_number),
+          holes: rScores.map((h: any) => ({ hole_number: h.hole_number, score: h.score, par: h.par || 0, putts: h.putts ?? 0, fairway_hit: h.fairway_hit, gir: !!h.gir, wedge_and_in: h.wedge_and_in })).sort((a: any, b: any) => a.hole_number - b.hole_number),
           wedge_total: wTotal,
         };
       }));

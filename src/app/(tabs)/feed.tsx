@@ -87,7 +87,7 @@ export default function Feed() {
 
     const roundIds = roundsData.map(r => r.id);
     const { data: scores } = await supabase.from('sb_hole_scores')
-      .select('round_id, fairway_hit, gir, putts, score, sb_holes(par)')
+      .select('round_id, fairway_hit, gir, putts, score, par')
       .in('round_id', roundIds);
 
     const scoresByRound = new Map<string, any[]>();
@@ -127,8 +127,8 @@ export default function Feed() {
           fairway_pct: fwHoles.length ? Math.round(fwHoles.filter(h => h.fairway_hit).length / fwHoles.length * 100) : null,
           gir_pct: girHoles.length ? Math.round(girHoles.filter(h => h.gir).length / girHoles.length * 100) : null,
           avg_putts: puttHoles.length ? Math.round(puttHoles.reduce((s, h) => s + h.putts, 0) / puttHoles.length * 10) / 10 : null,
-          birdies: hs.filter((h: any) => h.score && h.sb_holes?.par && h.score === h.sb_holes.par - 1).length,
-          eagles: hs.filter((h: any) => h.score && h.sb_holes?.par && h.score <= h.sb_holes.par - 2).length,
+          birdies: hs.filter((h: any) => h.score && h.par && h.score === h.par - 1).length,
+          eagles: hs.filter((h: any) => h.score && h.par && h.score <= h.par - 2).length,
           wedge_total: wedgeTotalsByRound.has(r.id) ? wedgeTotalsByRound.get(r.id)! : null,
         };
       });
