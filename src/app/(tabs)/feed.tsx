@@ -12,7 +12,7 @@ interface FeedRound {
   weather: string;
   user_id: string;
   visibility: string;
-  course: { name: string; city: string; state: string } | null;
+  course: { id: string; name: string; city: string; state: string } | null;
   player: { display_name: string; username: string } | null;
   fairway_pct: number | null;
   gir_pct: number | null;
@@ -70,7 +70,7 @@ export default function Feed() {
     const visibleUserIds = [user.id, ...followingIds];
 
     const { data: roundsData } = await supabase.from('sb_rounds')
-      .select('*, sb_courses(name, city, state)')
+      .select('*, sb_courses(id, name, city, state)')
       .eq('is_complete', true)
       .in('user_id', visibleUserIds)
       .order('date_played', { ascending: false })
@@ -151,10 +151,19 @@ export default function Feed() {
     setEditing(false);
     setLoadingScores(true);
     const { data } = await supabase.from('sb_hole_scores')
-      .select('id, round_id, hole_number, score, putts, fairway_hit, gir, penalties, sb_holes(par)')
+      .select('id, round_id, hole_number, score, putts, fairway_hit, gir, penalties')
       .eq('round_id', roundId)
       .order('hole_number', { ascending: true });
-    setHoleScores((data || []).map((h: any) => ({ ...h, par: h.sb_holes?.par ?? undefined })));
+    // Get par from the course holes
+    const round = rounds.find(r => r.id === roundId);
+    let parMap = new Map<number, number>();
+    if (round?.course?.id) {
+      const { data: courseHoles } = await supabase.from('sb_holes')
+        .select('hole_number, par')
+        .eq('course_id', round.course.id);
+      (courseHoles || []).forEach((h: any) => parMap.set(h.hole_number, h.par));
+    }
+    setHoleScores((data || []).map((h: any) => ({ ...h, par: parMap.get(h.hole_number) ?? undefined })));
     setLoadingScores(false);
   };
 
