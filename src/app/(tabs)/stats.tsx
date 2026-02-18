@@ -141,8 +141,11 @@ export default function Stats() {
   const girPct = girHoles.length ? Math.round(girHoles.filter((s: any) => s.gir).length / girHoles.length * 100) : 0;
   const puttHoles = filteredScores.filter((s: any) => s.putts !== null);
   const avgPutts = puttHoles.length && rounds.length ? Math.round(puttHoles.reduce((s: number, h: any) => s + h.putts, 0) / rounds.length * 10) / 10 : 0;
-  const onePutts = puttHoles.filter((s: any) => s.putts === 1).length;
-  const threePutts = puttHoles.filter((s: any) => s.putts >= 3).length;
+  const onePuttsTotal = puttHoles.filter((s: any) => s.putts === 1).length;
+  const threePuttsTotal = puttHoles.filter((s: any) => s.putts >= 3).length;
+  const roundCount = filteredRounds.length || 1;
+  const onePuttsPer18 = (onePuttsTotal / roundCount).toFixed(1);
+  const threePuttsPer18 = (threePuttsTotal / roundCount).toFixed(1);
   const fwMisses = filteredScores.filter((sc: any) => sc.fairway_hit === false && sc.fairway_miss_dir);
   const missLPct = fwMisses.length ? Math.round(fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'L').length / fwMisses.length * 100) : 0;
   const missRPct = fwMisses.length ? Math.round(fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'R').length / fwMisses.length * 100) : 0;
@@ -204,12 +207,12 @@ export default function Stats() {
           {/* Putting & Miss Direction */}
           <View style={s.summaryRow}>
             <View style={s.summaryCard}>
-              <Text style={s.summaryNum}>{onePutts}</Text>
-              <Text style={s.summaryLabel}>1-Putts</Text>
+              <Text style={s.summaryNum}>{onePuttsPer18}</Text>
+              <Text style={s.summaryLabel}>1-Putts/Rnd</Text>
             </View>
             <View style={s.summaryCard}>
-              <Text style={s.summaryNum}>{threePutts}</Text>
-              <Text style={s.summaryLabel}>3-Putts</Text>
+              <Text style={s.summaryNum}>{threePuttsPer18}</Text>
+              <Text style={s.summaryLabel}>3-Putts/Rnd</Text>
             </View>
             {(missLPct > 0 || missRPct > 0) && (
               <>
