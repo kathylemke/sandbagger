@@ -3,6 +3,7 @@ import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity, Tex
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
+import ScoreCell from '../../components/ScoreCell';
 
 interface FeedRound {
   id: string;
@@ -150,10 +151,10 @@ export default function Feed() {
     setEditing(false);
     setLoadingScores(true);
     const { data } = await supabase.from('sb_hole_scores')
-      .select('id, round_id, hole_number, score, putts, fairway_hit, gir, penalties')
+      .select('id, round_id, hole_number, score, putts, fairway_hit, gir, penalties, sb_holes(par)')
       .eq('round_id', roundId)
       .order('hole_number', { ascending: true });
-    setHoleScores(data || []);
+    setHoleScores((data || []).map((h: any) => ({ ...h, par: h.sb_holes?.par ?? undefined })));
     setLoadingScores(false);
   };
 
@@ -257,6 +258,7 @@ export default function Feed() {
                   {/* Header row */}
                   <View style={s.holeRow}>
                     <Text style={[s.holeCell, s.holeHeader, { flex: 0.6 }]}>Hole</Text>
+                    <Text style={[s.holeCell, s.holeHeader]}>Par</Text>
                     <Text style={[s.holeCell, s.holeHeader]}>Score</Text>
                     <Text style={[s.holeCell, s.holeHeader]}>Putts</Text>
                     <Text style={[s.holeCell, s.holeHeader]}>FW</Text>
@@ -267,6 +269,7 @@ export default function Feed() {
                       <Text style={[s.holeCell, { flex: 0.6, fontWeight: '700', color: colors.primary }]}>{hole.hole_number}</Text>
                       {editing ? (
                         <>
+                          <Text style={s.holeCell}>{hole.par ?? '—'}</Text>
                           <TextInput
                             style={[s.holeCell, s.editInput]}
                             keyboardType="number-pad"
@@ -288,7 +291,10 @@ export default function Feed() {
                         </>
                       ) : (
                         <>
-                          <Text style={s.holeCell}>{hole.score ?? '—'}</Text>
+                          <Text style={s.holeCell}>{hole.par ?? '—'}</Text>
+                          <View style={{ flex: 1, alignItems: 'center' }}>
+                            <ScoreCell score={hole.score} par={hole.par || 0} size={13} />
+                          </View>
                           <Text style={s.holeCell}>{hole.putts ?? '—'}</Text>
                           <Text style={s.holeCell}>{hole.fairway_hit ? '✓' : hole.fairway_hit === false ? '✗' : '—'}</Text>
                           <Text style={s.holeCell}>{hole.gir ? '✓' : hole.gir === false ? '✗' : '—'}</Text>
