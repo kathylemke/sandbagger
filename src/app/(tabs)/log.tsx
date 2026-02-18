@@ -819,13 +819,21 @@ export default function LogRound() {
             onChange={handleScanScorecard}
           />
         )}
-        <TouchableOpacity
-          style={[s.goldBtn, { marginTop: 0, marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8 }]}
-          onPress={() => { if (Platform.OS === 'web') document.getElementById('scan-scorecard-input')?.click(); }}
-          disabled={scanning}
-        >
-          <Text style={s.goldBtnText}>{scanning ? '⏳ Scanning scorecard...' : '📷 Scan Scorecard'}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+          <TouchableOpacity
+            style={[s.goldBtn, { marginTop: 0, marginBottom: 0, flex: 1 }]}
+            onPress={() => { if (Platform.OS === 'web') document.getElementById('scan-scorecard-input')?.click(); }}
+            disabled={scanning}
+          >
+            <Text style={s.goldBtnText}>{scanning ? '⏳ Scanning...' : '📷 Scan Scores'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.goldBtn, { marginTop: 0, marginBottom: 0, flex: 1, backgroundColor: colors.cardBg, borderWidth: 1, borderColor: colors.gold }]}
+            onPress={() => { if (Platform.OS === 'web') window.open('https://kathylemke.github.io/sandbagger/scorecard.pdf', '_blank'); }}
+          >
+            <Text style={[s.goldBtnText, { color: colors.gold }]}>🖨️ Stat Template</Text>
+          </TouchableOpacity>
+        </View>
         <TextInput style={s.searchInput} placeholder="Search courses..." placeholderTextColor={colors.gray} value={search} onChangeText={setSearch} />
         {filteredCourses.map(c => (
           <TouchableOpacity key={c.id} style={s.courseCard} onPress={() => selectCourse(c)}>
