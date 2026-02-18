@@ -11,7 +11,7 @@ interface RoundStat { id: string; date_played: string; total_score: number; cour
 interface HoleScore { round_id: string; hole_number: number; score: number; par?: number; }
 interface ClubStat { club: string; avgDistance: number; count: number; }
 interface RecentHole { hole_number: number; score: number; par: number; putts: number; fairway_hit: boolean | null; gir: boolean; wedge_and_in: number | null; }
-interface RecentRound { id: string; date_played: string; total_score: number; course_name: string; holes: RecentHole[]; wedge_total?: number | null; }
+interface RecentRound { id: string; date_played: string; total_score: number; course_name: string; holes: RecentHole[]; wedge_total?: number | null; round_type?: string; }
 
 function BarChart({ data, maxVal, label }: { data: { label: string; value: number }[]; maxVal: number; label: string }) {
   if (!data.length) return null;
@@ -82,7 +82,7 @@ export default function Stats() {
 
       // Recent rounds with hole scores
       const { data: recentFull } = await supabase.from('sb_rounds')
-        .select('id, date_played, total_score, notes, sb_courses(name)')
+        .select('id, date_played, total_score, notes, round_type, sb_courses(name)')
         .eq('user_id', user.id).eq('is_complete', true)
         .order('date_played', { ascending: false })
         .limit(10);
@@ -96,6 +96,7 @@ export default function Stats() {
           date_played: r.date_played,
           total_score: r.total_score,
           course_name: r.sb_courses?.name || 'Unknown',
+          round_type: r.round_type || undefined,
           holes: rScores.map((h: any) => ({ hole_number: h.hole_number, score: h.score, par: h.par || 0, putts: h.putts ?? 0, fairway_hit: h.fairway_hit, gir: !!h.gir, wedge_and_in: h.wedge_and_in })).sort((a: any, b: any) => a.hole_number - b.hole_number),
           wedge_total: wTotal,
         };
@@ -251,7 +252,7 @@ export default function Stats() {
                       <View style={s.recentHeader}>
                         <View style={{ flex: 1 }}>
                           <Text style={s.recentCourse}>{r.course_name}</Text>
-                          <Text style={s.recentDate}>{new Date(r.date_played).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
+                          <Text style={s.recentDate}>{new Date(r.date_played).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{r.round_type ? ` · ${r.round_type === 'practice' ? '🏋️' : r.round_type === 'tournament' ? '🏆' : '⛳'}` : ''}</Text>
                         </View>
                         <View style={{ alignItems: 'flex-end' }}>
                           <Text style={s.recentScore}>{r.total_score}</Text>

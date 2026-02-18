@@ -167,6 +167,7 @@ export default function LogRound() {
   const [wind, setWind] = useState('');
   const [visibility, setVisibility] = useState('private');
   const [trackingMode, setTrackingMode] = useState<TrackingMode>('basic');
+  const [roundType, setRoundType] = useState<'practice' | 'tournament' | 'casual'>('practice');
   const [holeEntries, setHoleEntries] = useState<HoleEntry[]>([]);
   const [currentHole, setCurrentHole] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -334,7 +335,7 @@ export default function LogRound() {
     try {
       const { data: round, error } = await supabase.from('sb_rounds').insert({
         user_id: user.id, course_id: selectedCourse.id, date_played: datePlayed,
-        total_score: totalScore, weather, wind, is_complete: true, visibility,
+        total_score: totalScore, weather, wind, is_complete: true, visibility, round_type: roundType,
         tee_set_id: selectedTee?.id || null,
         mixed_tees: mixedTees,
         notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn }),
@@ -363,7 +364,7 @@ export default function LogRound() {
       } else {
         Alert.alert('Success', `Round saved! Total: ${totalScore}`);
       }
-      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false);
+      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false); setRoundType('practice');
     } catch (e: any) {
       if (Platform.OS === 'web') {
         window.alert(`Error: ${e.message}`);
@@ -783,6 +784,15 @@ export default function LogRound() {
         {selectedTee && <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color} ({selectedTee.total_yardage} yds)</Text>}
         {mixedTees && <Text style={s.selectedTeeLabel}>Mixed Tees</Text>}
 
+        <Text style={s.formLabel}>Round Type</Text>
+        <View style={s.visRow}>
+          {([['practice', 'Practice 🏋️'], ['tournament', 'Tournament 🏆'], ['casual', 'Casual ⛳']] as const).map(([key, label]) => (
+            <TouchableOpacity key={key} style={[s.visBtn, roundType === key && s.visBtnActive]} onPress={() => setRoundType(key)}>
+              <Text style={[s.visBtnText, roundType === key && s.visBtnTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <Text style={s.formLabel}>Tracking Mode</Text>
         <View style={s.modeGrid}>
           {TRACKING_MODES.map(m => (
@@ -1033,7 +1043,7 @@ export default function LogRound() {
       <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
       {selectedTee && <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color}</Text>}
       {mixedTees && <Text style={s.selectedTeeLabel}>Mixed Tees</Text>}
-      <Text style={s.reviewDate}>{datePlayed} · {weather || 'No weather'} · {visibility}</Text>
+      <Text style={s.reviewDate}>{datePlayed} · {weather || 'No weather'} · {visibility} · {roundType === 'practice' ? 'Practice 🏋️' : roundType === 'tournament' ? 'Tournament 🏆' : 'Casual ⛳'}</Text>
       <View style={s.modeBadge}>
         <Text style={s.modeBadgeText}>{TRACKING_MODES.find(m => m.key === trackingMode)?.emoji} {TRACKING_MODES.find(m => m.key === trackingMode)?.label} Mode</Text>
       </View>
