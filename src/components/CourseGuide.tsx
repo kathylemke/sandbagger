@@ -71,7 +71,7 @@ const ps = StyleSheet.create({
   chipTextActive: { color: colors.gold, fontWeight: '700' },
 });
 
-function HazardEditor({ hazard, onChange, onDelete }: { hazard: HoleHazard; onChange: (h: HoleHazard) => void; onDelete: () => void }) {
+function HazardEditor({ hazard, onChange, onDelete, teeColor }: { hazard: HoleHazard; onChange: (h: HoleHazard) => void; onDelete: () => void; teeColor?: string }) {
   return (
     <View style={he.card}>
       <View style={he.header}>
@@ -83,7 +83,10 @@ function HazardEditor({ hazard, onChange, onDelete }: { hazard: HoleHazard; onCh
       <OptionPicker label="Location" options={LOCATION_OPTIONS} value={hazard.location} onChange={v => onChange({ ...hazard, location: v })} />
       <View style={he.row}>
         <View style={he.field}>
-          <Text style={he.fieldLabel}>From Tee (yds)</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={he.fieldLabel}>From Tee (yds)</Text>
+            {teeColor && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: TEE_COLOR_MAP[teeColor.toLowerCase()] || colors.grayDark, borderWidth: teeColor.toLowerCase() === 'white' ? 1 : 0, borderColor: colors.grayLight }} />}
+          </View>
           <TextInput style={he.input} keyboardType="number-pad" value={hazard.distance_from_tee ? String(hazard.distance_from_tee) : ''} onChangeText={t => onChange({ ...hazard, distance_from_tee: t ? parseInt(t) : undefined })} placeholder="—" placeholderTextColor={colors.gray} />
         </View>
         <View style={he.field}>
@@ -115,7 +118,7 @@ const he = StyleSheet.create({
   notesInput: { backgroundColor: colors.offWhite, borderRadius: 6, padding: 8, fontSize: 13, borderWidth: 1, borderColor: colors.grayLight },
 });
 
-function HoleEditModal({ hole, holeNumber, onSave, onCancel, onReset }: { hole: HoleDetail; holeNumber: number; onSave: (h: HoleDetail) => void; onCancel: () => void; onReset: () => void }) {
+function HoleEditModal({ hole, holeNumber, onSave, onCancel, onReset, teeColor }: { hole: HoleDetail; holeNumber: number; onSave: (h: HoleDetail) => void; onCancel: () => void; onReset: () => void; teeColor?: string }) {
   const [draft, setDraft] = useState<HoleDetail>({ ...hole, hazards: hole.hazards.map(h => ({ ...h })) });
 
   const updateHazard = (idx: number, h: HoleHazard) => {
@@ -156,7 +159,7 @@ function HoleEditModal({ hole, holeNumber, onSave, onCancel, onReset }: { hole: 
               </TouchableOpacity>
             </View>
             {draft.hazards.map((h, i) => (
-              <HazardEditor key={i} hazard={h} onChange={haz => updateHazard(i, haz)} onDelete={() => deleteHazard(i)} />
+              <HazardEditor key={i} hazard={h} onChange={haz => updateHazard(i, haz)} onDelete={() => deleteHazard(i)} teeColor={teeColor} />
             ))}
             {draft.hazards.length === 0 && <Text style={{ color: colors.gray, textAlign: 'center', padding: 20 }}>No hazards — tap "Add Hazard" above</Text>}
           </ScrollView>
@@ -189,7 +192,7 @@ export default function CourseGuide({ courseId, courseName, visible, onClose }: 
   const [metadata, setMetadata] = useState<CourseMetadata>({});
   const [editingHole, setEditingHole] = useState<number | null>(null);
   const [teeSets, setTeeSets] = useState<TeeSet[]>([]);
-  const [selectedTeeId, setSelectedTeeId] = useState<string | null>(null);
+  const [perHoleTee, setPerHoleTee] = useState<Record<number, string>>({});
   const [holesData, setHolesData] = useState<HoleData[]>([]);
 
   const load = useCallback(async () => {
@@ -205,7 +208,11 @@ export default function CourseGuide({ courseId, courseName, visible, onClose }: 
       .order('total_yardage', { ascending: false });
     if (sets && sets.length > 0) {
       setTeeSets(sets);
-      setSelectedTeeId(prev => prev && sets.find((s: TeeSet) => s.id === prev) ? prev : sets[0].id);
+      setPerHoleTee(prev => {
+        const next: Record<number, string> = {};
+        for (let i = 1; i <= 18; i++) next[i] = prev[i] && sets.find((s: TeeSet) => s.id === prev[i]) ? prev[i] : sets[0].id;
+        return next;
+      });
     }
     const { data: holes } = await supabase
       .from('sb_holes')
@@ -218,13 +225,18 @@ export default function CourseGuide({ courseId, courseName, visible, onClose }: 
   useEffect(() => { if (visible) { load(); loadTeeData(); } }, [visible, load, loadTeeData]);
 
   const getHolePar = (holeNum: number): number | null => {
-    const h = holesData.find(d => d.hole_number === holeNum && d.tee_set_id === selectedTeeId);
+    const h = holesData.find(d => d.hole_number === holeNum && d.tee_set_id === perHoleTee[holeNum]);
     return h ? h.par : null;
   };
 
   const getHoleYardage = (holeNum: number): number | null => {
-    const h = holesData.find(d => d.hole_number === holeNum && d.tee_set_id === selectedTeeId);
+    const h = holesData.find(d => d.hole_number === holeNum && d.tee_set_id === perHoleTee[holeNum]);
     return h ? h.yardage : null;
+  };
+
+  const getHoleTeeColor = (holeNum: number): string | undefined => {
+    const tee = teeSets.find(t => t.id === perHoleTee[holeNum]);
+    return tee?.color;
   };
 
   const handleSave = async (holeNumber: number, detail: HoleDetail) => {
@@ -254,25 +266,6 @@ export default function CourseGuide({ courseId, courseName, visible, onClose }: 
             </View>
           </View>
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-            {teeSets.length > 0 && (
-              <View style={g.teeSelector}>
-                {teeSets.map(tee => {
-                  const isSelected = tee.id === selectedTeeId;
-                  const bgColor = TEE_COLOR_MAP[tee.color?.toLowerCase()] || colors.grayDark;
-                  const textColor = ['white', 'gold', 'silver'].includes(tee.color?.toLowerCase()) ? colors.black : '#fff';
-                  return (
-                    <TouchableOpacity
-                      key={tee.id}
-                      style={[g.teePill, { backgroundColor: bgColor }, isSelected && g.teePillSelected]}
-                      onPress={() => setSelectedTeeId(tee.id)}
-                    >
-                      <Text style={[g.teePillText, { color: textColor }]}>{tee.name || tee.color}</Text>
-                      <Text style={[g.teePillYds, { color: textColor, opacity: 0.8 }]}>{tee.total_yardage}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
             {holes.map(num => {
               const hole = metadata[String(num)];
               if (!hole) return null;
@@ -288,6 +281,22 @@ export default function CourseGuide({ courseId, courseName, visible, onClose }: 
                     )}
                     {yardage != null && (
                       <Text style={g.yardageText}>{yardage} yds</Text>
+                    )}
+                    {teeSets.length > 1 && (
+                      <View style={g.teeDots}>
+                        {teeSets.map(tee => {
+                          const isSelected = tee.id === perHoleTee[num];
+                          const dotColor = TEE_COLOR_MAP[tee.color?.toLowerCase()] || colors.grayDark;
+                          const needsBorder = ['white', 'silver'].includes(tee.color?.toLowerCase());
+                          return (
+                            <TouchableOpacity
+                              key={tee.id}
+                              onPress={(e) => { e.stopPropagation(); setPerHoleTee(prev => ({ ...prev, [num]: tee.id })); }}
+                              style={[g.teeDot, { backgroundColor: dotColor }, needsBorder && { borderWidth: 1, borderColor: colors.grayLight }, isSelected && g.teeDotSelected]}
+                            />
+                          );
+                        })}
+                      </View>
                     )}
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -342,6 +351,7 @@ export default function CourseGuide({ courseId, courseName, visible, onClose }: 
               onSave={(d) => handleSave(editingHole, d)}
               onCancel={() => setEditingHole(null)}
               onReset={() => handleReset(editingHole)}
+              teeColor={getHoleTeeColor(editingHole)}
             />
           )}
         </View>
@@ -358,11 +368,9 @@ const g = StyleSheet.create({
   subtitle: { fontSize: 14, color: colors.white, marginTop: 2, opacity: 0.9 },
   holeCard: { backgroundColor: colors.white, borderRadius: 12, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   holeHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  teeSelector: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  teePill: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center', minWidth: 60 },
-  teePillSelected: { borderWidth: 2, borderColor: colors.gold },
-  teePillText: { fontWeight: '700', fontSize: 13 },
-  teePillYds: { fontSize: 11, marginTop: 1 },
+  teeDots: { flexDirection: 'row', gap: 5, alignItems: 'center' },
+  teeDot: { width: 14, height: 14, borderRadius: 7 },
+  teeDotSelected: { borderWidth: 2, borderColor: colors.gold },
   holeNum: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   holeNumText: { color: colors.gold, fontWeight: '800', fontSize: 16 },
   parBadge: { backgroundColor: colors.gold, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
