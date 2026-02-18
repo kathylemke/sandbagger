@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, TextInput, Alert, Platform } from 'react-native';
 import { colors } from '../lib/theme';
+import { supabase } from '../lib/supabase';
 import {
   HoleDetail, HoleHazard, CourseMetadata,
   getHoleDetails, saveHoleDetail, resetHoleDetail,
@@ -8,6 +9,35 @@ import {
   HAZARD_TYPE_OPTIONS, LOCATION_OPTIONS,
   getShapeIcon, getHazardIcon, getHazardLabel, getLocationLabel,
 } from '../lib/holeMetadata';
+
+interface TeeSet {
+  id: string;
+  course_id: string;
+  color: string;
+  name: string;
+  total_yardage: number;
+  total_par: number;
+  rating: number;
+  slope: number;
+}
+
+interface HoleData {
+  hole_number: number;
+  par: number;
+  yardage: number;
+  tee_set_id: string;
+}
+
+const TEE_COLOR_MAP: Record<string, string> = {
+  black: '#222',
+  blue: '#2563eb',
+  white: '#e5e7eb',
+  gold: '#d4a017',
+  red: '#dc2626',
+  green: '#16a34a',
+  silver: '#9ca3af',
+  orange: '#ea580c',
+};
 
 interface Props {
   courseId: string;
@@ -158,13 +188,44 @@ const em = StyleSheet.create({
 export default function CourseGuide({ courseId, courseName, visible, onClose }: Props) {
   const [metadata, setMetadata] = useState<CourseMetadata>({});
   const [editingHole, setEditingHole] = useState<number | null>(null);
+  const [teeSets, setTeeSets] = useState<TeeSet[]>([]);
+  const [selectedTeeId, setSelectedTeeId] = useState<string | null>(null);
+  const [holesData, setHolesData] = useState<HoleData[]>([]);
 
   const load = useCallback(async () => {
     const data = await getHoleDetails(courseId);
     setMetadata(data);
   }, [courseId]);
 
-  useEffect(() => { if (visible) load(); }, [visible, load]);
+  const loadTeeData = useCallback(async () => {
+    const { data: sets } = await supabase
+      .from('sb_tee_sets')
+      .select('*')
+      .eq('course_id', courseId)
+      .order('total_yardage', { ascending: false });
+    if (sets && sets.length > 0) {
+      setTeeSets(sets);
+      setSelectedTeeId(prev => prev && sets.find((s: TeeSet) => s.id === prev) ? prev : sets[0].id);
+    }
+    const { data: holes } = await supabase
+      .from('sb_holes')
+      .select('*')
+      .eq('course_id', courseId)
+      .order('hole_number');
+    if (holes) setHolesData(holes);
+  }, [courseId]);
+
+  useEffect(() => { if (visible) { load(); loadTeeData(); } }, [visible, load, loadTeeData]);
+
+  const getHolePar = (holeNum: number): number | null => {
+    const h = holesData.find(d => d.hole_number === holeNum && d.tee_set_id === selectedTeeId);
+    return h ? h.par : null;
+  };
+
+  const getHoleYardage = (holeNum: number): number | null => {
+    const h = holesData.find(d => d.hole_number === holeNum && d.tee_set_id === selectedTeeId);
+    return h ? h.yardage : null;
+  };
 
   const handleSave = async (holeNumber: number, detail: HoleDetail) => {
     await saveHoleDetail(courseId, holeNumber, detail);
@@ -193,14 +254,41 @@ export default function CourseGuide({ courseId, courseName, visible, onClose }: 
             </View>
           </View>
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+            {teeSets.length > 0 && (
+              <View style={g.teeSelector}>
+                {teeSets.map(tee => {
+                  const isSelected = tee.id === selectedTeeId;
+                  const bgColor = TEE_COLOR_MAP[tee.color?.toLowerCase()] || colors.grayDark;
+                  const textColor = ['white', 'gold', 'silver'].includes(tee.color?.toLowerCase()) ? colors.black : '#fff';
+                  return (
+                    <TouchableOpacity
+                      key={tee.id}
+                      style={[g.teePill, { backgroundColor: bgColor }, isSelected && g.teePillSelected]}
+                      onPress={() => setSelectedTeeId(tee.id)}
+                    >
+                      <Text style={[g.teePillText, { color: textColor }]}>{tee.name || tee.color}</Text>
+                      <Text style={[g.teePillYds, { color: textColor, opacity: 0.8 }]}>{tee.total_yardage}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
             {holes.map(num => {
               const hole = metadata[String(num)];
               if (!hole) return null;
               const shapeOpt = SHAPE_OPTIONS.find(s => s.value === hole.shape);
+              const par = getHolePar(num);
+              const yardage = getHoleYardage(num);
               return (
                 <TouchableOpacity key={num} style={g.holeCard} onPress={() => setEditingHole(num)} activeOpacity={0.7}>
                   <View style={g.holeHeader}>
                     <View style={g.holeNum}><Text style={g.holeNumText}>{num}</Text></View>
+                    {par != null && (
+                      <View style={g.parBadge}><Text style={g.parBadgeText}>Par {par}</Text></View>
+                    )}
+                    {yardage != null && (
+                      <Text style={g.yardageText}>{yardage} yds</Text>
+                    )}
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Text style={g.shapeText}>{shapeOpt?.icon || '⬆️'} {shapeOpt?.label || 'Straight'}</Text>

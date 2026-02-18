@@ -1,8 +1,8 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../lib/theme';
 
-const GOLD = colors.gold;
-const OVER_COLOR = '#8B3A3A'; // muted dark red
+const BIRDIE_COLOR = '#D32F2F'; // red circles for under par
+const BOGEY_COLOR = '#1B4332'; // green boxes for over par
 
 interface ScoreCellProps {
   score: number;
@@ -23,9 +23,9 @@ export default function ScoreCell({ score, par, size = 14, mini = false }: Score
   if (diff <= -2) {
     return (
       <View style={[styles.center, { width: cellSize, height: cellSize }]}>
-        <View style={[styles.circleOuter, { width: cellSize, height: cellSize, borderRadius: cellSize / 2, borderColor: GOLD }]}>
-          <View style={[styles.circleInner, { width: cellSize - 6, height: cellSize - 6, borderRadius: (cellSize - 6) / 2, borderColor: GOLD }]}>
-            <Text style={[styles.scoreText, { fontSize: size, color: GOLD }]}>{score}</Text>
+        <View style={[styles.circleOuter, { width: cellSize, height: cellSize, borderRadius: cellSize / 2, borderColor: BIRDIE_COLOR }]}>
+          <View style={[styles.circleInner, { width: cellSize - 6, height: cellSize - 6, borderRadius: (cellSize - 6) / 2, borderColor: BIRDIE_COLOR }]}>
+            <Text style={[styles.scoreText, { fontSize: size, color: BIRDIE_COLOR }]}>{score}</Text>
           </View>
         </View>
       </View>
@@ -36,8 +36,8 @@ export default function ScoreCell({ score, par, size = 14, mini = false }: Score
   if (diff === -1) {
     return (
       <View style={[styles.center, { width: cellSize, height: cellSize }]}>
-        <View style={[styles.circle, { width: cellSize, height: cellSize, borderRadius: cellSize / 2, borderColor: GOLD }]}>
-          <Text style={[styles.scoreText, { fontSize: size, color: GOLD }]}>{score}</Text>
+        <View style={[styles.circle, { width: cellSize, height: cellSize, borderRadius: cellSize / 2, borderColor: BIRDIE_COLOR }]}>
+          <Text style={[styles.scoreText, { fontSize: size, color: BIRDIE_COLOR }]}>{score}</Text>
         </View>
       </View>
     );
@@ -56,8 +56,8 @@ export default function ScoreCell({ score, par, size = 14, mini = false }: Score
   if (diff === 1) {
     return (
       <View style={[styles.center, { width: cellSize, height: cellSize }]}>
-        <View style={[styles.box, { width: cellSize, height: cellSize, borderColor: OVER_COLOR }]}>
-          <Text style={[styles.scoreText, { fontSize: size, color: OVER_COLOR }]}>{score}</Text>
+        <View style={[styles.box, { width: cellSize, height: cellSize, borderColor: BOGEY_COLOR }]}>
+          <Text style={[styles.scoreText, { fontSize: size, color: BOGEY_COLOR }]}>{score}</Text>
         </View>
       </View>
     );
@@ -67,9 +67,9 @@ export default function ScoreCell({ score, par, size = 14, mini = false }: Score
   if (diff === 2) {
     return (
       <View style={[styles.center, { width: cellSize, height: cellSize }]}>
-        <View style={[styles.box, { width: cellSize, height: cellSize, borderColor: OVER_COLOR }]}>
-          <View style={[styles.boxInner, { width: cellSize - 6, height: cellSize - 6, borderColor: OVER_COLOR }]}>
-            <Text style={[styles.scoreText, { fontSize: size, color: OVER_COLOR }]}>{score}</Text>
+        <View style={[styles.box, { width: cellSize, height: cellSize, borderColor: BOGEY_COLOR }]}>
+          <View style={[styles.boxInner, { width: cellSize - 6, height: cellSize - 6, borderColor: BOGEY_COLOR }]}>
+            <Text style={[styles.scoreText, { fontSize: size, color: BOGEY_COLOR }]}>{score}</Text>
           </View>
         </View>
       </View>
@@ -79,10 +79,10 @@ export default function ScoreCell({ score, par, size = 14, mini = false }: Score
   // Triple bogey+: triple box
   return (
     <View style={[styles.center, { width: cellSize, height: cellSize }]}>
-      <View style={[styles.box, { width: cellSize, height: cellSize, borderColor: OVER_COLOR }]}>
-        <View style={[styles.boxInner, { width: cellSize - 5, height: cellSize - 5, borderColor: OVER_COLOR }]}>
-          <View style={[styles.boxInner, { width: cellSize - 10, height: cellSize - 10, borderColor: OVER_COLOR }]}>
-            <Text style={[styles.scoreText, { fontSize: size, color: OVER_COLOR }]}>{score}</Text>
+      <View style={[styles.box, { width: cellSize, height: cellSize, borderColor: BOGEY_COLOR }]}>
+        <View style={[styles.boxInner, { width: cellSize - 5, height: cellSize - 5, borderColor: BOGEY_COLOR }]}>
+          <View style={[styles.boxInner, { width: cellSize - 10, height: cellSize - 10, borderColor: BOGEY_COLOR }]}>
+            <Text style={[styles.scoreText, { fontSize: size, color: BOGEY_COLOR }]}>{score}</Text>
           </View>
         </View>
       </View>
