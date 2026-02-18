@@ -567,6 +567,10 @@ export default function LogRound() {
   const isPuttShot = (holeIdx: number, shotIdx: number): boolean => {
     const entry = holeEntries[holeIdx];
     if (!entry) return false;
+    // If putts are recorded and this shot is within the last N shots (where N = putts)
+    const totalShots = entry.shots.length;
+    const puttsCount = entry.putts;
+    if (puttsCount > 0 && shotIdx >= totalShots - puttsCount) return true;
     // If previous shot landed on Green, this is a putt
     if (shotIdx > 0) {
       const prevShot = entry.shots[shotIdx - 1];
@@ -618,14 +622,28 @@ export default function LogRound() {
             <PillRow options={PUTT_SLOPES} value={shot.putt_slope || ''} onChange={v => updateShot(holeIdx, shotIdx, 'putt_slope', v)} />
 
             <Text style={s.formLabel}>Result</Text>
-            <View style={[s.pillRow, { flexWrap: 'wrap' }]}>
-              {PUTT_RESULTS.map(opt => (
-                <TouchableOpacity key={opt.key} style={[s.pill, shot.putt_result === opt.key && (opt.key === 'made' ? s.pillMade : s.pillActive)]}
-                  onPress={() => updateShot(holeIdx, shotIdx, 'putt_result', shot.putt_result === opt.key ? '' : opt.key)}>
-                  <Text style={[s.pillText, shot.putt_result === opt.key && s.pillTextActive]}>{opt.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {(() => {
+              const PUTT_GRID: { key: string; label: string }[][] = [
+                [{ key: 'miss-long-left', label: 'Long L' }, { key: 'miss-long', label: 'Long' }, { key: 'miss-long-right', label: 'Long R' }],
+                [{ key: 'miss-left', label: 'Left' }, { key: 'made', label: 'Made ✓' }, { key: 'miss-right', label: 'Right' }],
+                [{ key: 'miss-short-left', label: 'Short L' }, { key: 'miss-short', label: 'Short' }, { key: 'miss-short-right', label: 'Short R' }],
+              ];
+              return (
+                <View style={s.grid3x3}>
+                  {PUTT_GRID.map((row, ri) => (
+                    <View key={ri} style={s.gridRow}>
+                      {row.map(cell => (
+                        <TouchableOpacity key={cell.key}
+                          style={[s.gridCell, shot.putt_result === cell.key && (cell.key === 'made' ? s.pillMade : s.pillActive)]}
+                          onPress={() => updateShot(holeIdx, shotIdx, 'putt_result', shot.putt_result === cell.key ? '' : cell.key)}>
+                          <Text style={[s.pillText, shot.putt_result === cell.key && s.pillTextActive]}>{cell.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
 
             {shot.putt_result && shot.putt_result !== 'made' && (
               <>
