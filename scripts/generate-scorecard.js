@@ -81,13 +81,39 @@ rowLabels.slice(1).forEach((label, ri) => {
   });
 });
 
-// Footer
-const footerY = gridY + rowLabels.length * cellH + 20;
+// Caption
+const captionY = gridY + rowLabels.length * cellH + 16;
 doc.font('Helvetica').fontSize(11).fillColor(BLACK);
-doc.text('Caption: _______________________________________________', LEFT, footerY);
+doc.text('Caption: _______________________________________________', LEFT, captionY);
 
-doc.fontSize(10).fillColor('#888');
-doc.text('Scan this scorecard in the Sandbagger app to log your round', LEFT, footerY + 22, { align: 'center', width: W });
+// Instructions box
+const instrY = captionY + 30;
+const instrW = W;
+const instrPad = 10;
+doc.save();
+doc.roundedRect(LEFT, instrY, instrW, 120, 6).fillAndStroke('#FAFAFA', '#CCCCCC');
+doc.restore();
+
+doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK);
+doc.text('📋 HOW TO FILL OUT THIS SCORECARD', LEFT + instrPad, instrY + instrPad, { width: instrW - instrPad * 2 });
+
+doc.font('Helvetica').fontSize(8.5).fillColor('#333');
+const instrLines = [
+  '• Course / Date / Tees — Write clearly. Date as MM/DD/YYYY or any clear format.',
+  '• Round Type — Check ONE box: Practice, Tournament, or Casual.',
+  '• Par — Write the par for each hole (3, 4, or 5).',
+  '• Score — Write your total strokes for each hole. Fill in OUT (holes 1-9 total), IN (holes 10-18 total), and TOT (grand total).',
+  '• Putts — Number of putts per hole.',
+  '• FW (Fairway Hit) — Write ✓ or Y for yes, ✗ or N for no. Leave blank for par 3s or if not tracking.',
+  '• GIR (Green in Regulation) — Write ✓ or Y if you hit the green in regulation, ✗ or N if not.',
+  '• W&I (Wedge & In) — Number of shots hit with a wedge or shorter club (inside ~130 yds). Leave blank if not tracking.',
+  '• Caption — Optional note about your round (shows on your feed if shared).',
+  '',
+  '📷 To scan: Open the Sandbagger app → Log tab → tap "Scan Scores" → take a photo of this sheet. Review before saving!',
+];
+instrLines.forEach((line, i) => {
+  doc.text(line, LEFT + instrPad, instrY + instrPad + 14 + i * 10, { width: instrW - instrPad * 2 });
+});
 
 doc.end();
 console.log('Scorecard PDF generated:', outPath);
