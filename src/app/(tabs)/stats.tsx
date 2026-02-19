@@ -82,7 +82,7 @@ export default function Stats() {
 
       // Recent rounds with hole scores
       const { data: recentFull } = await supabase.from('sb_rounds')
-        .select('id, date_played, total_score, notes, round_type, sb_courses(name)')
+        .select('id, date_played, total_score, notes, sb_courses(name)')
         .eq('user_id', user.id).eq('is_complete', true)
         .order('date_played', { ascending: false })
         .limit(10);
@@ -96,7 +96,7 @@ export default function Stats() {
           date_played: r.date_played,
           total_score: r.total_score,
           course_name: r.sb_courses?.name || 'Unknown',
-          round_type: r.round_type || undefined,
+          round_type: (() => { try { const n = JSON.parse(r.notes); return n?.round_type || undefined; } catch { return undefined; } })(),
           holes: rScores.map((h: any) => ({ hole_number: h.hole_number, score: h.score, par: h.par || 0, putts: h.putts ?? 0, fairway_hit: h.fairway_hit, gir: !!h.gir, wedge_and_in: h.wedge_and_in })).sort((a: any, b: any) => a.hole_number - b.hole_number),
           wedge_total: wTotal,
         };

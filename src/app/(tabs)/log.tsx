@@ -419,10 +419,10 @@ export default function LogRound() {
     try {
       const { data: round, error } = await supabase.from('sb_rounds').insert({
         user_id: user.id, course_id: selectedCourse.id, date_played: datePlayed,
-        total_score: totalScore, weather, wind, is_complete: true, visibility, round_type: roundType,
+        total_score: totalScore, weather, wind, is_complete: true, visibility,
         tee_set_id: selectedTee?.id || null,
         mixed_tees: mixedTees,
-        notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn, caption: roundCaption || null, photo_url: roundPhoto || null }),
+        notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn, caption: roundCaption || null, photo_url: roundPhoto || null, round_type: roundType }),
       }).select().single();
       if (error) throw error;
 
