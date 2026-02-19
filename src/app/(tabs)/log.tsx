@@ -32,6 +32,7 @@ interface ShotData {
   putt_slope?: string; // 'uphill' | 'downhill' | 'flat'
   putt_result?: string; // 'made' | 'miss-left' | 'miss-right' | 'miss-short' | 'miss-long' | 'lip-out-left' | 'lip-out-right'
   putt_distance_remaining?: string; // feet remaining after miss
+  approach_distance?: string; // yards for approach shots
 }
 
 interface StrategyData {
@@ -629,16 +630,24 @@ export default function LogRound() {
                 [{ key: 'miss-short-left', label: 'Short L' }, { key: 'miss-short', label: 'Short' }, { key: 'miss-short-right', label: 'Short R' }],
               ];
               return (
-                <View style={s.grid3x3}>
+                <View style={{ gap: 4 }}>
                   {PUTT_GRID.map((row, ri) => (
-                    <View key={ri} style={s.gridRow}>
-                      {row.map(cell => (
-                        <TouchableOpacity key={cell.key}
-                          style={[s.gridCell, shot.putt_result === cell.key && (cell.key === 'made' ? s.pillMade : s.pillActive)]}
-                          onPress={() => updateShot(holeIdx, shotIdx, 'putt_result', shot.putt_result === cell.key ? '' : cell.key)}>
-                          <Text style={[s.pillText, shot.putt_result === cell.key && s.pillTextActive]}>{cell.label}</Text>
-                        </TouchableOpacity>
-                      ))}
+                    <View key={ri} style={{ flexDirection: 'row', gap: 4 }}>
+                      {row.map(cell => {
+                        const selected = shot.putt_result === cell.key;
+                        const isMade = cell.key === 'made';
+                        return (
+                          <TouchableOpacity key={cell.key}
+                            style={{
+                              flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center',
+                              backgroundColor: selected ? (isMade ? '#16a34a' : '#dc2626') : '#f3f4f6',
+                              borderWidth: 1, borderColor: selected ? (isMade ? '#16a34a' : '#dc2626') : '#d1d5db',
+                            }}
+                            onPress={() => updateShot(holeIdx, shotIdx, 'putt_result', shot.putt_result === cell.key ? '' : cell.key)}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: selected ? '#fff' : '#374151' }}>{cell.label}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
                   ))}
                 </View>
@@ -650,7 +659,12 @@ export default function LogRound() {
                 <Text style={s.formLabel}>Distance Remaining (feet)</Text>
                 <TextInput style={s.input}
                   value={shot.putt_distance_remaining || ''}
-                  onChangeText={v => updateShot(holeIdx, shotIdx, 'putt_distance_remaining', v)}
+                  onChangeText={v => {
+                    updateShot(holeIdx, shotIdx, 'putt_distance_remaining', v);
+                    if (v && shotIdx + 1 < holeEntries[holeIdx].shots.length) {
+                      updateShot(holeIdx, shotIdx + 1, 'putt_distance', v);
+                    }
+                  }}
                   keyboardType="number-pad" placeholder="3" placeholderTextColor={colors.gray} />
               </>
             )}
@@ -688,6 +702,16 @@ export default function LogRound() {
               <PillRow options={userBag && userBag.length > 0 ? userBag.filter(c => c !== 'Putter') : CLUBS.filter(c => c !== 'Putter')} value={shot.club} onChange={v => updateShot(holeIdx, shotIdx, 'club', v)} />
             </ScrollView>
             {(!userBag || userBag.length === 0) && <Text style={{ fontSize: 11, color: colors.grayDark, marginTop: 2 }}>Edit your bag in Profile</Text>}
+
+            {shotIdx > 0 && (
+              <>
+                <Text style={s.formLabel}>Distance (yards)</Text>
+                <TextInput style={s.input}
+                  value={shot.approach_distance || ''}
+                  onChangeText={v => updateShot(holeIdx, shotIdx, 'approach_distance', v)}
+                  keyboardType="number-pad" placeholder="150" placeholderTextColor={colors.gray} />
+              </>
+            )}
 
             <Text style={s.formLabel}>Intention</Text>
             <View style={[s.pillRow, { flexWrap: 'wrap' }]}>
