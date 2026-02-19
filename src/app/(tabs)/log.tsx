@@ -104,14 +104,14 @@ const REACTIONS = ['Positive', 'Negative', 'Neutral'];
 const EXECUTE_OPTIONS = ['Yes', 'No', 'Partial'];
 
 const GRID_3X3_LABELS = [
-  'front-left', 'front-center', 'front-right',
-  'mid-left', 'center', 'mid-right',
   'back-left', 'back-center', 'back-right',
+  'mid-left', 'center', 'mid-right',
+  'front-left', 'front-center', 'front-right',
 ];
 const GRID_3X3_DISPLAY = [
-  ['FL', 'FC', 'FR'],
-  ['ML', 'C', 'MR'],
   ['BL', 'BC', 'BR'],
+  ['ML', 'C', 'MR'],
+  ['FL', 'FC', 'FR'],
 ];
 
 // 5x5 green grid: outer ring = miss, inner 3x3 = on green
@@ -121,16 +121,16 @@ const GRID_5X5: { key: string; onGreen: boolean; label: string }[][] = (() => {
   const grid: { key: string; onGreen: boolean; label: string }[][] = [];
   const outerLabels = [
     ['miss-long-left','miss-long-left','miss-long','miss-long-right','miss-long-right'],
-    ['miss-left','on-front-left','on-front-center','on-front-right','miss-right'],
-    ['miss-left','on-mid-left','on-center','on-mid-right','miss-right'],
     ['miss-left','on-back-left','on-back-center','on-back-right','miss-right'],
+    ['miss-left','on-mid-left','on-center','on-mid-right','miss-right'],
+    ['miss-left','on-front-left','on-front-center','on-front-right','miss-right'],
     ['miss-short-left','miss-short-left','miss-short','miss-short-right','miss-short-right'],
   ];
   const displayLabels = [
     ['↖','⬆','⬆','⬆','↗'],
-    ['⬅','FL','FC','FR','➡'],
-    ['⬅','ML','C','MR','➡'],
     ['⬅','BL','BC','BR','➡'],
+    ['⬅','ML','C','MR','➡'],
+    ['⬅','FL','FC','FR','➡'],
     ['↙','⬇','⬇','⬇','↘'],
   ];
   for (let r = 0; r < 5; r++) {
@@ -516,18 +516,19 @@ export default function LogRound() {
   };
 
   // 3x3 grid component for pin position / aim point
-  const Grid3x3 = ({ value, onChange, markerType }: { value: string; onChange: (v: string) => void; markerType: 'pin' | 'aim' }) => (
+  const Grid3x3 = ({ value, onChange, markerType, pinValue }: { value: string; onChange: (v: string) => void; markerType: 'pin' | 'aim'; pinValue?: string }) => (
     <View style={s.grid3x3}>
       {GRID_3X3_DISPLAY.map((row, ri) => (
         <View key={ri} style={s.gridRow}>
           {row.map((label, ci) => {
             const key = GRID_3X3_LABELS[ri * 3 + ci];
             const isSelected = value === key;
+            const isPinHere = markerType === 'aim' && pinValue === key && !isSelected;
             return (
-              <TouchableOpacity key={key} style={[s.grid3Cell, isSelected && s.gridCellSelected]}
+              <TouchableOpacity key={key} style={[s.grid3Cell, isSelected && s.gridCellSelected, isPinHere && { borderColor: '#b91c1c', borderWidth: 2 }]}
                 onPress={() => onChange(value === key ? '' : key)}>
                 <Text style={[s.grid3CellText, isSelected && s.gridCellTextSelected]}>
-                  {isSelected ? (markerType === 'pin' ? '🚩' : '🎯') : label}
+                  {isSelected ? (markerType === 'pin' ? '🚩' : '🎯') : isPinHere ? '🚩' : label}
                 </Text>
               </TouchableOpacity>
             );
@@ -737,14 +738,14 @@ export default function LogRound() {
 
             {shot.intention === 'hit_green' && (
               <>
-                <Text style={s.formLabel}>Pin Position</Text>
+                <Text style={s.formLabel}>Where was the pin from your position?</Text>
                 <Grid3x3 value={shot.pin_position || ''} onChange={v => updateShot(holeIdx, shotIdx, 'pin_position', v)} markerType="pin" />
-                <Text style={s.formLabel}>Aim Point (relative to pin)</Text>
-                <Grid3x3 value={shot.aim_point || ''} onChange={v => updateShot(holeIdx, shotIdx, 'aim_point', v)} markerType="aim" />
+                <Text style={s.formLabel}>Where did you aim?</Text>
+                <Grid3x3 value={shot.aim_point || ''} onChange={v => updateShot(holeIdx, shotIdx, 'aim_point', v)} markerType="aim" pinValue={shot.pin_position} />
               </>
             )}
 
-            <Text style={s.formLabel}>Shot Shape</Text>
+            <Text style={s.formLabel}>Intended Shot Shape</Text>
             <PillRow options={SHOT_SHAPES} value={shot.shot_shape} onChange={v => updateShot(holeIdx, shotIdx, 'shot_shape', v)} wrap />
 
             <Text style={s.formLabel}>Result — Where Did You End Up?</Text>
