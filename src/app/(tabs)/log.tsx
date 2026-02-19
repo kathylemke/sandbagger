@@ -202,6 +202,82 @@ export default function LogRound() {
   const [greenSpeed, setGreenSpeed] = useState(0);
   const [grassType, setGrassType] = useState('');
   const [roughThickness, setRoughThickness] = useState('');
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftCourseName, setDraftCourseName] = useState('');
+  const [draftDate, setDraftDate] = useState('');
+
+  const DRAFT_KEY = user?.id ? `sandbagger_draft_${user.id}` : 'sandbagger_draft';
+
+  const saveDraft = async () => {
+    const draft = {
+      courseId: selectedCourse?.id, courseName: selectedCourse?.name, step, datePlayed, weather, wind, visibility,
+      trackingMode, roundType, holeEntries, currentHole, holeSelection, selectedHoles,
+      trackWedgeAndIn, greenFirmness, greenSpeed, grassType, roughThickness,
+      roundCaption, roundPhoto, teeSetId: selectedTee?.id, mixedTees, savedAt: new Date().toISOString(),
+    };
+    await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    if (Platform.OS === 'web') window.alert('Round saved! You can finish it later.');
+    else Alert.alert('Saved', 'Round saved! You can finish it later.');
+  };
+
+  const loadDraft = async () => {
+    const stored = await AsyncStorage.getItem(DRAFT_KEY);
+    if (!stored) return;
+    try {
+      const draft = JSON.parse(stored);
+      // Restore course first
+      const course = courses.find(c => c.id === draft.courseId);
+      if (course) {
+        setSelectedCourse(course);
+        const [holesRes, teesRes] = await Promise.all([
+          supabase.from('sb_holes').select('*').eq('course_id', course.id).order('hole_number'),
+          supabase.from('sb_tee_sets').select('*').eq('course_id', course.id).order('total_yardage', { ascending: false }),
+        ]);
+        setHoles(holesRes.data || []);
+        setTeeSets(teesRes.data || []);
+        const teeIds = (teesRes.data || []).map((t: TeeSet) => t.id);
+        if (teeIds.length > 0) {
+          const { data: allTH } = await supabase.from('sb_tee_holes').select('*').in('tee_set_id', teeIds).order('hole_number');
+          setAllTeeHolesData(allTH || []);
+        }
+        if (draft.teeSetId) {
+          const tee = (teesRes.data || []).find((t: TeeSet) => t.id === draft.teeSetId);
+          if (tee) {
+            setSelectedTee(tee);
+            const { data } = await supabase.from('sb_tee_holes').select('*').eq('tee_set_id', tee.id).order('hole_number');
+            setTeeHolesData(data || []);
+          }
+        }
+      }
+      // Restore all state
+      if (draft.datePlayed) setDatePlayed(draft.datePlayed);
+      if (draft.weather) setWeather(draft.weather);
+      if (draft.wind) setWind(draft.wind);
+      if (draft.visibility) setVisibility(draft.visibility);
+      if (draft.trackingMode) setTrackingMode(draft.trackingMode);
+      if (draft.roundType) setRoundType(draft.roundType);
+      if (draft.holeEntries) setHoleEntries(draft.holeEntries);
+      if (draft.currentHole != null) setCurrentHole(draft.currentHole);
+      if (draft.holeSelection) setHoleSelection(draft.holeSelection);
+      if (draft.selectedHoles) setSelectedHoles(draft.selectedHoles);
+      if (draft.trackWedgeAndIn) setTrackWedgeAndIn(draft.trackWedgeAndIn);
+      if (draft.greenFirmness) setGreenFirmness(draft.greenFirmness);
+      if (draft.greenSpeed) setGreenSpeed(draft.greenSpeed);
+      if (draft.grassType) setGrassType(draft.grassType);
+      if (draft.roughThickness) setRoughThickness(draft.roughThickness);
+      if (draft.roundCaption) setRoundCaption(draft.roundCaption);
+      if (draft.roundPhoto) setRoundPhoto(draft.roundPhoto);
+      if (draft.mixedTees) setMixedTees(draft.mixedTees);
+      setStep(draft.step || 4);
+      await AsyncStorage.removeItem(DRAFT_KEY);
+      setHasDraft(false);
+    } catch {}
+  };
+
+  const clearDraft = async () => {
+    await AsyncStorage.removeItem(DRAFT_KEY);
+    setHasDraft(false);
+  };
 
   useEffect(() => {
     supabase.from('sb_courses').select('*').order('name').then(({ data }) => setCourses(data || []));
@@ -212,6 +288,20 @@ export default function LogRound() {
       });
     }
   }, []);
+
+  // Check for saved draft
+  useEffect(() => {
+    AsyncStorage.getItem(DRAFT_KEY).then(stored => {
+      if (stored) {
+        try {
+          const draft = JSON.parse(stored);
+          setHasDraft(true);
+          setDraftCourseName(draft.courseName || 'Unknown');
+          setDraftDate(draft.datePlayed || '');
+        } catch {}
+      }
+    });
+  }, [DRAFT_KEY]);
 
   const scanScorecard = async (imageBase64: string) => {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -456,6 +546,8 @@ export default function LogRound() {
         return base;
       });
       await supabase.from('sb_hole_scores').insert(scoreInserts);
+      await AsyncStorage.removeItem(DRAFT_KEY);
+      setHasDraft(false);
       if (Platform.OS === 'web') {
         window.alert(`Round saved! Total: ${totalScore}`);
       } else {
@@ -876,6 +968,20 @@ export default function LogRound() {
   if (step === 1) {
     return (
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16 }}>
+        {hasDraft && (
+          <View style={{ backgroundColor: '#fef3c7', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#f59e0b' }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#92400e', marginBottom: 4 }}>📋 Unfinished Round</Text>
+            <Text style={{ fontSize: 14, color: '#92400e', marginBottom: 12 }}>{draftCourseName} · {draftDate}</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 8, padding: 12, alignItems: 'center' }} onPress={loadDraft}>
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Continue Round</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, backgroundColor: '#fee2e2', borderRadius: 8, padding: 12, alignItems: 'center' }} onPress={clearDraft}>
+                <Text style={{ color: '#dc2626', fontWeight: '700' }}>Discard</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
         <Text style={s.stepTitle}>Step 1: Select Course</Text>
         {Platform.OS === 'web' && (
           <input
@@ -1250,6 +1356,9 @@ export default function LogRound() {
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity style={{ backgroundColor: '#f3f4f6', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: '#d1d5db' }} onPress={saveDraft}>
+          <Text style={{ color: '#374151', fontWeight: '700', fontSize: 15 }}>💾 Save & Finish Later</Text>
+        </TouchableOpacity>
       </ScrollView>
     );
   }
@@ -1381,6 +1490,9 @@ export default function LogRound() {
 
       <TouchableOpacity style={[s.goldBtn, saving && { opacity: 0.6 }]} onPress={saveRound} disabled={saving}>
         <Text style={s.goldBtnText}>{saving ? 'Saving...' : '✓ Save Round'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={{ backgroundColor: '#f3f4f6', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: '#d1d5db' }} onPress={saveDraft}>
+        <Text style={{ color: '#374151', fontWeight: '700', fontSize: 15 }}>💾 Save & Finish Later</Text>
       </TouchableOpacity>
     </ScrollView>
   );
