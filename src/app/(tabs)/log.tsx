@@ -414,7 +414,8 @@ export default function LogRound() {
   };
 
   const saveRound = async () => {
-    if (!user || !selectedCourse) return;
+    if (!user) { if (Platform.OS === 'web') window.alert('Please log in first'); else Alert.alert('Error', 'Please log in first'); return; }
+    if (!selectedCourse) { if (Platform.OS === 'web') window.alert('Please select a course first'); else Alert.alert('Error', 'Please select a course first'); return; }
     setSaving(true);
     try {
       const { data: round, error } = await supabase.from('sb_rounds').insert({
@@ -450,10 +451,11 @@ export default function LogRound() {
       }
       setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false); setRoundType('practice'); setRoundCaption(''); setRoundPhoto(null); setScannedFromPhoto(false);
     } catch (e: any) {
+      console.error('Save round error:', e);
       if (Platform.OS === 'web') {
-        window.alert(`Error: ${e.message}`);
+        window.alert(`Error saving round: ${e.message || JSON.stringify(e)}`);
       } else {
-        Alert.alert('Error', e.message);
+        Alert.alert('Error', e.message || JSON.stringify(e));
       }
     } finally {
       setSaving(false);
