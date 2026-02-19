@@ -99,6 +99,10 @@ const PUTT_RESULTS = [
   { key: 'lip-out-right', label: 'Lip Out Right' },
 ];
 const LIE_TYPES = ['Tee', 'Fairway', 'Rough', 'Bunker', 'Green', 'Fringe', 'Trees'];
+const WEATHER_OPTIONS = ['Sunny', 'Partly Cloudy', 'Overcast', 'Light Rain', 'Rain', 'Windy', 'Cold', 'Hot & Humid'];
+const WIND_OPTIONS = ['Calm', '5-10 mph', '10-15 mph', '15-20 mph', '20+ mph'];
+const GRASS_TYPES = ['Bermuda', 'Bentgrass', 'Poa Annua', 'Zoysia', 'Ryegrass', 'Fescue', 'Paspalum', 'Mixed'];
+const ROUGH_THICKNESS = ['Thin', 'Medium', 'Thick', 'Very Thick'];
 const FEELINGS = ['Confident', 'Nervous', 'Frustrated', 'Neutral', 'Excited', 'Anxious', 'Calm'];
 const REACTIONS = ['Positive', 'Negative', 'Neutral'];
 const EXECUTE_OPTIONS = ['Yes', 'No', 'Partial'];
@@ -190,6 +194,10 @@ export default function LogRound() {
   const [selectedHoles, setSelectedHoles] = useState<number[]>([]);
   const [userBag, setUserBag] = useState<string[] | null>(null);
   const [trackWedgeAndIn, setTrackWedgeAndIn] = useState(false);
+  const [greenFirmness, setGreenFirmness] = useState(0);
+  const [greenSpeed, setGreenSpeed] = useState(0);
+  const [grassType, setGrassType] = useState('');
+  const [roughThickness, setRoughThickness] = useState('');
 
   useEffect(() => {
     supabase.from('sb_courses').select('*').order('name').then(({ data }) => setCourses(data || []));
@@ -423,7 +431,7 @@ export default function LogRound() {
         total_score: totalScore, weather, wind, is_complete: true, visibility,
         tee_set_id: selectedTee?.id || null,
         mixed_tees: mixedTees,
-        notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn, caption: roundCaption || null, photo_url: roundPhoto || null, round_type: roundType }),
+        notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn, caption: roundCaption || null, photo_url: roundPhoto || null, round_type: roundType, green_firmness: greenFirmness || null, green_speed: greenSpeed || null, grass_type: grassType || null, rough_thickness: roughThickness || null }),
       }).select().single();
       if (error) throw error;
 
@@ -988,9 +996,33 @@ export default function LogRound() {
         <Text style={s.formLabel}>Date</Text>
         <TextInput style={s.input} value={datePlayed} onChangeText={setDatePlayed} placeholder="YYYY-MM-DD" placeholderTextColor={colors.gray} />
         <Text style={s.formLabel}>Weather</Text>
-        <TextInput style={s.input} value={weather} onChangeText={setWeather} placeholder="Sunny, 75°F" placeholderTextColor={colors.gray} />
+        <PillRow options={WEATHER_OPTIONS} value={weather} onChange={v => setWeather(weather === v ? '' : v)} wrap />
         <Text style={s.formLabel}>Wind</Text>
-        <TextInput style={s.input} value={wind} onChangeText={setWind} placeholder="5-10 mph SW" placeholderTextColor={colors.gray} />
+        <PillRow options={WIND_OPTIONS} value={wind} onChange={v => setWind(wind === v ? '' : v)} wrap />
+
+        <Text style={s.formLabel}>Green Firmness (1 = soft, 5 = firm)</Text>
+        <View style={s.visRow}>
+          {[1,2,3,4,5].map(n => (
+            <TouchableOpacity key={n} style={[s.visBtn, greenFirmness === n && s.visBtnActive]} onPress={() => setGreenFirmness(greenFirmness === n ? 0 : n)}>
+              <Text style={[s.visBtnText, greenFirmness === n && s.visBtnTextActive]}>{n}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={s.formLabel}>Green Speed (stimp, 1-16)</Text>
+        <View style={[s.visRow, { flexWrap: 'wrap', gap: 4 }]}>
+          {Array.from({length: 16}, (_, i) => i + 1).map(n => (
+            <TouchableOpacity key={n} style={[s.visBtn, { minWidth: 36, paddingHorizontal: 6 }, greenSpeed === n && s.visBtnActive]} onPress={() => setGreenSpeed(greenSpeed === n ? 0 : n)}>
+              <Text style={[s.visBtnText, greenSpeed === n && s.visBtnTextActive]}>{n}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={s.formLabel}>Grass Type</Text>
+        <PillRow options={GRASS_TYPES} value={grassType} onChange={v => setGrassType(grassType === v ? '' : v)} wrap />
+
+        <Text style={s.formLabel}>Rough Thickness</Text>
+        <PillRow options={ROUGH_THICKNESS} value={roughThickness} onChange={v => setRoughThickness(roughThickness === v ? '' : v)} wrap />
         <Text style={s.formLabel}>Visibility</Text>
         <View style={s.visRow}>
           {['private', 'partners', 'public'].map(v => (
