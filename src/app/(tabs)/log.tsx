@@ -32,6 +32,10 @@ interface ShotData {
   putt_slope?: string; // 'uphill' | 'downhill' | 'flat'
   putt_result?: string; // 'made' | 'miss-left' | 'miss-right' | 'miss-short' | 'miss-long' | 'lip-out-left' | 'lip-out-right'
   putt_distance_remaining?: string; // feet remaining after miss
+  putt_hit_line?: string; // 'yes' | 'no'
+  putt_line_miss?: string; // 'pull' | 'push'
+  putt_hit_speed?: string; // 'yes' | 'no'
+  putt_speed_miss?: string; // 'hard' | 'soft'
   approach_distance?: string; // yards for approach shots
 }
 
@@ -627,11 +631,40 @@ export default function LogRound() {
             <Text style={s.formLabel}>Break</Text>
             <PillRow options={PUTT_BREAKS} value={shot.putt_break || ''} onChange={v => updateShot(holeIdx, shotIdx, 'putt_break', v)} wrap />
 
-            <Text style={s.formLabel}>Break Amount</Text>
-            <PillRow options={PUTT_BREAK_AMOUNTS} value={shot.putt_break_amount || ''} onChange={v => updateShot(holeIdx, shotIdx, 'putt_break_amount', v)} />
-
             <Text style={s.formLabel}>Slope</Text>
             <PillRow options={PUTT_SLOPES} value={shot.putt_slope || ''} onChange={v => updateShot(holeIdx, shotIdx, 'putt_slope', v)} />
+
+            <Text style={s.formLabel}>Did you hit your line?</Text>
+            <View style={s.toggleRow}>
+              <TouchableOpacity style={[s.toggleBtn, shot.putt_hit_line === 'yes' && s.toggleBtnActive]} onPress={() => { updateShot(holeIdx, shotIdx, 'putt_hit_line', shot.putt_hit_line === 'yes' ? '' : 'yes'); updateShot(holeIdx, shotIdx, 'putt_line_miss', ''); }}>
+                <Text style={[s.toggleBtnText, shot.putt_hit_line === 'yes' && s.toggleBtnTextActive]}>Yes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.toggleBtn, shot.putt_hit_line === 'no' && s.toggleBtnActive]} onPress={() => updateShot(holeIdx, shotIdx, 'putt_hit_line', shot.putt_hit_line === 'no' ? '' : 'no')}>
+                <Text style={[s.toggleBtnText, shot.putt_hit_line === 'no' && s.toggleBtnTextActive]}>No</Text>
+              </TouchableOpacity>
+            </View>
+            {shot.putt_hit_line === 'no' && (
+              <>
+                <Text style={s.formLabel}>Pull or Push?</Text>
+                <PillRow options={['Pull', 'Push']} value={shot.putt_line_miss || ''} onChange={v => updateShot(holeIdx, shotIdx, 'putt_line_miss', v)} />
+              </>
+            )}
+
+            <Text style={s.formLabel}>Did you hit your speed?</Text>
+            <View style={s.toggleRow}>
+              <TouchableOpacity style={[s.toggleBtn, shot.putt_hit_speed === 'yes' && s.toggleBtnActive]} onPress={() => { updateShot(holeIdx, shotIdx, 'putt_hit_speed', shot.putt_hit_speed === 'yes' ? '' : 'yes'); updateShot(holeIdx, shotIdx, 'putt_speed_miss', ''); }}>
+                <Text style={[s.toggleBtnText, shot.putt_hit_speed === 'yes' && s.toggleBtnTextActive]}>Yes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.toggleBtn, shot.putt_hit_speed === 'no' && s.toggleBtnActive]} onPress={() => updateShot(holeIdx, shotIdx, 'putt_hit_speed', shot.putt_hit_speed === 'no' ? '' : 'no')}>
+                <Text style={[s.toggleBtnText, shot.putt_hit_speed === 'no' && s.toggleBtnTextActive]}>No</Text>
+              </TouchableOpacity>
+            </View>
+            {shot.putt_hit_speed === 'no' && (
+              <>
+                <Text style={s.formLabel}>Hard or Soft?</Text>
+                <PillRow options={['Hard', 'Soft']} value={shot.putt_speed_miss || ''} onChange={v => updateShot(holeIdx, shotIdx, 'putt_speed_miss', v)} />
+              </>
+            )}
 
             <Text style={s.formLabel}>Result</Text>
             {(() => {
