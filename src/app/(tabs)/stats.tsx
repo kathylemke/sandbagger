@@ -40,6 +40,9 @@ export default function Stats() {
   const [recentRounds, setRecentRounds] = useState<RecentRound[]>([]);
   const [wedgeTotalsByRound, setWedgeTotalsByRound] = useState<Map<string, number>>(new Map());
   const [expandedRoundId, setExpandedRoundId] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [advancedCategory, setAdvancedCategory] = useState<'tee' | 'approach' | 'chip' | 'putting'>('tee');
+  const [advancedShots, setAdvancedShots] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -59,7 +62,7 @@ export default function Stats() {
     const roundIds = rds.map(r => r.id);
     if (roundIds.length) {
       const { data: scores } = await supabase.from('sb_hole_scores')
-        .select('round_id, fairway_hit, fairway_miss_dir, gir, putts, wedge_and_in, hole_number, score, par')
+        .select('round_id, fairway_hit, fairway_miss_dir, gir, putts, wedge_and_in, hole_number, score, par, notes')
         .in('round_id', roundIds)
         .order('hole_number');
 
@@ -69,6 +72,19 @@ export default function Stats() {
         byRound.get(sc.round_id)!.push(sc);
       });
       setAllScoresByRound(byRound);
+
+      // Extract advanced shots from notes
+      const allAdvShots: any[] = [];
+      (scores || []).forEach((sc: any) => {
+        if (!sc.notes) return;
+        try {
+          const parsed = JSON.parse(sc.notes);
+          if (parsed.mode === 'advanced' && parsed.shots) {
+            parsed.shots.forEach((shot: any) => allAdvShots.push({ ...shot, hole_number: sc.hole_number, par: sc.par }));
+          }
+        } catch {}
+      });
+      setAdvancedShots(allAdvShots);
 
       // Wedge totals per round
       const wTotals = new Map<string, number>();
@@ -228,6 +244,187 @@ export default function Stats() {
               </>
             )}
           </View>
+
+          {/* Advanced Stats Dashboard */}
+          {advancedShots.length > 0 && (
+            <>
+              <TouchableOpacity style={{ backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }} onPress={() => setShowAdvanced(!showAdvanced)}>
+                <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '800' }}>🎯 Advanced Stats Dashboard {showAdvanced ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
+
+              {showAdvanced && (() => {
+                const categories: { key: typeof advancedCategory; label: string }[] = [
+                  { key: 'tee', label: 'Tee Shots' },
+                  { key: 'approach', label: 'Approach Shots' },
+                  { key: 'chip', label: 'Chip/Pitch' },
+                  { key: 'putting', label: 'Putting' },
+                ];
+
+                // Filter shots by category
+                const catShots = advancedShots.filter(sh => {
+                  if (advancedCategory === 'tee') return sh.shot_number === 1 && !sh.is_putt;
+                  if (advancedCategory === 'approach') return sh.intention === 'hit_green' && !sh.is_putt;
+                  if (advancedCategory === 'chip') return (sh.intention === 'chip_pitch' || sh.intention === 'recovery' || sh.intention === 'punch_out') && !sh.is_putt;
+                  if (advancedCategory === 'putting') return !!sh.is_putt;
+                  return false;
+                });
+
+                const totalShots = catShots.length;
+
+                // Miss direction breakdown
+                const missDir: Record<string, number> = {};
+                catShots.forEach(sh => {
+                  const dir = sh.miss_direction || 'Unknown';
+                  missDir[dir] = (missDir[dir] || 0) + 1;
+                });
+
+                // Shot shape breakdown
+                const shapes: Record<string, number> = {};
+                catShots.forEach(sh => {
+                  if (sh.shot_shape) shapes[sh.shot_shape] = (shapes[sh.shot_shape] || 0) + 1;
+                });
+
+                // Putt-specific stats
+                const puttLineHit = catShots.filter(sh => sh.putt_hit_line === 'yes').length;
+                const puttLineMiss = catShots.filter(sh => sh.putt_hit_line === 'no').length;
+                const puttLineTotal = puttLineHit + puttLineMiss;
+                const pullCount = catShots.filter(sh => sh.putt_line_miss === 'Pull').length;
+                const pushCount = catShots.filter(sh => sh.putt_line_miss === 'Push').length;
+
+                const puttSpeedHit = catShots.filter(sh => sh.putt_hit_speed === 'yes').length;
+                const puttSpeedMiss = catShots.filter(sh => sh.putt_hit_speed === 'no').length;
+                const puttSpeedTotal = puttSpeedHit + puttSpeedMiss;
+                const hardCount = catShots.filter(sh => sh.putt_speed_miss === 'Hard').length;
+                const softCount = catShots.filter(sh => sh.putt_speed_miss === 'Soft').length;
+
+                // Result lies
+                const results: Record<string, number> = {};
+                catShots.forEach(sh => {
+                  if (sh.result_lie) results[sh.result_lie] = (results[sh.result_lie] || 0) + 1;
+                });
+
+                return (
+                  <View style={{ marginBottom: 20 }}>
+                    {/* Category selector */}
+                    <View style={s.rangePillRow}>
+                      {categories.map(cat => (
+                        <TouchableOpacity key={cat.key} style={[s.rangePill, advancedCategory === cat.key && s.rangePillActive]} onPress={() => setAdvancedCategory(cat.key)}>
+                          <Text style={[s.rangePillText, advancedCategory === cat.key && s.rangePillTextActive]}>{cat.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <Text style={{ fontSize: 13, color: colors.gray, marginBottom: 12 }}>{totalShots} shots tracked</Text>
+
+                    {totalShots > 0 && (
+                      <>
+                        {/* Miss Direction */}
+                        <Text style={s.sectionTitle}>Miss Direction</Text>
+                        {Object.entries(missDir).sort(([,a],[,b]) => b - a).map(([dir, count]) => (
+                          <View key={dir} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                            <Text style={{ width: 90, fontSize: 13, fontWeight: '600', color: colors.primary }}>{dir}</Text>
+                            <View style={{ flex: 1, height: 24, backgroundColor: colors.grayLight, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 }}>
+                              <View style={{ height: '100%', width: `${(count / totalShots) * 100}%`, backgroundColor: dir === 'On Target' ? '#16a34a' : colors.gold, borderRadius: 12 }} />
+                            </View>
+                            <Text style={{ width: 50, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((count / totalShots) * 100)}%</Text>
+                          </View>
+                        ))}
+
+                        {/* Shot shape breakdown (non-putting) */}
+                        {advancedCategory !== 'putting' && Object.keys(shapes).length > 0 && (
+                          <>
+                            <Text style={s.sectionTitle}>Intended Shot Shape</Text>
+                            {Object.entries(shapes).sort(([,a],[,b]) => b - a).map(([shape, count]) => (
+                              <View key={shape} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                                <Text style={{ width: 90, fontSize: 13, fontWeight: '600', color: colors.primary }}>{shape}</Text>
+                                <View style={{ flex: 1, height: 24, backgroundColor: colors.grayLight, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 }}>
+                                  <View style={{ height: '100%', width: `${(count / totalShots) * 100}%`, backgroundColor: colors.gold, borderRadius: 12 }} />
+                                </View>
+                                <Text style={{ width: 50, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((count / totalShots) * 100)}%</Text>
+                              </View>
+                            ))}
+                          </>
+                        )}
+
+                        {/* Result lie breakdown (non-putting) */}
+                        {advancedCategory !== 'putting' && Object.keys(results).length > 0 && (
+                          <>
+                            <Text style={s.sectionTitle}>Where You Ended Up</Text>
+                            {Object.entries(results).sort(([,a],[,b]) => b - a).map(([lie, count]) => (
+                              <View key={lie} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                                <Text style={{ width: 90, fontSize: 13, fontWeight: '600', color: colors.primary }}>{lie}</Text>
+                                <View style={{ flex: 1, height: 24, backgroundColor: colors.grayLight, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 }}>
+                                  <View style={{ height: '100%', width: `${(count / totalShots) * 100}%`, backgroundColor: lie === 'Green' || lie === 'Fairway' ? '#16a34a' : colors.gold, borderRadius: 12 }} />
+                                </View>
+                                <Text style={{ width: 50, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((count / totalShots) * 100)}%</Text>
+                              </View>
+                            ))}
+                          </>
+                        )}
+
+                        {/* Putting-specific: line & speed */}
+                        {advancedCategory === 'putting' && puttLineTotal > 0 && (
+                          <>
+                            <Text style={s.sectionTitle}>Hit Your Line</Text>
+                            <View style={s.summaryRow}>
+                              <View style={s.summaryCard}>
+                                <Text style={s.summaryNum}>{Math.round((puttLineHit / puttLineTotal) * 100)}%</Text>
+                                <Text style={s.summaryLabel}>Yes</Text>
+                              </View>
+                              <View style={s.summaryCard}>
+                                <Text style={s.summaryNum}>{Math.round((puttLineMiss / puttLineTotal) * 100)}%</Text>
+                                <Text style={s.summaryLabel}>No</Text>
+                              </View>
+                            </View>
+                            {puttLineMiss > 0 && (
+                              <View style={s.summaryRow}>
+                                <View style={s.summaryCard}>
+                                  <Text style={s.summaryNum}>{pullCount}</Text>
+                                  <Text style={s.summaryLabel}>Pull</Text>
+                                </View>
+                                <View style={s.summaryCard}>
+                                  <Text style={s.summaryNum}>{pushCount}</Text>
+                                  <Text style={s.summaryLabel}>Push</Text>
+                                </View>
+                              </View>
+                            )}
+                          </>
+                        )}
+
+                        {advancedCategory === 'putting' && puttSpeedTotal > 0 && (
+                          <>
+                            <Text style={s.sectionTitle}>Hit Your Speed</Text>
+                            <View style={s.summaryRow}>
+                              <View style={s.summaryCard}>
+                                <Text style={s.summaryNum}>{Math.round((puttSpeedHit / puttSpeedTotal) * 100)}%</Text>
+                                <Text style={s.summaryLabel}>Yes</Text>
+                              </View>
+                              <View style={s.summaryCard}>
+                                <Text style={s.summaryNum}>{Math.round((puttSpeedMiss / puttSpeedTotal) * 100)}%</Text>
+                                <Text style={s.summaryLabel}>No</Text>
+                              </View>
+                            </View>
+                            {puttSpeedMiss > 0 && (
+                              <View style={s.summaryRow}>
+                                <View style={s.summaryCard}>
+                                  <Text style={s.summaryNum}>{hardCount}</Text>
+                                  <Text style={s.summaryLabel}>Hard</Text>
+                                </View>
+                                <View style={s.summaryCard}>
+                                  <Text style={s.summaryNum}>{softCount}</Text>
+                                  <Text style={s.summaryLabel}>Soft</Text>
+                                </View>
+                              </View>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </View>
+                );
+              })()}
+            </>
+          )}
 
           <Text style={s.sectionTitle}>Scoring Trend (Last 10)</Text>
           <BarChart data={scoreData} maxVal={Math.max(...scoreData.map(d => d.value), 72)} label="" />
