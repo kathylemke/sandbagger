@@ -261,11 +261,13 @@ export default function Stats() {
                 ];
 
                 // Filter shots by category
+                // Detect putts by is_putt flag OR presence of putt-specific fields
+                const isPutt = (sh: any) => !!sh.is_putt || !!sh.putt_result || !!sh.putt_break || !!sh.putt_distance || !!sh.putt_hit_line || !!sh.putt_hit_speed;
                 const catShots = advancedShots.filter(sh => {
-                  if (advancedCategory === 'tee') return sh.shot_number === 1 && !sh.is_putt;
-                  if (advancedCategory === 'approach') return sh.intention === 'hit_green' && !sh.is_putt;
-                  if (advancedCategory === 'chip') return (sh.intention === 'chip_pitch' || sh.intention === 'recovery' || sh.intention === 'punch_out') && !sh.is_putt;
-                  if (advancedCategory === 'putting') return !!sh.is_putt;
+                  if (advancedCategory === 'tee') return sh.shot_number === 1 && !isPutt(sh);
+                  if (advancedCategory === 'approach') return sh.intention === 'hit_green' && !isPutt(sh);
+                  if (advancedCategory === 'chip') return (sh.intention === 'chip_pitch' || sh.intention === 'recovery' || sh.intention === 'punch_out') && !isPutt(sh);
+                  if (advancedCategory === 'putting') return isPutt(sh);
                   return false;
                 });
 
@@ -274,7 +276,15 @@ export default function Stats() {
                 // Miss direction breakdown
                 const missDir: Record<string, number> = {};
                 catShots.forEach(sh => {
-                  const dir = sh.miss_direction || 'Unknown';
+                  let dir: string;
+                  if (advancedCategory === 'putting') {
+                    // Use putt_result for putting miss direction
+                    if (!sh.putt_result) return;
+                    const labels: Record<string, string> = { 'made': 'Made', 'miss-left': 'Left', 'miss-right': 'Right', 'miss-short': 'Short', 'miss-long': 'Long', 'miss-short-left': 'Short Left', 'miss-short-right': 'Short Right', 'miss-long-left': 'Long Left', 'miss-long-right': 'Long Right' };
+                    dir = labels[sh.putt_result] || sh.putt_result;
+                  } else {
+                    dir = sh.miss_direction || 'Unknown';
+                  }
                   missDir[dir] = (missDir[dir] || 0) + 1;
                 });
 

@@ -537,7 +537,14 @@ export default function LogRound() {
           score: e.score, putts: e.putts, fairway_hit: e.fairway_hit, fairway_miss_dir: e.fairway_hit === false ? e.fairway_miss_dir : null, gir: e.gir, penalties: e.penalties, wedge_and_in: trackWedgeAndIn ? e.wedge_and_in : null,
         };
         if (trackingMode === 'advanced' && e.shots.length > 0) {
-          base.notes = JSON.stringify({ mode: 'advanced', shots: e.shots });
+          // Tag putt shots before saving
+          const taggedShots = e.shots.map((sh: ShotData, si: number) => {
+            const totalS = e.shots.length;
+            const puttsC = e.putts;
+            const isPutt = (puttsC > 0 && si >= totalS - puttsC) || (si > 0 && e.shots[si - 1]?.result_lie === 'Green') || !!sh.is_putt;
+            return isPutt ? { ...sh, is_putt: true } : sh;
+          });
+          base.notes = JSON.stringify({ mode: 'advanced', shots: taggedShots });
         } else if (trackingMode === 'strategy' && e.strategy) {
           base.notes = JSON.stringify({ mode: 'strategy', data: e.strategy });
         } else if (trackingMode === 'mental' && e.mental) {
