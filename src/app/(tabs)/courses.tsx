@@ -19,6 +19,59 @@ export default function Courses() {
   const [teeHoles, setTeeHoles] = useState<Record<string, TeeHole[]>>({});
   const [showDetail, setShowDetail] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newCourse, setNewCourse] = useState({ name: '', city: '', state: '', country: 'US', num_holes: '18' });
+  const [newHoles, setNewHoles] = useState<{ par: string; yards: string }[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const initHoles = (count: number) => Array.from({ length: count }, () => ({ par: '4', yards: '' }));
+
+  const openAddModal = () => {
+    setNewCourse({ name: '', city: '', state: '', country: 'US', num_holes: '18' });
+    setNewHoles(initHoles(18));
+    setShowAdd(true);
+  };
+
+  const handleHoleCountChange = (val: string) => {
+    setNewCourse(prev => ({ ...prev, num_holes: val }));
+    const count = parseInt(val) || 0;
+    if (count > 0 && count <= 36) setNewHoles(initHoles(count));
+  };
+
+  const updateHole = (index: number, field: 'par' | 'yards', val: string) => {
+    setNewHoles(prev => prev.map((h, i) => i === index ? { ...h, [field]: val } : h));
+  };
+
+  const saveCourse = async () => {
+    if (!newCourse.name.trim()) return;
+    setSaving(true);
+    try {
+      const numHoles = parseInt(newCourse.num_holes) || 18;
+      const { data: course, error } = await supabase.from('sb_courses').insert({
+        name: newCourse.name.trim(),
+        city: newCourse.city.trim() || null,
+        state: newCourse.state.trim() || null,
+        country: newCourse.country.trim() || 'US',
+        num_holes: numHoles,
+      }).select().single();
+      if (error || !course) throw error;
+
+      const holeRows = newHoles.slice(0, numHoles).map((h, i) => ({
+        course_id: course.id,
+        hole_number: i + 1,
+        par: parseInt(h.par) || 4,
+        distance_yards: parseInt(h.yards) || null,
+      }));
+      await supabase.from('sb_holes').insert(holeRows);
+
+      setCourses(prev => [...prev, course].sort((a, b) => a.name.localeCompare(b.name)));
+      setShowAdd(false);
+    } catch (e) {
+      console.error('Save course error:', e);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   useEffect(() => {
     supabase.from('sb_courses').select('*').order('name').then(({ data }) => setCourses(data || []));
@@ -108,6 +161,9 @@ export default function Courses() {
       <View style={s.searchBar}>
         <TextInput style={s.searchInput} placeholder="Search courses..." placeholderTextColor={colors.gray} value={search} onChangeText={setSearch} />
       </View>
+      <TouchableOpacity style={s.addBtn} onPress={openAddModal}>
+        <Text style={s.addBtnText}>+ Add Course</Text>
+      </TouchableOpacity>
       <FlatList
         data={filtered}
         keyExtractor={i => i.id}
@@ -192,6 +248,63 @@ export default function Courses() {
           </View>
         </View>
       </Modal>
+      <Modal visible={showAdd} animationType="slide" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modal}>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <View style={s.modalHeader}>
+                <Text style={s.modalTitle}>Add Course</Text>
+              </View>
+              <View style={s.addForm}>
+                <Text style={s.addLabel}>Course Name *</Text>
+                <TextInput style={s.addInput} placeholder="e.g. Pebble Beach" placeholderTextColor={colors.gray} value={newCourse.name} onChangeText={v => setNewCourse(p => ({ ...p, name: v }))} />
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.addLabel}>City</Text>
+                    <TextInput style={s.addInput} placeholder="City" placeholderTextColor={colors.gray} value={newCourse.city} onChangeText={v => setNewCourse(p => ({ ...p, city: v }))} />
+                  </View>
+                  <View style={{ flex: 0.5 }}>
+                    <Text style={s.addLabel}>State</Text>
+                    <TextInput style={s.addInput} placeholder="CA" placeholderTextColor={colors.gray} value={newCourse.state} onChangeText={v => setNewCourse(p => ({ ...p, state: v }))} maxLength={2} autoCapitalize="characters" />
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flex: 0.5 }}>
+                    <Text style={s.addLabel}>Holes</Text>
+                    <TextInput style={s.addInput} placeholder="18" placeholderTextColor={colors.gray} value={newCourse.num_holes} onChangeText={handleHoleCountChange} keyboardType="number-pad" />
+                  </View>
+                  <View style={{ flex: 0.5 }}>
+                    <Text style={s.addLabel}>Country</Text>
+                    <TextInput style={s.addInput} placeholder="US" placeholderTextColor={colors.gray} value={newCourse.country} onChangeText={v => setNewCourse(p => ({ ...p, country: v }))} maxLength={2} autoCapitalize="characters" />
+                  </View>
+                </View>
+
+                <Text style={[s.addLabel, { marginTop: 16 }]}>Hole Info</Text>
+                <View style={s.scHeader}>
+                  <Text style={[s.scCell, s.scHeaderText, { flex: 0.5 }]}>Hole</Text>
+                  <Text style={[s.scCell, s.scHeaderText]}>Par</Text>
+                  <Text style={[s.scCell, s.scHeaderText]}>Yards</Text>
+                </View>
+                {newHoles.map((h, i) => (
+                  <View key={i} style={s.scRow}>
+                    <Text style={[s.scCell, { flex: 0.5, fontWeight: '700' }]}>{i + 1}</Text>
+                    <TextInput style={[s.scCell, s.addHoleInput]} value={h.par} onChangeText={v => updateHole(i, 'par', v)} keyboardType="number-pad" selectTextOnFocus />
+                    <TextInput style={[s.scCell, s.addHoleInput]} value={h.yards} onChangeText={v => updateHole(i, 'yards', v)} keyboardType="number-pad" placeholder="—" placeholderTextColor={colors.gray} />
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+            <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 16 }}>
+              <TouchableOpacity style={[s.closeBtn, { flex: 1, backgroundColor: colors.grayLight }]} onPress={() => setShowAdd(false)}>
+                <Text style={[s.closeBtnText, { color: colors.grayDark }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.closeBtn, { flex: 1, opacity: saving || !newCourse.name.trim() ? 0.5 : 1 }]} onPress={saveCourse} disabled={saving || !newCourse.name.trim()}>
+                <Text style={s.closeBtnText}>{saving ? 'Saving...' : 'Save Course'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {selected && (
         <CourseGuide
           courseId={selected.id}
@@ -246,6 +359,12 @@ const s = StyleSheet.create({
   holeTableCell: { flex: 1, textAlign: 'center', fontSize: 14 },
   closeBtn: { marginHorizontal: 16, backgroundColor: colors.primary, borderRadius: 10, padding: 14, alignItems: 'center' },
   closeBtnText: { color: colors.gold, fontWeight: '700', fontSize: 16 },
+  addBtn: { marginHorizontal: 16, marginTop: 12, backgroundColor: colors.gold, borderRadius: 10, padding: 12, alignItems: 'center' },
+  addBtnText: { color: colors.primary, fontWeight: '800', fontSize: 15 },
+  addForm: { padding: 16 },
+  addLabel: { fontSize: 13, fontWeight: '700', color: colors.primary, marginBottom: 4, marginTop: 10 },
+  addInput: { backgroundColor: colors.offWhite, borderRadius: 8, padding: 12, fontSize: 15, borderWidth: 1, borderColor: colors.grayLight },
+  addHoleInput: { backgroundColor: colors.offWhite, borderRadius: 6, padding: 6, textAlign: 'center', fontSize: 14, borderWidth: 1, borderColor: colors.grayLight },
   guideBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, borderRadius: 12, padding: 16, gap: 12 },
   guideBtnIcon: { fontSize: 24 },
   guideBtnText: { fontSize: 16, fontWeight: '800', color: colors.gold },
