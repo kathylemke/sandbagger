@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
@@ -49,6 +51,7 @@ function confirmAction(title: string, message: string, onConfirm: () => void) {
 
 export default function Feed() {
   const { user } = useAuth();
+  const router = useRouter();
   const [rounds, setRounds] = useState<FeedRound[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -162,9 +165,30 @@ export default function Feed() {
     setLoadingScores(false);
   };
 
-  const startEdit = () => {
-    setEditScores(holeScores.map(h => ({ ...h })));
-    setEditing(true);
+  const startEdit = async (roundId: string) => {
+    // Fetch full round data including notes
+    const { data: roundData } = await supabase.from('sb_rounds')
+      .select('*, sb_courses(id, name, city, state, num_holes)')
+      .eq('id', roundId)
+      .single();
+    if (!roundData) return;
+
+    // Fetch all hole scores with full data
+    const { data: allScores } = await supabase.from('sb_hole_scores')
+      .select('*')
+      .eq('round_id', roundId)
+      .order('hole_number', { ascending: true });
+
+    // Store editing round data in AsyncStorage
+    const editData = {
+      round_id: roundId,
+      round: roundData,
+      hole_scores: allScores || [],
+    };
+    await AsyncStorage.setItem('editing_round', JSON.stringify(editData));
+
+    // Navigate to log tab
+    router.push('/(tabs)/log');
   };
 
   const cancelEdit = () => { setEditing(false); setEditScores([]); };
@@ -312,7 +336,7 @@ export default function Feed() {
                   {/* Action buttons for own rounds */}
                   {isOwn && !editing && (
                     <View style={s.actionRow}>
-                      <TouchableOpacity style={s.editBtn} onPress={startEdit}>
+                      <TouchableOpacity style={s.editBtn} onPress={() => startEdit(item.id)}>
                         <Text style={s.editBtnText}>Edit</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={s.deleteBtn} onPress={() => deleteRound(item.id)}>

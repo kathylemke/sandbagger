@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors, teeColors } from '../../lib/theme';
@@ -163,6 +164,8 @@ const OPENAI_API_KEY = 'sk-proj-ceUGQnbSF4ZoZXbl0HXNiAaW';
 
 export default function LogRound() {
   const { user } = useAuth();
+  const router = useRouter();
+  const [editingRoundId, setEditingRoundId] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const [scanning, setScanning] = useState(false);
   const [scannedFromPhoto, setScannedFromPhoto] = useState(false);
@@ -302,6 +305,127 @@ export default function LogRound() {
       }
     });
   }, [DRAFT_KEY]);
+
+  // Check for editing round (from feed Edit button)
+  useEffect(() => {
+    if (courses.length === 0) return; // Wait for courses to load first
+    AsyncStorage.getItem('editing_round').then(async (stored) => {
+      if (!stored) return;
+      try {
+        const editData = JSON.parse(stored);
+        await AsyncStorage.removeItem('editing_round');
+
+        const roundData = editData.round;
+        const holeScoresData = editData.hole_scores || [];
+
+        setEditingRoundId(editData.round_id);
+
+        // Parse notes
+        let notes: any = {};
+        try { notes = JSON.parse(roundData.notes || '{}'); } catch {}
+
+        // Find and select course
+        const course = courses.find((c: Course) => c.id === roundData.course_id);
+        if (course) {
+          setSelectedCourse(course);
+          const [holesRes, teesRes] = await Promise.all([
+            supabase.from('sb_holes').select('*').eq('course_id', course.id).order('hole_number'),
+            supabase.from('sb_tee_sets').select('*').eq('course_id', course.id).order('total_yardage', { ascending: false }),
+          ]);
+          const holesData = holesRes.data || [];
+          const teeSetsData = teesRes.data || [];
+          setHoles(holesData);
+          setTeeSets(teeSetsData);
+          const teeIds = teeSetsData.map((t: TeeSet) => t.id);
+          if (teeIds.length > 0) {
+            const { data: allTH } = await supabase.from('sb_tee_holes').select('*').in('tee_set_id', teeIds).order('hole_number');
+            setAllTeeHolesData(allTH || []);
+          }
+
+          // Restore tee selection
+          if (roundData.tee_set_id) {
+            const tee = teeSetsData.find((t: TeeSet) => t.id === roundData.tee_set_id);
+            if (tee) {
+              setSelectedTee(tee);
+              const { data } = await supabase.from('sb_tee_holes').select('*').eq('tee_set_id', tee.id).order('hole_number');
+              setTeeHolesData(data || []);
+            }
+          }
+          if (roundData.mixed_tees) setMixedTees(true);
+
+          // Restore round fields
+          setDatePlayed(roundData.date_played || new Date().toISOString().split('T')[0]);
+          setWeather(roundData.weather || '');
+          setWind(roundData.wind || '');
+          setVisibility(roundData.visibility || 'private');
+          setRoundType(notes.round_type || 'practice');
+          setRoundCaption(notes.caption || '');
+          setRoundPhoto(notes.photo_url || null);
+          setTrackWedgeAndIn(!!notes.track_wedge_and_in);
+          setGreenFirmness(notes.green_firmness || 0);
+          setGreenSpeed(notes.green_speed || 0);
+          setGrassType(notes.grass_type || '');
+          setRoughThickness(notes.rough_thickness || '');
+
+          // Detect tracking mode from notes
+          const trackMode = notes.tracking_mode || 'basic';
+          setTrackingMode(trackMode);
+
+          // Restore hole selection
+          const holesPlayed = notes.holes_played;
+          const numH = holesData.length || course.num_holes || 18;
+          if (holesPlayed && Array.isArray(holesPlayed)) {
+            if (holesPlayed.length === numH) {
+              setHoleSelection('all');
+            } else if (holesPlayed.length === 9 && holesPlayed[0] === 1) {
+              setHoleSelection('front9');
+            } else if (holesPlayed.length === 9 && holesPlayed[0] === 10) {
+              setHoleSelection('back9');
+            } else {
+              setHoleSelection('custom');
+            }
+            setSelectedHoles(holesPlayed);
+          } else {
+            setHoleSelection('all');
+            setSelectedHoles(Array.from({ length: numH }, (_, i) => i + 1));
+          }
+
+          // Build hole entries from saved scores
+          const entries: HoleEntry[] = initHoleEntries(numH);
+          holeScoresData.forEach((hs: any) => {
+            const idx = (hs.hole_number || 1) - 1;
+            if (idx < 0 || idx >= entries.length) return;
+            entries[idx].score = hs.score || 0;
+            entries[idx].putts = hs.putts || 0;
+            entries[idx].fairway_hit = hs.fairway_hit;
+            entries[idx].fairway_miss_dir = hs.fairway_miss_dir || null;
+            entries[idx].gir = hs.gir ?? false;
+            entries[idx].penalties = hs.penalties || 0;
+            entries[idx].wedge_and_in = hs.wedge_and_in ?? null;
+
+            // Parse per-hole notes for advanced/strategy/mental data
+            if (hs.notes) {
+              try {
+                const holeNotes = JSON.parse(hs.notes);
+                if (holeNotes.mode === 'advanced' && holeNotes.shots) {
+                  entries[idx].shots = holeNotes.shots;
+                } else if (holeNotes.mode === 'strategy' && holeNotes.data) {
+                  entries[idx].strategy = holeNotes.data;
+                } else if (holeNotes.mode === 'mental' && holeNotes.data) {
+                  entries[idx].mental = holeNotes.data;
+                }
+              } catch {}
+            }
+          });
+          setHoleEntries(entries);
+          setCurrentHole(0);
+          setStep(4); // Go straight to hole-by-hole entry
+        }
+      } catch (e) {
+        console.error('Error loading editing round:', e);
+      }
+    });
+  }, [courses]);
 
   const scanScorecard = async (imageBase64: string) => {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -520,24 +644,45 @@ export default function LogRound() {
     if (!selectedCourse) { if (Platform.OS === 'web') window.alert('Please select a course first'); else Alert.alert('Error', 'Please select a course first'); return; }
     setSaving(true);
     try {
-      const { data: round, error } = await supabase.from('sb_rounds').insert({
-        user_id: user.id, course_id: selectedCourse.id, date_played: datePlayed,
-        total_score: totalScore, weather, wind, is_complete: true, visibility,
-        tee_set_id: selectedTee?.id || null,
-        mixed_tees: mixedTees,
-        notes: JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn, caption: roundCaption || null, photo_url: roundPhoto || null, round_type: roundType, green_firmness: greenFirmness || null, green_speed: greenSpeed || null, grass_type: grassType || null, rough_thickness: roughThickness || null }),
-      }).select().single();
-      if (error) throw error;
+      const notesJson = JSON.stringify({ tracking_mode: trackingMode, holes_played: activeHoleNumbers, track_wedge_and_in: trackWedgeAndIn, caption: roundCaption || null, photo_url: roundPhoto || null, round_type: roundType, green_firmness: greenFirmness || null, green_speed: greenSpeed || null, grass_type: grassType || null, rough_thickness: roughThickness || null });
+
+      let roundId: string;
+
+      if (editingRoundId) {
+        // UPDATE existing round
+        const { error } = await supabase.from('sb_rounds').update({
+          course_id: selectedCourse.id, date_played: datePlayed,
+          total_score: totalScore, weather, wind, visibility,
+          tee_set_id: selectedTee?.id || null,
+          mixed_tees: mixedTees,
+          notes: notesJson,
+        }).eq('id', editingRoundId);
+        if (error) throw error;
+        roundId = editingRoundId;
+
+        // Delete old hole scores and re-insert
+        await supabase.from('sb_hole_scores').delete().eq('round_id', roundId);
+      } else {
+        // INSERT new round
+        const { data: round, error } = await supabase.from('sb_rounds').insert({
+          user_id: user.id, course_id: selectedCourse.id, date_played: datePlayed,
+          total_score: totalScore, weather, wind, is_complete: true, visibility,
+          tee_set_id: selectedTee?.id || null,
+          mixed_tees: mixedTees,
+          notes: notesJson,
+        }).select().single();
+        if (error) throw error;
+        roundId = round.id;
+      }
 
       const scoreInserts = activeIndices.map((i) => {
         const e = holeEntries[i];
         const base: any = {
-          round_id: round.id, hole_id: holes[i]?.id || null, hole_number: i + 1,
+          round_id: roundId, hole_id: holes[i]?.id || null, hole_number: i + 1,
           par: holes[i]?.par || teeHolesData.find(th => th.hole_number === i + 1)?.par || allTeeHolesData.find(th => th.hole_number === i + 1)?.par || null,
           score: e.score, putts: e.putts, fairway_hit: e.fairway_hit, fairway_miss_dir: e.fairway_hit === false ? e.fairway_miss_dir : null, gir: e.gir, penalties: e.penalties, wedge_and_in: trackWedgeAndIn ? e.wedge_and_in : null,
         };
         if (trackingMode === 'advanced' && e.shots.length > 0) {
-          // Tag putt shots before saving
           const taggedShots = e.shots.map((sh: ShotData, si: number) => {
             const totalS = e.shots.length;
             const puttsC = e.putts;
@@ -555,10 +700,15 @@ export default function LogRound() {
       await supabase.from('sb_hole_scores').insert(scoreInserts);
       await AsyncStorage.removeItem(DRAFT_KEY);
       setHasDraft(false);
+      const msg = editingRoundId ? `Round updated! Total: ${totalScore}` : `Round saved! Total: ${totalScore}`;
       if (Platform.OS === 'web') {
-        window.alert(`Round saved! Total: ${totalScore}`);
+        window.alert(msg);
       } else {
-        Alert.alert('Success', `Round saved! Total: ${totalScore}`);
+        Alert.alert('Success', msg);
+      }
+      setEditingRoundId(null);
+      if (editingRoundId) {
+        router.push('/(tabs)/feed');
       }
       setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false); setRoundType('practice'); setRoundCaption(''); setRoundPhoto(null); setScannedFromPhoto(false);
     } catch (e: any) {
@@ -1379,7 +1529,7 @@ export default function LogRound() {
           <Text style={{ color: '#92400E', fontWeight: '700', fontSize: 14, textAlign: 'center' }}>📷 Scanned from photo — tap any hole to edit</Text>
         </View>
       )}
-      <Text style={s.stepTitle}>Review & Save</Text>
+      <Text style={s.stepTitle}>{editingRoundId ? 'Edit Round — Review & Save' : 'Review & Save'}</Text>
       <Text style={s.selectedCourse}>{selectedCourse?.name}</Text>
       {selectedTee && <Text style={s.selectedTeeLabel}>Tees: {selectedTee.name || selectedTee.color}</Text>}
       {mixedTees && <Text style={s.selectedTeeLabel}>Mixed Tees</Text>}
@@ -1496,7 +1646,7 @@ export default function LogRound() {
       </View>
 
       <TouchableOpacity style={[s.goldBtn, saving && { opacity: 0.6 }]} onPress={saveRound} disabled={saving}>
-        <Text style={s.goldBtnText}>{saving ? 'Saving...' : '✓ Save Round'}</Text>
+        <Text style={s.goldBtnText}>{saving ? 'Saving...' : editingRoundId ? '✓ Update Round' : '✓ Save Round'}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={{ backgroundColor: '#f3f4f6', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: '#d1d5db' }} onPress={saveDraft}>
         <Text style={{ color: '#374151', fontWeight: '700', fontSize: 15 }}>💾 Save & Finish Later</Text>

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Platform } from 'react-native';
-import Svg, { Circle, Path, Line, Text as SvgText } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
@@ -31,11 +30,11 @@ function Dropdown<T extends string>({ options, value, onChange, labelMap }: { op
 }
 
 const dropdownStyles = StyleSheet.create({
-  wrapper: { position: 'relative', zIndex: 100, marginBottom: 16 },
+  wrapper: { position: 'relative', zIndex: 100, marginBottom: 16, overflow: 'visible' },
   button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.primary, borderRadius: 10, borderWidth: 2, borderColor: colors.gold, paddingVertical: 12, paddingHorizontal: 16 },
   buttonText: { fontSize: 14, fontWeight: '700', color: colors.gold },
   arrow: { fontSize: 12, color: colors.gold, marginLeft: 8 },
-  list: { position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: colors.white, borderRadius: 10, borderWidth: 1, borderColor: colors.grayLight, marginTop: 4, overflow: 'hidden', ...Platform.select({ web: { boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }, default: { elevation: 6 } }) },
+  list: { position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: colors.white, borderRadius: 10, borderWidth: 1, borderColor: colors.grayLight, marginTop: 4, zIndex: 999, ...Platform.select({ web: { boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }, default: { elevation: 6 } }) },
   item: { paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.grayLight },
   itemActive: { backgroundColor: colors.primary },
   itemText: { fontSize: 14, fontWeight: '600', color: colors.primary },
@@ -107,44 +106,48 @@ function normalizeMissDir(dir: string): string | null {
   return dir in map ? map[dir] : dir;
 }
 
+function buildSvgPetal(cx: number, cy: number, directions: typeof PETAL_DIRECTIONS, missCounts: Record<string, number>, maxR: number, centerContent: string): string {
+  const vals = Object.values(missCounts);
+  const maxCount = vals.length > 0 ? Math.max(...vals, 1) : 1;
+  let svg = `<circle cx="${cx}" cy="${cy}" r="${maxR}" fill="none" stroke="#e5e7eb" stroke-width="0.5"/>`;
+  svg += `<circle cx="${cx}" cy="${cy}" r="${maxR * 0.5}" fill="none" stroke="#e5e7eb" stroke-width="0.5"/>`;
+  directions.forEach(d => {
+    const rad = (d.angle - 90) * Math.PI / 180;
+    svg += `<line x1="${cx}" y1="${cy}" x2="${cx + Math.cos(rad) * maxR}" y2="${cy + Math.sin(rad) * maxR}" stroke="#e5e7eb" stroke-width="0.5"/>`;
+  });
+  directions.forEach(d => {
+    const count = missCounts[d.key] || 0;
+    if (count === 0) return;
+    const length = (count / maxCount) * maxR;
+    const width = Math.max(8, length * 0.35);
+    svg += `<path d="${petalPath(cx, cy, d.angle, length, width)}" fill="${colors.gold}" opacity="0.75"/>`;
+  });
+  svg += centerContent;
+  directions.forEach(d => {
+    const count = missCounts[d.key] || 0;
+    if (count === 0) return;
+    const rad = (d.angle - 90) * Math.PI / 180;
+    const lx = cx + Math.cos(rad) * (maxR + 16);
+    const ly = cy + Math.sin(rad) * (maxR + 16);
+    svg += `<text x="${lx}" y="${ly}" font-size="9" fill="${colors.primary}" font-weight="700" text-anchor="middle" alignment-baseline="central">${d.label} ${count}</text>`;
+  });
+  return svg;
+}
+
 function PetalChart({ missCounts, totalShots, onTargetCount, title }: { missCounts: Record<string, number>; totalShots: number; onTargetCount: number; title?: string }) {
   const size = 240;
   const cx = size / 2;
   const cy = size / 2;
   const maxR = 80;
-  const vals = Object.values(missCounts);
-  const maxCount = vals.length > 0 ? Math.max(...vals, 1) : 1;
+  const otR = onTargetCount > 0 ? Math.min(12, 6 + (onTargetCount / Math.max(totalShots, 1)) * 6) : 0;
+  const center = `<circle cx="${cx}" cy="${cy}" r="12" fill="${colors.primary}"/>` + (onTargetCount > 0 ? `<circle cx="${cx}" cy="${cy}" r="${otR}" fill="#16a34a"/>` : '');
+  const inner = buildSvgPetal(cx, cy, PETAL_DIRECTIONS, missCounts, maxR, center);
+  const svgHtml = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
 
   return (
     <View style={{ alignItems: 'center', marginBottom: 16 }}>
       {title && <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>{title}</Text>}
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <Circle cx={cx} cy={cy} r={maxR} fill="none" stroke={colors.grayLight} strokeWidth={0.5} />
-        <Circle cx={cx} cy={cy} r={maxR * 0.5} fill="none" stroke={colors.grayLight} strokeWidth={0.5} />
-        {PETAL_DIRECTIONS.map(d => {
-          const rad = (d.angle - 90) * Math.PI / 180;
-          return <Line key={d.key} x1={cx} y1={cy} x2={cx + Math.cos(rad) * maxR} y2={cy + Math.sin(rad) * maxR} stroke={colors.grayLight} strokeWidth={0.5} />;
-        })}
-        {PETAL_DIRECTIONS.map(d => {
-          const count = missCounts[d.key] || 0;
-          if (count === 0) return null;
-          const length = (count / maxCount) * maxR;
-          const width = Math.max(8, length * 0.35);
-          return <Path key={d.key} d={petalPath(cx, cy, d.angle, length, width)} fill={colors.gold} opacity={0.75} />;
-        })}
-        <Circle cx={cx} cy={cy} r={12} fill={colors.primary} />
-        {onTargetCount > 0 && (
-          <Circle cx={cx} cy={cy} r={Math.min(12, 6 + (onTargetCount / Math.max(totalShots, 1)) * 6)} fill="#16a34a" />
-        )}
-        {PETAL_DIRECTIONS.map(d => {
-          const count = missCounts[d.key] || 0;
-          if (count === 0) return null;
-          const rad = (d.angle - 90) * Math.PI / 180;
-          const lx = cx + Math.cos(rad) * (maxR + 16);
-          const ly = cy + Math.sin(rad) * (maxR + 16);
-          return <SvgText key={d.key + '_lbl'} x={lx} y={ly} fontSize={9} fill={colors.primary} fontWeight="700" textAnchor="middle" alignmentBaseline="central">{d.label} {count}</SvgText>;
-        })}
-      </Svg>
+      <div dangerouslySetInnerHTML={{ __html: svgHtml }} />
       {onTargetCount > 0 && <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>On Target: {onTargetCount} ({Math.round(onTargetCount / Math.max(totalShots, 1) * 100)}%)</Text>}
     </View>
   );
@@ -172,40 +175,16 @@ function PuttPetalChart({ shots }: { shots: any[] }) {
     if (sh.putt_result === 'made') { madeCount++; return; }
     counts[sh.putt_result] = (counts[sh.putt_result] || 0) + 1;
   });
-  const vals = Object.values(counts);
-  const maxCount = vals.length > 0 ? Math.max(...vals, 1) : 1;
   const total = shots.filter(sh => sh.putt_result).length;
   const makePct = total > 0 ? Math.round(madeCount / total * 100) : 0;
+  const center = `<circle cx="${cx}" cy="${cy}" r="16" fill="${madeCount > 0 ? '#16a34a' : colors.primary}"/><circle cx="${cx}" cy="${cy}" r="10" fill="${colors.primary}"/><text x="${cx}" y="${cy + 1}" font-size="9" fill="${colors.gold}" font-weight="800" text-anchor="middle" alignment-baseline="central">${makePct}%</text>`;
+  const inner = buildSvgPetal(cx, cy, PUTT_DIRECTIONS, counts, maxR, center);
+  const svgHtml = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
 
   return (
     <View style={{ alignItems: 'center', marginBottom: 16 }}>
       <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>Putt Dispersion</Text>
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <Circle cx={cx} cy={cy} r={maxR} fill="none" stroke={colors.grayLight} strokeWidth={0.5} />
-        <Circle cx={cx} cy={cy} r={maxR * 0.5} fill="none" stroke={colors.grayLight} strokeWidth={0.5} />
-        {PUTT_DIRECTIONS.map(d => {
-          const rad = (d.angle - 90) * Math.PI / 180;
-          return <Line key={d.key} x1={cx} y1={cy} x2={cx + Math.cos(rad) * maxR} y2={cy + Math.sin(rad) * maxR} stroke={colors.grayLight} strokeWidth={0.5} />;
-        })}
-        {PUTT_DIRECTIONS.map(d => {
-          const count = counts[d.key] || 0;
-          if (count === 0) return null;
-          const length = (count / maxCount) * maxR;
-          const width = Math.max(8, length * 0.35);
-          return <Path key={d.key} d={petalPath(cx, cy, d.angle, length, width)} fill={colors.gold} opacity={0.75} />;
-        })}
-        <Circle cx={cx} cy={cy} r={16} fill={madeCount > 0 ? '#16a34a' : colors.primary} />
-        <Circle cx={cx} cy={cy} r={10} fill={colors.primary} />
-        <SvgText x={cx} y={cy + 1} fontSize={9} fill={colors.gold} fontWeight="800" textAnchor="middle" alignmentBaseline="central">{makePct}%</SvgText>
-        {PUTT_DIRECTIONS.map(d => {
-          const count = counts[d.key] || 0;
-          if (count === 0) return null;
-          const rad = (d.angle - 90) * Math.PI / 180;
-          const lx = cx + Math.cos(rad) * (maxR + 16);
-          const ly = cy + Math.sin(rad) * (maxR + 16);
-          return <SvgText key={d.key + '_lbl'} x={lx} y={ly} fontSize={9} fill={colors.primary} fontWeight="700" textAnchor="middle" alignmentBaseline="central">{d.label} {count}</SvgText>;
-        })}
-      </Svg>
+      <div dangerouslySetInnerHTML={{ __html: svgHtml }} />
       <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>Made: {madeCount} ({makePct}%)</Text>
     </View>
   );
@@ -221,16 +200,16 @@ const PUTT_BRACKETS = [
 ];
 
 function PuttDistanceStats({ shots }: { shots: any[] }) {
-  const puttsWithDist = shots.filter((sh: any) => sh.putt_distance != null && sh.putt_distance > 0);
+  const puttsWithDist = shots.filter((sh: any) => sh.putt_distance != null && parseFloat(sh.putt_distance) > 0).map((sh: any) => ({ ...sh, putt_distance: parseFloat(sh.putt_distance), putt_distance_remaining: sh.putt_distance_remaining != null ? parseFloat(sh.putt_distance_remaining) : null }));
   if (puttsWithDist.length === 0) return null;
 
-  const avgRemaining = puttsWithDist.filter((sh: any) => sh.putt_distance_remaining != null);
+  const avgRemaining = puttsWithDist.filter((sh: any) => sh.putt_distance_remaining != null && !isNaN(sh.putt_distance_remaining));
   const avgRem = avgRemaining.length > 0 ? (avgRemaining.reduce((sum: number, sh: any) => sum + sh.putt_distance_remaining, 0) / avgRemaining.length).toFixed(1) : null;
 
   const brackets = PUTT_BRACKETS.map(b => {
     const inBracket = puttsWithDist.filter((sh: any) => sh.putt_distance >= b.min && sh.putt_distance < b.max);
     const made = inBracket.filter((sh: any) => sh.putt_result === 'made').length;
-    const withRemaining = inBracket.filter((sh: any) => sh.putt_distance_remaining != null);
+    const withRemaining = inBracket.filter((sh: any) => sh.putt_distance_remaining != null && !isNaN(sh.putt_distance_remaining));
     const avgLeave = withRemaining.length > 0 ? (withRemaining.reduce((sum: number, sh: any) => sum + sh.putt_distance_remaining, 0) / withRemaining.length) : 0;
     const avgPctLeft = withRemaining.length > 0 ? (withRemaining.reduce((sum: number, sh: any) => sum + (sh.putt_distance > 0 ? (sh.putt_distance_remaining / sh.putt_distance) * 100 : 0), 0) / withRemaining.length) : 0;
     const makeRate = inBracket.length > 0 ? Math.round(made / inBracket.length * 100) : 0;
