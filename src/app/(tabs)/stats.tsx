@@ -1,9 +1,46 @@
-import { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Platform } from 'react-native';
+import Svg, { Circle, Path, Line, Text as SvgText } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
 import ScoreCell from '../../components/ScoreCell';
+
+// --- Custom Dropdown ---
+function Dropdown<T extends string>({ options, value, onChange, labelMap }: { options: T[]; value: T; onChange: (v: T) => void; labelMap?: Record<string, string> }) {
+  const [open, setOpen] = useState(false);
+  const getLabel = (v: T) => labelMap?.[v] ?? v;
+
+  return (
+    <View style={dropdownStyles.wrapper}>
+      <TouchableOpacity style={dropdownStyles.button} onPress={() => setOpen(!open)} activeOpacity={0.7}>
+        <Text style={dropdownStyles.buttonText}>{getLabel(value)}</Text>
+        <Text style={dropdownStyles.arrow}>{open ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+      {open && (
+        <View style={dropdownStyles.list}>
+          {options.map(opt => (
+            <TouchableOpacity key={opt} style={[dropdownStyles.item, value === opt && dropdownStyles.itemActive]} onPress={() => { onChange(opt); setOpen(false); }}>
+              <Text style={[dropdownStyles.itemText, value === opt && dropdownStyles.itemTextActive]}>{getLabel(opt)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const dropdownStyles = StyleSheet.create({
+  wrapper: { position: 'relative', zIndex: 100, marginBottom: 16 },
+  button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.primary, borderRadius: 10, borderWidth: 2, borderColor: colors.gold, paddingVertical: 12, paddingHorizontal: 16 },
+  buttonText: { fontSize: 14, fontWeight: '700', color: colors.gold },
+  arrow: { fontSize: 12, color: colors.gold, marginLeft: 8 },
+  list: { position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: colors.white, borderRadius: 10, borderWidth: 1, borderColor: colors.grayLight, marginTop: 4, overflow: 'hidden', ...Platform.select({ web: { boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }, default: { elevation: 6 } }) },
+  item: { paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.grayLight },
+  itemActive: { backgroundColor: colors.primary },
+  itemText: { fontSize: 14, fontWeight: '600', color: colors.primary },
+  itemTextActive: { color: colors.gold },
+});
 
 type RangeOption = 'all' | '3' | '5' | '10' | '25';
 
@@ -31,6 +68,250 @@ function BarChart({ data, maxVal, label }: { data: { label: string; value: numbe
   );
 }
 
+// --- Petal Chart for shot dispersion ---
+const PETAL_DIRECTIONS: { key: string; angle: number; label: string }[] = [
+  { key: 'Long', angle: 0, label: 'Long' },
+  { key: 'Long-Right', angle: 45, label: 'Long R' },
+  { key: 'Right', angle: 90, label: 'Right' },
+  { key: 'Short-Right', angle: 135, label: 'Short R' },
+  { key: 'Short', angle: 180, label: 'Short' },
+  { key: 'Short-Left', angle: 225, label: 'Short L' },
+  { key: 'Left', angle: 270, label: 'Left' },
+  { key: 'Long-Left', angle: 315, label: 'Long L' },
+];
+
+function petalPath(cx: number, cy: number, angle: number, length: number, width: number): string {
+  const rad = (angle - 90) * Math.PI / 180;
+  const perpRad = rad + Math.PI / 2;
+  const tipX = cx + Math.cos(rad) * length;
+  const tipY = cy + Math.sin(rad) * length;
+  const cp1X = cx + Math.cos(rad) * length * 0.6 + Math.cos(perpRad) * width;
+  const cp1Y = cy + Math.sin(rad) * length * 0.6 + Math.sin(perpRad) * width;
+  const cp2X = cx + Math.cos(rad) * length * 0.6 - Math.cos(perpRad) * width;
+  const cp2Y = cy + Math.sin(rad) * length * 0.6 - Math.sin(perpRad) * width;
+  return `M ${cx} ${cy} C ${cp1X} ${cp1Y}, ${cp1X} ${cp1Y}, ${tipX} ${tipY} C ${cp2X} ${cp2Y}, ${cp2X} ${cp2Y}, ${cx} ${cy} Z`;
+}
+
+function normalizeMissDir(dir: string): string | null {
+  const map: Record<string, string | null> = {
+    'Left': 'Left', 'left': 'Left', 'L': 'Left',
+    'Right': 'Right', 'right': 'Right', 'R': 'Right',
+    'Short': 'Short', 'short': 'Short',
+    'Long': 'Long', 'long': 'Long',
+    'Short Left': 'Short-Left', 'Short-Left': 'Short-Left', 'short-left': 'Short-Left',
+    'Short Right': 'Short-Right', 'Short-Right': 'Short-Right', 'short-right': 'Short-Right',
+    'Long Left': 'Long-Left', 'Long-Left': 'Long-Left', 'long-left': 'Long-Left',
+    'Long Right': 'Long-Right', 'Long-Right': 'Long-Right', 'long-right': 'Long-Right',
+    'On Target': null, 'on_target': null, 'On target': null,
+  };
+  return dir in map ? map[dir] : dir;
+}
+
+function PetalChart({ missCounts, totalShots, onTargetCount, title }: { missCounts: Record<string, number>; totalShots: number; onTargetCount: number; title?: string }) {
+  const size = 240;
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = 80;
+  const vals = Object.values(missCounts);
+  const maxCount = vals.length > 0 ? Math.max(...vals, 1) : 1;
+
+  return (
+    <View style={{ alignItems: 'center', marginBottom: 16 }}>
+      {title && <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>{title}</Text>}
+      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <Circle cx={cx} cy={cy} r={maxR} fill="none" stroke={colors.grayLight} strokeWidth={0.5} />
+        <Circle cx={cx} cy={cy} r={maxR * 0.5} fill="none" stroke={colors.grayLight} strokeWidth={0.5} />
+        {PETAL_DIRECTIONS.map(d => {
+          const rad = (d.angle - 90) * Math.PI / 180;
+          return <Line key={d.key} x1={cx} y1={cy} x2={cx + Math.cos(rad) * maxR} y2={cy + Math.sin(rad) * maxR} stroke={colors.grayLight} strokeWidth={0.5} />;
+        })}
+        {PETAL_DIRECTIONS.map(d => {
+          const count = missCounts[d.key] || 0;
+          if (count === 0) return null;
+          const length = (count / maxCount) * maxR;
+          const width = Math.max(8, length * 0.35);
+          return <Path key={d.key} d={petalPath(cx, cy, d.angle, length, width)} fill={colors.gold} opacity={0.75} />;
+        })}
+        <Circle cx={cx} cy={cy} r={12} fill={colors.primary} />
+        {onTargetCount > 0 && (
+          <Circle cx={cx} cy={cy} r={Math.min(12, 6 + (onTargetCount / Math.max(totalShots, 1)) * 6)} fill="#16a34a" />
+        )}
+        {PETAL_DIRECTIONS.map(d => {
+          const count = missCounts[d.key] || 0;
+          if (count === 0) return null;
+          const rad = (d.angle - 90) * Math.PI / 180;
+          const lx = cx + Math.cos(rad) * (maxR + 16);
+          const ly = cy + Math.sin(rad) * (maxR + 16);
+          return <SvgText key={d.key + '_lbl'} x={lx} y={ly} fontSize={9} fill={colors.primary} fontWeight="700" textAnchor="middle" alignmentBaseline="central">{d.label} {count}</SvgText>;
+        })}
+      </Svg>
+      {onTargetCount > 0 && <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>On Target: {onTargetCount} ({Math.round(onTargetCount / Math.max(totalShots, 1) * 100)}%)</Text>}
+    </View>
+  );
+}
+
+// --- Putting Petal Chart ---
+const PUTT_DIRECTIONS: { key: string; angle: number; label: string }[] = [
+  { key: 'miss-long', angle: 0, label: 'Long' },
+  { key: 'lip-out-right', angle: 60, label: 'Lip R' },
+  { key: 'miss-right', angle: 90, label: 'Right' },
+  { key: 'miss-short', angle: 180, label: 'Short' },
+  { key: 'lip-out-left', angle: 300, label: 'Lip L' },
+  { key: 'miss-left', angle: 270, label: 'Left' },
+];
+
+function PuttPetalChart({ shots }: { shots: any[] }) {
+  const size = 240;
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = 80;
+  const counts: Record<string, number> = {};
+  let madeCount = 0;
+  shots.forEach(sh => {
+    if (!sh.putt_result) return;
+    if (sh.putt_result === 'made') { madeCount++; return; }
+    counts[sh.putt_result] = (counts[sh.putt_result] || 0) + 1;
+  });
+  const vals = Object.values(counts);
+  const maxCount = vals.length > 0 ? Math.max(...vals, 1) : 1;
+  const total = shots.filter(sh => sh.putt_result).length;
+  const makePct = total > 0 ? Math.round(madeCount / total * 100) : 0;
+
+  return (
+    <View style={{ alignItems: 'center', marginBottom: 16 }}>
+      <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>Putt Dispersion</Text>
+      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <Circle cx={cx} cy={cy} r={maxR} fill="none" stroke={colors.grayLight} strokeWidth={0.5} />
+        <Circle cx={cx} cy={cy} r={maxR * 0.5} fill="none" stroke={colors.grayLight} strokeWidth={0.5} />
+        {PUTT_DIRECTIONS.map(d => {
+          const rad = (d.angle - 90) * Math.PI / 180;
+          return <Line key={d.key} x1={cx} y1={cy} x2={cx + Math.cos(rad) * maxR} y2={cy + Math.sin(rad) * maxR} stroke={colors.grayLight} strokeWidth={0.5} />;
+        })}
+        {PUTT_DIRECTIONS.map(d => {
+          const count = counts[d.key] || 0;
+          if (count === 0) return null;
+          const length = (count / maxCount) * maxR;
+          const width = Math.max(8, length * 0.35);
+          return <Path key={d.key} d={petalPath(cx, cy, d.angle, length, width)} fill={colors.gold} opacity={0.75} />;
+        })}
+        <Circle cx={cx} cy={cy} r={16} fill={madeCount > 0 ? '#16a34a' : colors.primary} />
+        <Circle cx={cx} cy={cy} r={10} fill={colors.primary} />
+        <SvgText x={cx} y={cy + 1} fontSize={9} fill={colors.gold} fontWeight="800" textAnchor="middle" alignmentBaseline="central">{makePct}%</SvgText>
+        {PUTT_DIRECTIONS.map(d => {
+          const count = counts[d.key] || 0;
+          if (count === 0) return null;
+          const rad = (d.angle - 90) * Math.PI / 180;
+          const lx = cx + Math.cos(rad) * (maxR + 16);
+          const ly = cy + Math.sin(rad) * (maxR + 16);
+          return <SvgText key={d.key + '_lbl'} x={lx} y={ly} fontSize={9} fill={colors.primary} fontWeight="700" textAnchor="middle" alignmentBaseline="central">{d.label} {count}</SvgText>;
+        })}
+      </Svg>
+      <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>Made: {madeCount} ({makePct}%)</Text>
+    </View>
+  );
+}
+
+// --- Putting Distance Stats ---
+const PUTT_BRACKETS = [
+  { label: '0-3ft', min: 0, max: 3 },
+  { label: '3-5ft', min: 3, max: 5 },
+  { label: '5-10ft', min: 5, max: 10 },
+  { label: '10-20ft', min: 10, max: 20 },
+  { label: '20+ft', min: 20, max: Infinity },
+];
+
+function PuttDistanceStats({ shots }: { shots: any[] }) {
+  const puttsWithDist = shots.filter((sh: any) => sh.putt_distance != null && sh.putt_distance > 0);
+  if (puttsWithDist.length === 0) return null;
+
+  const avgRemaining = puttsWithDist.filter((sh: any) => sh.putt_distance_remaining != null);
+  const avgRem = avgRemaining.length > 0 ? (avgRemaining.reduce((sum: number, sh: any) => sum + sh.putt_distance_remaining, 0) / avgRemaining.length).toFixed(1) : null;
+
+  const brackets = PUTT_BRACKETS.map(b => {
+    const inBracket = puttsWithDist.filter((sh: any) => sh.putt_distance >= b.min && sh.putt_distance < b.max);
+    const made = inBracket.filter((sh: any) => sh.putt_result === 'made').length;
+    const withRemaining = inBracket.filter((sh: any) => sh.putt_distance_remaining != null);
+    const avgLeave = withRemaining.length > 0 ? (withRemaining.reduce((sum: number, sh: any) => sum + sh.putt_distance_remaining, 0) / withRemaining.length) : 0;
+    const avgPctLeft = withRemaining.length > 0 ? (withRemaining.reduce((sum: number, sh: any) => sum + (sh.putt_distance > 0 ? (sh.putt_distance_remaining / sh.putt_distance) * 100 : 0), 0) / withRemaining.length) : 0;
+    const makeRate = inBracket.length > 0 ? Math.round(made / inBracket.length * 100) : 0;
+    return { ...b, count: inBracket.length, made, makeRate, avgLeave, avgPctLeft };
+  }).filter(b => b.count > 0);
+
+  const dropoffIdx = new Set<number>();
+  for (let i = 1; i < brackets.length; i++) {
+    if (brackets[i - 1].makeRate - brackets[i].makeRate >= 20) dropoffIdx.add(i);
+  }
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <Text style={s.sectionTitle}>Putting Distance</Text>
+      {avgRem !== null && (
+        <View style={[s.summaryRow, { marginBottom: 12 }]}>
+          <View style={s.summaryCard}>
+            <Text style={s.summaryNum}>{avgRem}ft</Text>
+            <Text style={s.summaryLabel}>Avg Leave</Text>
+          </View>
+          <View style={s.summaryCard}>
+            <Text style={s.summaryNum}>{puttsWithDist.length}</Text>
+            <Text style={s.summaryLabel}>Putts Tracked</Text>
+          </View>
+        </View>
+      )}
+      <View style={{ backgroundColor: colors.white, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.grayLight }}>
+        <View style={{ flexDirection: 'row', backgroundColor: colors.primary, paddingVertical: 8, paddingHorizontal: 6 }}>
+          <Text style={{ flex: 1.2, color: colors.white, fontWeight: '700', fontSize: 11 }}>Range</Text>
+          <Text style={{ flex: 0.6, color: colors.white, fontWeight: '700', fontSize: 11, textAlign: 'center' }}>#</Text>
+          <Text style={{ flex: 1, color: colors.white, fontWeight: '700', fontSize: 11, textAlign: 'center' }}>Make%</Text>
+          <Text style={{ flex: 1, color: colors.white, fontWeight: '700', fontSize: 11, textAlign: 'center' }}>Avg Leave</Text>
+          <Text style={{ flex: 1, color: colors.white, fontWeight: '700', fontSize: 11, textAlign: 'center' }}>% Left</Text>
+        </View>
+        {brackets.map((b, idx) => {
+          const isDropoff = dropoffIdx.has(idx);
+          return (
+            <View key={b.label} style={{ flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: colors.grayLight, backgroundColor: isDropoff ? '#fef3c7' : idx % 2 === 0 ? colors.offWhite : colors.white }}>
+              <Text style={{ flex: 1.2, fontSize: 12, fontWeight: '600', color: colors.primary }}>{b.label}</Text>
+              <Text style={{ flex: 0.6, fontSize: 12, color: colors.black, textAlign: 'center' }}>{b.count}</Text>
+              <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: b.makeRate >= 50 ? '#16a34a' : colors.primary, textAlign: 'center' }}>{b.makeRate}%{isDropoff ? ' ⚠️' : ''}</Text>
+              <Text style={{ flex: 1, fontSize: 12, color: colors.black, textAlign: 'center' }}>{b.avgLeave.toFixed(1)}ft</Text>
+              <Text style={{ flex: 1, fontSize: 12, color: colors.black, textAlign: 'center' }}>{b.avgPctLeft.toFixed(0)}%</Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// --- Fairway Miss Direction Bar (tug-of-war) ---
+function FairwayMissBar({ leftPct, rightPct, leftCount, rightCount }: { leftPct: number; rightPct: number; leftCount: number; rightCount: number }) {
+  const total = leftCount + rightCount;
+  if (total === 0) return null;
+  const dominant = leftPct > rightPct ? 'L' : rightPct > leftPct ? 'R' : null;
+
+  return (
+    <View style={{ marginBottom: 24 }}>
+      <Text style={s.sectionTitle}>Fairway Miss Tendency</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary, width: 50 }}>Left</Text>
+        <View style={{ flex: 1 }} />
+        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary, width: 50, textAlign: 'right' }}>Right</Text>
+      </View>
+      <View style={{ flexDirection: 'row', height: 32, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.grayLight }}>
+        <View style={{ width: `${leftPct}%`, backgroundColor: dominant === 'L' ? colors.gold : colors.primary, justifyContent: 'center', alignItems: 'center', borderTopLeftRadius: 16, borderBottomLeftRadius: 16 }}>
+          {leftPct > 15 && <Text style={{ color: colors.white, fontSize: 12, fontWeight: '800' }}>{leftPct}%</Text>}
+        </View>
+        <View style={{ width: `${rightPct}%`, backgroundColor: dominant === 'R' ? colors.gold : colors.primary, justifyContent: 'center', alignItems: 'center', borderTopRightRadius: 16, borderBottomRightRadius: 16 }}>
+          {rightPct > 15 && <Text style={{ color: colors.white, fontSize: 12, fontWeight: '800' }}>{rightPct}%</Text>}
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+        <Text style={{ fontSize: 11, color: colors.gray }}>{leftCount} misses</Text>
+        <Text style={{ fontSize: 11, color: colors.gray }}>{rightCount} misses</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function Stats() {
   const { user } = useAuth();
   const [allRounds, setAllRounds] = useState<RoundStat[]>([]);
@@ -43,6 +324,7 @@ export default function Stats() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedCategory, setAdvancedCategory] = useState<'tee' | 'approach' | 'chip' | 'putting'>('tee');
   const [advancedShots, setAdvancedShots] = useState<any[]>([]);
+  const [shapeFilter, setShapeFilter] = useState<string>('all');
 
   useEffect(() => {
     if (!user) return;
@@ -73,7 +355,6 @@ export default function Stats() {
       });
       setAllScoresByRound(byRound);
 
-      // Extract advanced shots from notes
       const allAdvShots: any[] = [];
       (scores || []).forEach((sc: any) => {
         if (!sc.notes) return;
@@ -86,7 +367,6 @@ export default function Stats() {
       });
       setAdvancedShots(allAdvShots);
 
-      // Wedge totals per round
       const wTotals = new Map<string, number>();
       byRound.forEach((holes, roundId) => {
         const wedgeHoles = holes.filter((h: any) => h.wedge_and_in !== null && h.wedge_and_in !== undefined && typeof h.wedge_and_in === 'number');
@@ -96,7 +376,6 @@ export default function Stats() {
       });
       setWedgeTotalsByRound(wTotals);
 
-      // Recent rounds with hole scores
       const { data: recentFull } = await supabase.from('sb_rounds')
         .select('id, date_played, total_score, notes, sb_courses(name)')
         .eq('user_id', user.id).eq('is_complete', true)
@@ -118,7 +397,6 @@ export default function Stats() {
         };
       }));
 
-      // Club distances
       const { data: shots } = await supabase.from('sb_shots')
         .select('club, distance_yards, hole_score_id')
         .not('club', 'is', null)
@@ -139,7 +417,6 @@ export default function Stats() {
     }
   };
 
-  // Compute filtered stats based on range
   const filteredRounds = range === 'all' ? allRounds : allRounds.slice(-parseInt(range));
   const filteredIds = new Set(filteredRounds.map(r => r.id));
   const filteredScores = (() => {
@@ -164,8 +441,10 @@ export default function Stats() {
   const onePuttsPer18 = (onePuttsTotal / roundCount).toFixed(1);
   const threePuttsPer18 = (threePuttsTotal / roundCount).toFixed(1);
   const fwMisses = filteredScores.filter((sc: any) => sc.fairway_hit === false && sc.fairway_miss_dir);
-  const missLPct = fwMisses.length ? Math.round(fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'L').length / fwMisses.length * 100) : 0;
-  const missRPct = fwMisses.length ? Math.round(fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'R').length / fwMisses.length * 100) : 0;
+  const missLCount = fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'L').length;
+  const missRCount = fwMisses.filter((sc: any) => sc.fairway_miss_dir === 'R').length;
+  const missLPct = fwMisses.length ? Math.round(missLCount / fwMisses.length * 100) : 0;
+  const missRPct = fwMisses.length ? Math.round(missRCount / fwMisses.length * 100) : 0;
   const wedgeHolesFiltered = filteredScores.filter((sc: any) => sc.wedge_and_in !== null && typeof sc.wedge_and_in === 'number');
   const wedgeInTotal = wedgeHolesFiltered.length;
   const wedgeInMade = wedgeHolesFiltered.reduce((s: number, sc: any) => s + (sc.wedge_and_in || 0), 0);
@@ -221,7 +500,7 @@ export default function Stats() {
             </View>
           </View>
 
-          {/* Putting & Miss Direction */}
+          {/* Putting row */}
           <View style={s.summaryRow}>
             <View style={s.summaryCard}>
               <Text style={s.summaryNum}>{onePuttsPer18}</Text>
@@ -231,19 +510,12 @@ export default function Stats() {
               <Text style={s.summaryNum}>{threePuttsPer18}</Text>
               <Text style={s.summaryLabel}>3-Putts/Rnd</Text>
             </View>
-            {(missLPct > 0 || missRPct > 0) && (
-              <>
-                <View style={s.summaryCard}>
-                  <Text style={s.summaryNum}>{missLPct}%</Text>
-                  <Text style={s.summaryLabel}>Miss L</Text>
-                </View>
-                <View style={s.summaryCard}>
-                  <Text style={s.summaryNum}>{missRPct}%</Text>
-                  <Text style={s.summaryLabel}>Miss R</Text>
-                </View>
-              </>
-            )}
           </View>
+
+          {/* Fairway Miss Direction Bar */}
+          {(missLPct > 0 || missRPct > 0) && (
+            <FairwayMissBar leftPct={missLPct} rightPct={missRPct} leftCount={missLCount} rightCount={missRCount} />
+          )}
 
           {/* Advanced Stats Dashboard */}
           {advancedShots.length > 0 && (
@@ -260,8 +532,6 @@ export default function Stats() {
                   { key: 'putting', label: 'Putting' },
                 ];
 
-                // Filter shots by category
-                // Detect putts by is_putt flag OR presence of putt-specific fields
                 const isPutt = (sh: any) => !!sh.is_putt || !!sh.putt_result || !!sh.putt_break || !!sh.putt_distance || !!sh.putt_hit_line || !!sh.putt_hit_speed;
                 const catShots = advancedShots.filter(sh => {
                   if (advancedCategory === 'tee') return sh.shot_number === 1 && !isPutt(sh);
@@ -273,20 +543,27 @@ export default function Stats() {
 
                 const totalShots = catShots.length;
 
-                // Miss direction breakdown
-                const missDir: Record<string, number> = {};
-                catShots.forEach(sh => {
-                  let dir: string;
-                  if (advancedCategory === 'putting') {
-                    // Use putt_result for putting miss direction
-                    if (!sh.putt_result) return;
-                    const labels: Record<string, string> = { 'made': 'Made', 'miss-left': 'Left', 'miss-right': 'Right', 'miss-short': 'Short', 'miss-long': 'Long', 'miss-short-left': 'Short Left', 'miss-short-right': 'Short Right', 'miss-long-left': 'Long Left', 'miss-long-right': 'Long Right' };
-                    dir = labels[sh.putt_result] || sh.putt_result;
-                  } else {
-                    dir = sh.miss_direction || 'Unknown';
-                  }
-                  missDir[dir] = (missDir[dir] || 0) + 1;
-                });
+                // Get unique shot shapes for filter
+                const uniqueShapes = new Set<string>();
+                catShots.forEach(sh => { if (sh.shot_shape) uniqueShapes.add(sh.shot_shape); });
+                const shapeOptions = ['all', ...Array.from(uniqueShapes)];
+
+                // Apply shape filter for non-putting
+                const filteredCatShots = advancedCategory !== 'putting' && shapeFilter !== 'all'
+                  ? catShots.filter(sh => sh.shot_shape === shapeFilter)
+                  : catShots;
+
+                // Build petal miss counts for non-putting categories
+                const petalMissCounts: Record<string, number> = {};
+                let onTargetCount = 0;
+                if (advancedCategory !== 'putting') {
+                  filteredCatShots.forEach(sh => {
+                    if (!sh.miss_direction) return;
+                    const normalized = normalizeMissDir(sh.miss_direction);
+                    if (normalized === null) { onTargetCount++; return; }
+                    petalMissCounts[normalized] = (petalMissCounts[normalized] || 0) + 1;
+                  });
+                }
 
                 // Shot shape breakdown
                 const shapes: Record<string, number> = {};
@@ -294,7 +571,7 @@ export default function Stats() {
                   if (sh.shot_shape) shapes[sh.shot_shape] = (shapes[sh.shot_shape] || 0) + 1;
                 });
 
-                // Putt-specific stats
+                // Putt stats
                 const puttLineHit = catShots.filter(sh => sh.putt_hit_line === 'yes').length;
                 const puttLineMiss = catShots.filter(sh => sh.putt_hit_line === 'no').length;
                 const puttLineTotal = puttLineHit + puttLineMiss;
@@ -315,30 +592,41 @@ export default function Stats() {
 
                 return (
                   <View style={{ marginBottom: 20 }}>
-                    {/* Category selector */}
-                    <View style={s.rangePillRow}>
-                      {categories.map(cat => (
-                        <TouchableOpacity key={cat.key} style={[s.rangePill, advancedCategory === cat.key && s.rangePillActive]} onPress={() => setAdvancedCategory(cat.key)}>
-                          <Text style={[s.rangePillText, advancedCategory === cat.key && s.rangePillTextActive]}>{cat.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                    {/* Category selector dropdown */}
+                    <Dropdown
+                      options={categories.map(c => c.key)}
+                      value={advancedCategory}
+                      onChange={(v) => { setAdvancedCategory(v); setShapeFilter('all'); }}
+                      labelMap={Object.fromEntries(categories.map(c => [c.key, c.label]))}
+                    />
 
                     <Text style={{ fontSize: 13, color: colors.gray, marginBottom: 12 }}>{totalShots} shots tracked</Text>
 
                     {totalShots > 0 && (
                       <>
-                        {/* Miss Direction */}
-                        <Text style={s.sectionTitle}>Miss Direction</Text>
-                        {Object.entries(missDir).sort(([,a],[,b]) => b - a).map(([dir, count]) => (
-                          <View key={dir} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                            <Text style={{ width: 90, fontSize: 13, fontWeight: '600', color: colors.primary }}>{dir}</Text>
-                            <View style={{ flex: 1, height: 24, backgroundColor: colors.grayLight, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 }}>
-                              <View style={{ height: '100%', width: `${(count / totalShots) * 100}%`, backgroundColor: dir === 'On Target' ? '#16a34a' : colors.gold, borderRadius: 12 }} />
-                            </View>
-                            <Text style={{ width: 50, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((count / totalShots) * 100)}%</Text>
-                          </View>
-                        ))}
+                        {/* PETAL CHART for non-putting */}
+                        {advancedCategory !== 'putting' && (
+                          <>
+                            {/* Shape filter dropdown */}
+                            {uniqueShapes.size > 0 && (
+                              <Dropdown
+                                options={shapeOptions}
+                                value={shapeFilter}
+                                onChange={setShapeFilter}
+                                labelMap={{ all: 'Overall' }}
+                              />
+                            )}
+                            <PetalChart missCounts={petalMissCounts} totalShots={filteredCatShots.length} onTargetCount={onTargetCount} title="Shot Dispersion" />
+                          </>
+                        )}
+
+                        {/* PUTTING: Petal + Distance Stats */}
+                        {advancedCategory === 'putting' && (
+                          <>
+                            <PuttPetalChart shots={catShots} />
+                            <PuttDistanceStats shots={catShots} />
+                          </>
+                        )}
 
                         {/* Shot shape breakdown (non-putting) */}
                         {advancedCategory !== 'putting' && Object.keys(shapes).length > 0 && (
@@ -445,7 +733,6 @@ export default function Stats() {
               {recentRounds.map(r => {
                 const isExpanded = expandedRoundId === r.id;
                 const hasWedge = r.holes.some(h => h.wedge_and_in != null);
-                // Summary stats for expanded view
                 const fwTracked = r.holes.filter(h => h.fairway_hit !== null);
                 const fwHitCount = fwTracked.filter(h => h.fairway_hit === true).length;
                 const girCount = r.holes.filter(h => h.gir).length;
@@ -469,7 +756,6 @@ export default function Stats() {
                         </View>
                       </View>
 
-                      {/* Collapsed: mini scorecard */}
                       {!isExpanded && r.holes.length > 0 && (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.miniScorecard}>
                           <View style={{ flexDirection: 'row', gap: 2 }}>
@@ -483,10 +769,8 @@ export default function Stats() {
                         </ScrollView>
                       )}
 
-                      {/* Expanded: full scorecard + summary */}
                       {isExpanded && r.holes.length > 0 && (
                         <View style={s.expandedDetail}>
-                          {/* Round summary pills */}
                           <View style={s.detailPillRow}>
                             <View style={s.detailPill}><Text style={s.detailPillLabel}>FW</Text><Text style={s.detailPillValue}>{fwHitCount}/{fwTracked.length}</Text></View>
                             <View style={s.detailPill}><Text style={s.detailPillLabel}>GIR</Text><Text style={s.detailPillValue}>{girCount}/{r.holes.length}</Text></View>
@@ -498,7 +782,6 @@ export default function Stats() {
                             )}
                           </View>
 
-                          {/* Full scorecard table */}
                           <View style={s.detailTable}>
                             <View style={s.detailHeaderRow}>
                               <Text style={[s.detailCell, s.detailHeaderText, { flex: 0.5 }]}>Hole</Text>
