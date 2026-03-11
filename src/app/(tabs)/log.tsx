@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors, teeColors } from '../../lib/theme';
@@ -306,11 +306,20 @@ export default function LogRound() {
     });
   }, [DRAFT_KEY]);
 
-  // Check for editing round (from feed Edit button)
-  useEffect(() => {
-    if (courses.length === 0) return; // Wait for courses to load first
-    AsyncStorage.getItem('editing_round').then(async (stored) => {
+  // Check for editing round (from feed Edit button) — runs on every tab focus
+  const coursesRef = useRef(courses);
+  coursesRef.current = courses;
+  useFocusEffect(useCallback(() => {
+    const checkEditingRound = async () => {
+      const stored = await AsyncStorage.getItem('editing_round');
       if (!stored) return;
+      // Wait for courses to be available (they load async)
+      let localCourses = coursesRef.current;
+      if (localCourses.length === 0) {
+        const { data } = await supabase.from('sb_courses').select('*').order('name');
+        localCourses = data || [];
+        setCourses(localCourses);
+      }
       try {
         const editData = JSON.parse(stored);
         await AsyncStorage.removeItem('editing_round');
@@ -325,7 +334,7 @@ export default function LogRound() {
         try { notes = JSON.parse(roundData.notes || '{}'); } catch {}
 
         // Find and select course
-        const course = courses.find((c: Course) => c.id === roundData.course_id);
+        const course = localCourses.find((c: Course) => c.id === roundData.course_id);
         if (course) {
           setSelectedCourse(course);
           const [holesRes, teesRes] = await Promise.all([
@@ -424,8 +433,9 @@ export default function LogRound() {
       } catch (e) {
         console.error('Error loading editing round:', e);
       }
-    });
-  }, [courses]);
+    };
+    checkEditingRound();
+  }, []));
 
   const scanScorecard = async (imageBase64: string) => {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
