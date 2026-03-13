@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
 import ScoreCell from '../../components/ScoreCell';
+import ConditionFilteredStats from '../../components/ConditionFilteredStats';
 
 // --- Custom Dropdown ---
 function Dropdown<T extends string>({ options, value, onChange, labelMap }: { options: T[]; value: T; onChange: (v: T) => void; labelMap?: Record<string, string> }) {
@@ -43,7 +44,7 @@ const dropdownStyles = StyleSheet.create({
 
 type RangeOption = 'all' | '3' | '5' | '10' | '25';
 
-interface RoundStat { id: string; date_played: string; total_score: number; course_name?: string; }
+interface RoundStat { id: string; date_played: string; total_score: number; course_name?: string; weather?: string; wind?: string; notes?: string; }
 interface HoleScore { round_id: string; hole_number: number; score: number; par?: number; }
 interface ClubStat { club: string; avgDistance: number; count: number; }
 interface RecentHole { hole_number: number; score: number; par: number; putts: number; fairway_hit: boolean | null; gir: boolean; wedge_and_in: number | null; }
@@ -313,7 +314,7 @@ export default function Stats() {
   const loadStats = async () => {
     if (!user) return;
     const { data: roundsData } = await supabase.from('sb_rounds')
-      .select('id, date_played, total_score, notes')
+      .select('id, date_played, total_score, notes, weather, wind')
       .eq('user_id', user.id).eq('is_complete', true)
       .order('date_played', { ascending: true });
 
@@ -702,6 +703,9 @@ export default function Stats() {
               })()}
             </>
           )}
+
+          {/* Condition-Filtered Stats */}
+          <ConditionFilteredStats rounds={allRounds} holeScores={allScoresByRound} />
 
           <Text style={s.sectionTitle}>Scoring Trend (Last 10)</Text>
           <BarChart data={scoreData} maxVal={Math.max(...scoreData.map(d => d.value), 72)} label="" />

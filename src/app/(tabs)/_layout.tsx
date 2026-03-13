@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { colors } from '../../lib/theme';
 
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
-  const icons: Record<string, string> = { feed: '📰', log: '✏️', courses: '⛳', stats: '📊', profile: '👤' };
+  const icons: Record<string, string> = { feed: '📰', log: '✏️', courses: '⛳', stats: '📊', training: '🎯', profile: '👤' };
   return (
     <View style={{ alignItems: 'center' }}>
       <Text style={{ fontSize: 22 }}>{icons[name] || '•'}</Text>
@@ -25,6 +25,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="log" options={{ title: 'Log Round', headerTitle: 'LOG ROUND', tabBarIcon: ({ focused }) => <TabIcon name="log" focused={focused} /> }} />
       <Tabs.Screen name="courses" options={{ title: 'Courses', headerTitle: 'COURSES', tabBarIcon: ({ focused }) => <TabIcon name="courses" focused={focused} /> }} />
       <Tabs.Screen name="stats" options={{ title: 'Stats', headerTitle: 'STATS', tabBarIcon: ({ focused }) => <TabIcon name="stats" focused={focused} /> }} />
+      <Tabs.Screen name="training" options={{ title: 'Training', headerTitle: 'TRAINING', tabBarIcon: ({ focused }) => <TabIcon name="training" focused={focused} /> }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', headerTitle: 'PROFILE', tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} /> }} />
     </Tabs>
   );

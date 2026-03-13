@@ -6,6 +6,10 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors, teeColors } from '../../lib/theme';
 import ScoreCell from '../../components/ScoreCell';
+import ScorecardScanner from '../../components/ScorecardScanner';
+import WindRangeInput from '../../components/WindRangeInput';
+import GreenFirmnessSlider from '../../components/GreenFirmnessSlider';
+import WindDirectionDial from '../../components/WindDirectionDial';
 
 type TrackingMode = 'basic' | 'advanced' | 'strategy' | 'mental';
 
@@ -181,6 +185,10 @@ export default function LogRound() {
   const [datePlayed, setDatePlayed] = useState(new Date().toISOString().split('T')[0]);
   const [weather, setWeather] = useState('');
   const [wind, setWind] = useState('');
+  const [windMin, setWindMin] = useState(0);
+  const [windMax, setWindMax] = useState(0);
+  const [holeWindDirections, setHoleWindDirections] = useState<Record<number, number | null>>({});
+  const [showScannerModal, setShowScannerModal] = useState(false);
   const [visibility, setVisibility] = useState('private');
   const [trackingMode, setTrackingMode] = useState<TrackingMode>('basic');
   const [roundType, setRoundType] = useState<'practice' | 'tournament' | 'casual'>('practice');

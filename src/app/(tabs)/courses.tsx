@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { colors, teeColors } from '../../lib/theme';
-import CourseGuide from '../../components/CourseGuide';
+import CourseGuideOverhaul from '../../components/CourseGuideOverhaul';
 
 interface Course { id: string; name: string; city: string; state: string; country: string; num_holes: number; created_at: string; }
 interface Hole { id: string; hole_number: number; par: number; distance_yards: number; shape: string; hazards: any[]; notes: string; }
@@ -306,7 +306,7 @@ export default function Courses() {
         </View>
       </Modal>
       {selected && (
-        <CourseGuide
+        <CourseGuideOverhaul
           courseId={selected.id}
           courseName={selected.name}
           visible={showGuide}
