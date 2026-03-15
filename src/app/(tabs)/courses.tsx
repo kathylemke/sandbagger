@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { colors, teeColors } from '../../lib/theme';
+import { useDistanceUnit, formatDistance } from '../../lib/distanceUnits';
 import CourseGuideOverhaul from '../../components/CourseGuideOverhaul';
 
 interface Course { id: string; name: string; city: string; state: string; country: string; num_holes: number; created_at: string; }
@@ -23,6 +24,7 @@ export default function Courses() {
   const [newCourse, setNewCourse] = useState({ name: '', city: '', state: '', country: 'US', num_holes: '18' });
   const [newHoles, setNewHoles] = useState<{ par: string; yards: string }[]>([]);
   const [saving, setSaving] = useState(false);
+  const { unit: distanceUnit } = useDistanceUnit();
 
   const initHoles = (count: number) => Array.from({ length: count }, () => ({ par: '4', yards: '' }));
 
@@ -118,7 +120,7 @@ export default function Courses() {
           <View style={{ flex: 1 }}>
             <Text style={s.teeName}>{tee.name || tee.color}</Text>
             <Text style={s.teeSub}>
-              {(tee.total_yardage || 0).toLocaleString()} yds | Par {tee.total_par} | Rating {tee.rating} / Slope {tee.slope}
+              {formatDistance(tee.total_yardage || 0, distanceUnit)} | Par {tee.total_par} | Rating {tee.rating} / Slope {tee.slope}
             </Text>
           </View>
           <Text style={s.teeChevron}>{expanded ? '▲' : '▼'}</Text>
@@ -138,14 +140,14 @@ export default function Courses() {
                   <View key={h.hole_number} style={s.scRow}>
                     <Text style={[s.scCell, { flex: 0.6, fontWeight: '700' }]}>{h.hole_number}</Text>
                     <Text style={s.scCell}>{h.par}</Text>
-                    <Text style={s.scCell}>{h.yardage}</Text>
+                    <Text style={s.scCell}>{formatDistance(h.yardage, distanceUnit, false)}</Text>
                     <Text style={s.scCell}>{h.handicap_index}</Text>
                   </View>
                 ))}
                 <View style={[s.scRow, { backgroundColor: colors.offWhite }]}>  
                   <Text style={[s.scCell, { flex: 0.6, fontWeight: '800' }]}>Tot</Text>
                   <Text style={[s.scCell, { fontWeight: '800' }]}>{section.data.reduce((a, h) => a + h.par, 0)}</Text>
-                  <Text style={[s.scCell, { fontWeight: '800' }]}>{section.data.reduce((a, h) => a + h.yardage, 0)}</Text>
+                  <Text style={[s.scCell, { fontWeight: '800' }]}>{formatDistance(section.data.reduce((a, h) => a + h.yardage, 0), distanceUnit, false)}</Text>
                   <Text style={s.scCell}>—</Text>
                 </View>
               </View>
@@ -200,7 +202,7 @@ export default function Courses() {
                 {holes.length > 0 && (
                   <View style={s.modalStats}>
                     <Text style={s.modalStat}>Par {totalPar}</Text>
-                    {totalYards > 0 && <Text style={s.modalStat}>{totalYards.toLocaleString()} yards</Text>}
+                    {totalYards > 0 && <Text style={s.modalStat}>{formatDistance(totalYards, distanceUnit)}</Text>}
                   </View>
                 )}
               </View>
@@ -235,7 +237,7 @@ export default function Courses() {
                     <View key={h.id} style={s.holeTableRow}>
                       <Text style={[s.holeTableCell, { flex: 0.5 }]}>{h.hole_number}</Text>
                       <Text style={[s.holeTableCell, { fontWeight: '700' }]}>{h.par}</Text>
-                      <Text style={s.holeTableCell}>{h.distance_yards || '—'}</Text>
+                      <Text style={s.holeTableCell}>{h.distance_yards ? formatDistance(h.distance_yards, distanceUnit, false) : '—'}</Text>
                       <Text style={[s.holeTableCell, { flex: 1.5 }]}>{h.shape?.replace('_', ' ') || '—'}</Text>
                     </View>
                   ))}

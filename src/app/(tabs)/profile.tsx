@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { updateProfile } from '../../lib/auth';
 import { colors } from '../../lib/theme';
+import { useDistanceUnit, DistanceUnit } from '../../lib/distanceUnits';
 
 const BAG_CATEGORIES: { key: string; label: string; clubs: string[] }[] = [
   { key: 'woods', label: '🪵 Woods', clubs: ['Driver', '2W', '3W', '4W', '5W', '7W', '9W', '11W'] },
@@ -34,6 +35,9 @@ export default function Profile() {
   const [practicePlans, setPracticePlans] = useState<any[]>([]);
   const [bag, setBag] = useState<string[]>([]);
   const [expandedBagCat, setExpandedBagCat] = useState<string | null>(null);
+
+  // Distance unit preference
+  const { unit: distanceUnit, setUnit: setDistanceUnit } = useDistanceUnit();
 
   const bagKey = user ? `sandbagger_bag_${user.id}` : null;
 
@@ -250,6 +254,33 @@ export default function Profile() {
         })}
       </View>
 
+      {/* Settings */}
+      <View style={s.section}>
+        <Text style={[s.sectionTitle, { marginBottom: 12 }]}>⚙️ Settings</Text>
+        <View style={settingsS.card}>
+          <View style={settingsS.row}>
+            <View style={settingsS.labelContainer}>
+              <Text style={settingsS.label}>Distance Units</Text>
+              <Text style={settingsS.sublabel}>Used throughout the app for distances</Text>
+            </View>
+            <View style={settingsS.toggle}>
+              <TouchableOpacity 
+                style={[settingsS.toggleOption, distanceUnit === 'yards' && settingsS.toggleActive]} 
+                onPress={() => setDistanceUnit('yards')}
+              >
+                <Text style={[settingsS.toggleText, distanceUnit === 'yards' && settingsS.toggleTextActive]}>Yards</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[settingsS.toggleOption, distanceUnit === 'meters' && settingsS.toggleActive]} 
+                onPress={() => setDistanceUnit('meters')}
+              >
+                <Text style={[settingsS.toggleText, distanceUnit === 'meters' && settingsS.toggleTextActive]}>Meters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+
       {/* Following */}
       <View style={s.section}>
         <View style={s.sectionHeader}>
@@ -436,4 +467,17 @@ const bagS = StyleSheet.create({
   clubPillDisabled: { opacity: 0.4 },
   clubPillText: { fontSize: 13, fontWeight: '600', color: colors.grayDark },
   clubPillTextActive: { color: colors.gold },
+});
+
+const settingsS = StyleSheet.create({
+  card: { backgroundColor: colors.white, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.grayLight },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
+  labelContainer: { flex: 1, marginRight: 12 },
+  label: { fontSize: 15, fontWeight: '600', color: colors.primary },
+  sublabel: { fontSize: 12, color: colors.grayDark, marginTop: 2 },
+  toggle: { flexDirection: 'row', backgroundColor: colors.offWhite, borderRadius: 8, borderWidth: 1, borderColor: colors.grayLight, overflow: 'hidden' },
+  toggleOption: { paddingHorizontal: 16, paddingVertical: 10 },
+  toggleActive: { backgroundColor: colors.primary },
+  toggleText: { fontSize: 13, fontWeight: '600', color: colors.grayDark },
+  toggleTextActive: { color: colors.gold },
 });
