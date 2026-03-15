@@ -327,10 +327,18 @@ function hazardXY(
   h: HoleHazard, yardage: number, scale: number, centerX: number, teeY: number, greenY: number
 ): Pt {
   let y = greenY;
-  if (h.distance_from_tee) y = teeY - h.distance_from_tee * scale;
-  else if (h.distance_from_green !== undefined) y = greenY + h.distance_from_green * scale;
-  else {
-    const loc = h.location || '';
+  const loc = h.location || '';
+  if (h.distance_from_tee) {
+    y = teeY - h.distance_from_tee * scale;
+  } else if (h.distance_from_green !== undefined) {
+    // Positive distance_from_green = in front of green (toward tee = higher Y)
+    // For "back" locations, flip the sign so they render behind the green (lower Y)
+    if (loc.includes('back')) {
+      y = greenY - h.distance_from_green * scale;
+    } else {
+      y = greenY + h.distance_from_green * scale;
+    }
+  } else {
     if (loc.includes('front')) y = greenY + 12 * scale;
     else if (loc.includes('back')) y = greenY - 10 * scale;
   }
@@ -339,9 +347,9 @@ function hazardXY(
   if (h.lateral_offset !== undefined) {
     x = centerX + h.lateral_offset * scale;
   } else {
-    const loc = h.location || '';
-    if (loc.includes('left')) x -= 30;
-    if (loc.includes('right')) x += 30;
+    // Use scaled yards (20yd offset) instead of raw pixels for consistency
+    if (loc.includes('left')) x -= 20 * scale;
+    if (loc.includes('right')) x += 20 * scale;
   }
   return { x, y };
 }
@@ -447,7 +455,7 @@ function HolePage({ hole, metadata, distUnit }: {
           return (
             <G key={`water${i}`}>
               <Path d={hazardShapePath(pos.x, pos.y, hw, hh, i * 2.7, h.type, h.outline)}
-                fill={C.waterFill} stroke={C.waterStroke} strokeWidth={0.8} />
+                fill={C.waterFill} stroke={C.waterStroke} strokeWidth={1.5} />
             </G>
           );
         })}
@@ -461,7 +469,7 @@ function HolePage({ hole, metadata, distUnit }: {
           const bh = Math.max((h.length || 18) * scale, 6);
           return (
             <Path key={`fb${i}`} d={hazardShapePath(pos.x, pos.y, bw, bh, i * 1.9, h.type, h.outline)}
-              fill={C.bunker} stroke={C.bunkerStroke} strokeWidth={0.8} />
+              fill={C.bunker} stroke={C.bunkerStroke} strokeWidth={1.2} />
           );
         })}
       
@@ -474,20 +482,22 @@ function HolePage({ hole, metadata, distUnit }: {
           const bh = Math.max((h.length || 30) * scale, 8);
           return (
             <Path key={`wa${i}`} d={hazardShapePath(pos.x, pos.y, bw, bh, i * 2.5, h.type, h.outline)}
-              fill={C.bunker} opacity={0.75} stroke={C.bunkerStroke} strokeWidth={0.5} strokeDasharray="2,2" />
+              fill={C.bunker} opacity={0.75} stroke={C.bunkerStroke} strokeWidth={1} strokeDasharray="3,2" />
           );
         })}
       
-      {/* Greenside bunkers BEHIND green (back bunkers only) */}
+      {/* Greenside bunkers BEHIND green (back bunkers only) — rendered before green
+          but with enough offset to be visible behind it */}
       {metadata.hazards
         .filter(h => h.type === 'greenside_bunker' && (h.location || '').includes('back'))
         .map((h, i) => {
           const pos = hazardXY(h, yardage, scale, centerX, teeY, greenPt.y);
-          const bw = Math.max((h.width || 10) * scale, 7);
-          const bh = Math.max((h.length || 12) * scale, 6);
+          // Make back bunkers larger so they visibly extend beyond the green edge
+          const bw = Math.max((h.width || 12) * scale, 9);
+          const bh = Math.max((h.length || 14) * scale, 8);
           return (
             <Path key={`gbb${i}`} d={hazardShapePath(pos.x, pos.y, bw, bh, i * 1.7 + 5, h.type, h.outline)}
-              fill={C.bunker} stroke={C.bunkerStroke} strokeWidth={0.8} />
+              fill={C.bunker} stroke={C.bunkerStroke} strokeWidth={1.2} />
           );
         })}
       
@@ -569,7 +579,7 @@ function HolePage({ hole, metadata, distUnit }: {
           const bh = Math.max((h.length || 12) * scale, 6);
           return (
             <Path key={`gbf${i}`} d={hazardShapePath(pos.x, pos.y, bw, bh, i * 1.7 + 5, h.type, h.outline)}
-              fill={C.bunker} stroke={C.bunkerStroke} strokeWidth={0.8} />
+              fill={C.bunker} stroke={C.bunkerStroke} strokeWidth={1.2} />
           );
         })}
       
