@@ -1,0 +1,1287 @@
+{
+  "a0000026-0000-0000-0000-000000000001": {
+    "1": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 38},
+        {"distance": 200, "offset": 0, "width": 42},
+        {"distance": 280, "offset": 0, "width": 40},
+        {"distance": 350, "offset": 0, "width": 35},
+        {"distance": 420, "offset": 0, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -32}, {"distance": 200, "offset": -35}, {"distance": 350, "offset": -30}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 32}, {"distance": 200, "offset": 35}, {"distance": 350, "offset": 30}]}
+      ],
+      "green": {"shape": "round", "depth": 26, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 16, "length": 8, "width": 5}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Straight opening par 4. Classic Donald Ross crowned green requires precise approach. Tree-lined fairway typical of Sedgefield."
+    },
+    "2": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 270,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": -5, "width": 45},
+        {"distance": 270, "offset": -12, "width": 42},
+        {"distance": 350, "offset": -15, "width": 38},
+        {"distance": 450, "offset": -12, "width": 35},
+        {"distance": 520, "offset": -8, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -35}, {"distance": 200, "offset": -40}, {"distance": 400, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 35}, {"distance": 200, "offset": 40}, {"distance": 400, "offset": 35}]}
+      ],
+      "green": {"shape": "kidney", "depth": 30, "width": 32, "angle": -10, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 260, "lateral_offset": -28, "length": 20, "width": 10},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -18, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 3, "lateral_offset": 15, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Par 5 dogleg left. Reachable in two for long hitters. Fairway bunker guards landing zone. Ross green complex."
+    },
+    "3": {
+      "shape": "straight",
+      "elevation_change": "uphill",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 18},
+        {"distance": 60, "offset": 0, "width": 22},
+        {"distance": 120, "offset": 0, "width": 20},
+        {"distance": 180, "offset": 0, "width": 18}
+      ],
+      "green": {"shape": "oval", "depth": 24, "width": 26, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 4, "lateral_offset": -14, "length": 8, "width": 5},
+        {"type": "greenside_bunker", "location": "front_right", "distance_from_green": 3, "lateral_offset": 13, "length": 9, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Uphill par 3 with bunkers guarding the front. Ross green slopes back to front."
+    },
+    "4": {
+      "shape": "dogleg_right",
+      "elevation_change": "flat",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 5, "width": 44},
+        {"distance": 280, "offset": 12, "width": 42},
+        {"distance": 380, "offset": 10, "width": 38},
+        {"distance": 450, "offset": 5, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -35}, {"distance": 250, "offset": -38}, {"distance": 400, "offset": -35}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 32}, {"distance": 250, "offset": 35}, {"distance": 400, "offset": 32}]}
+      ],
+      "green": {"shape": "tiered", "depth": 28, "width": 30, "angle": 8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 275, "lateral_offset": 30, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 18, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Par 4 dogleg right. Fairway bunker at the corner rewards an aggressive line. Two-tiered Ross green."
+    },
+    "5": {
+      "shape": "straight",
+      "elevation_change": "downhill",
+      "landing_zone_distance": 285,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": 0, "width": 45},
+        {"distance": 285, "offset": 0, "width": 42},
+        {"distance": 380, "offset": 0, "width": 38},
+        {"distance": 480, "offset": 0, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 250, "offset": -40}, {"distance": 450, "offset": -35}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 250, "offset": 40}, {"distance": 450, "offset": 35}]}
+      ],
+      "green": {"shape": "long_narrow", "depth": 35, "width": 26, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 280, "lateral_offset": -30, "length": 22, "width": 12},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -14, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 15, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}],
+      "notes": "Downhill par 5. Reachable for long hitters but narrow landing areas. Deep green with severe slopes."
+    },
+    "6": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 38},
+        {"distance": 200, "offset": -5, "width": 42},
+        {"distance": 275, "offset": -10, "width": 40},
+        {"distance": 350, "offset": -8, "width": 35},
+        {"distance": 420, "offset": -5, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -33}, {"distance": 200, "offset": -38}, {"distance": 380, "offset": -32}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 33}, {"distance": 200, "offset": 36}, {"distance": 380, "offset": 32}]}
+      ],
+      "green": {"shape": "oval", "depth": 26, "width": 30, "angle": -5, "slope_direction": "right_to_left"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -16, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 17, "length": 8, "width": 5}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Gentle dogleg left par 4. Accuracy off the tee sets up second shot to crowned green."
+    },
+    "7": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 15},
+        {"distance": 60, "offset": 0, "width": 18},
+        {"distance": 120, "offset": 0, "width": 16},
+        {"distance": 160, "offset": 0, "width": 15}
+      ],
+      "green": {"shape": "round", "depth": 22, "width": 24, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -14, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 14, "length": 9, "width": 5}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Short par 3 with bunkers on both sides. Small target requires precision. Classic Ross."
+    },
+    "8": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 0, "width": 44},
+        {"distance": 280, "offset": 0, "width": 42},
+        {"distance": 380, "offset": 0, "width": 38},
+        {"distance": 440, "offset": 0, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -34}, {"distance": 200, "offset": -38}, {"distance": 400, "offset": -34}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 34}, {"distance": 200, "offset": 38}, {"distance": 400, "offset": 34}]}
+      ],
+      "green": {"shape": "kidney", "depth": 28, "width": 32, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 270, "lateral_offset": -28, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 3, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long par 4 demanding accuracy. Fairway bunker left. Kidney-shaped green with multiple pin positions."
+    },
+    "9": {
+      "shape": "dogleg_right",
+      "elevation_change": "uphill",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 5, "width": 44},
+        {"distance": 275, "offset": 10, "width": 40},
+        {"distance": 350, "offset": 8, "width": 35},
+        {"distance": 420, "offset": 5, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -35}, {"distance": 200, "offset": -38}, {"distance": 380, "offset": -34}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 32}, {"distance": 200, "offset": 35}, {"distance": 380, "offset": 32}]}
+      ],
+      "green": {"shape": "tiered", "depth": 30, "width": 28, "angle": 8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 265, "lateral_offset": 28, "length": 20, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 16, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Uphill dogleg right finishing the front. Tiered green frames iconic Tudor clubhouse."
+    },
+    "10": {
+      "shape": "straight",
+      "elevation_change": "downhill",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 0, "width": 44},
+        {"distance": 280, "offset": 0, "width": 42},
+        {"distance": 380, "offset": 0, "width": 38},
+        {"distance": 450, "offset": 0, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -35}, {"distance": 200, "offset": -40}, {"distance": 400, "offset": -36}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 35}, {"distance": 200, "offset": 40}, {"distance": 400, "offset": 36}]}
+      ],
+      "green": {"shape": "oval", "depth": 28, "width": 30, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 275, "lateral_offset": 30, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -16, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 17, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Downhill start to back nine. Driver can be challenged by fairway bunker right."
+    },
+    "11": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 18},
+        {"distance": 60, "offset": 0, "width": 22},
+        {"distance": 130, "offset": 0, "width": 20},
+        {"distance": 200, "offset": 0, "width": 18}
+      ],
+      "green": {"shape": "round", "depth": 24, "width": 26, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 14, "length": 8, "width": 5}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Mid-length par 3. Bunkers protect the green. Club selection critical."
+    },
+    "12": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": -6, "width": 46},
+        {"distance": 280, "offset": -12, "width": 44},
+        {"distance": 380, "offset": -10, "width": 40},
+        {"distance": 480, "offset": -6, "width": 35},
+        {"distance": 560, "offset": -3, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 250, "offset": -42}, {"distance": 500, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 250, "offset": 40}, {"distance": 500, "offset": 36}]}
+      ],
+      "green": {"shape": "kidney", "depth": 32, "width": 34, "angle": -8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 275, "lateral_offset": -32, "length": 22, "width": 12},
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 290, "lateral_offset": 28, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -18, "length": 14, "width": 8},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 17, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}],
+      "notes": "Long par 5 dogleg left. Multiple bunkers challenge both layups and going for it. Large kidney green."
+    },
+    "13": {
+      "shape": "dogleg_right",
+      "elevation_change": "flat",
+      "landing_zone_distance": 270,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 38},
+        {"distance": 200, "offset": 5, "width": 42},
+        {"distance": 270, "offset": 10, "width": 40},
+        {"distance": 350, "offset": 8, "width": 35},
+        {"distance": 420, "offset": 5, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -33}, {"distance": 200, "offset": -36}, {"distance": 380, "offset": -32}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 32}, {"distance": 200, "offset": 34}, {"distance": 380, "offset": 30}]}
+      ],
+      "green": {"shape": "oval", "depth": 26, "width": 28, "angle": 6, "slope_direction": "right_to_left"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 260, "lateral_offset": 26, "length": 16, "width": 9},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Dogleg right par 4. Fairway bunker guards corner. Precise approach needed to small Ross green."
+    },
+    "14": {
+      "shape": "straight",
+      "elevation_change": "uphill",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 0, "width": 44},
+        {"distance": 280, "offset": 0, "width": 42},
+        {"distance": 380, "offset": 0, "width": 38},
+        {"distance": 460, "offset": 0, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -35}, {"distance": 200, "offset": -40}, {"distance": 420, "offset": -36}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 35}, {"distance": 200, "offset": 40}, {"distance": 420, "offset": 36}]}
+      ],
+      "green": {"shape": "tiered", "depth": 30, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 275, "lateral_offset": -28, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -16, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 15, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long uphill par 4. Two-tiered green makes putting treacherous from wrong level."
+    },
+    "15": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 0, "width": 44},
+        {"distance": 280, "offset": 0, "width": 42},
+        {"distance": 360, "offset": 0, "width": 36},
+        {"distance": 430, "offset": 0, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -34}, {"distance": 200, "offset": -38}, {"distance": 380, "offset": -34}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 34}, {"distance": 200, "offset": 38}, {"distance": 380, "offset": 34}]}
+      ],
+      "green": {"shape": "round", "depth": 26, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -16, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 15, "length": 8, "width": 5}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Straightforward par 4 offering birdie chance before tough finish. Classic Ross green."
+    },
+    "16": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 18},
+        {"distance": 60, "offset": 0, "width": 22},
+        {"distance": 120, "offset": 0, "width": 20},
+        {"distance": 180, "offset": 0, "width": 18}
+      ],
+      "green": {"shape": "oval", "depth": 24, "width": 26, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "water", "location": "front", "distance_from_green": 25, "lateral_offset": 0, "length": 30, "width": 60, "carry_distance": 165},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 14, "length": 8, "width": 5}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Par 3 over water. One of Sedgefield's most challenging holes. No bailout short."
+    },
+    "17": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": -5, "width": 46},
+        {"distance": 275, "offset": -12, "width": 44},
+        {"distance": 380, "offset": -10, "width": 40},
+        {"distance": 490, "offset": -6, "width": 35},
+        {"distance": 580, "offset": -3, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 250, "offset": -42}, {"distance": 520, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 250, "offset": 40}, {"distance": 520, "offset": 36}]}
+      ],
+      "green": {"shape": "long_narrow", "depth": 34, "width": 28, "angle": -8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 270, "lateral_offset": -32, "length": 20, "width": 11},
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 480, "lateral_offset": 25, "length": 16, "width": 9},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -16, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}],
+      "notes": "Par 5 birdie opportunity before 18. Reachable in two but fairway bunkers demand precision."
+    },
+    "18": {
+      "shape": "straight",
+      "elevation_change": "uphill",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": 0, "width": 46},
+        {"distance": 280, "offset": 0, "width": 44},
+        {"distance": 380, "offset": 0, "width": 40},
+        {"distance": 460, "offset": 0, "width": 34}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 200, "offset": -40}, {"distance": 400, "offset": -36}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 200, "offset": 40}, {"distance": 400, "offset": 36}]}
+      ],
+      "green": {"shape": "tiered", "depth": 30, "width": 32, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 275, "lateral_offset": -30, "length": 20, "width": 11},
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 280, "lateral_offset": 28, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "front_right", "distance_from_green": 5, "lateral_offset": 18, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Classic finishing hole uphill to clubhouse. Fairway bunkers pinch landing area. Brandt Snedeker shot 59 here (2018)."
+    }
+  },
+  "a0000027-0000-0000-0000-000000000001": {
+    "1": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 0, "width": 45},
+        {"distance": 275, "offset": 0, "width": 42},
+        {"distance": 360, "offset": 0, "width": 38},
+        {"distance": 440, "offset": 0, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -35}, {"distance": 200, "offset": -40}, {"distance": 400, "offset": -36}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 35}, {"distance": 200, "offset": 40}, {"distance": 400, "offset": 36}]}
+      ],
+      "green": {"shape": "oval", "depth": 28, "width": 30, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -16, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 17, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Opening par 4 at Detroit Golf Club's North Course. Tree-lined fairway with Donald Ross green complex."
+    },
+    "2": {
+      "shape": "dogleg_right",
+      "elevation_change": "flat",
+      "landing_zone_distance": 270,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 38},
+        {"distance": 200, "offset": 5, "width": 42},
+        {"distance": 270, "offset": 12, "width": 40},
+        {"distance": 360, "offset": 10, "width": 36},
+        {"distance": 440, "offset": 6, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -34}, {"distance": 200, "offset": -38}, {"distance": 400, "offset": -35}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 32}, {"distance": 200, "offset": 35}, {"distance": 400, "offset": 32}]}
+      ],
+      "green": {"shape": "tiered", "depth": 28, "width": 30, "angle": 8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 265, "lateral_offset": 28, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 17, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Dogleg right par 4. Bunker guards corner. Two-tiered Ross green demands precise approach."
+    },
+    "3": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 16},
+        {"distance": 60, "offset": 0, "width": 20},
+        {"distance": 120, "offset": 0, "width": 18},
+        {"distance": 180, "offset": 0, "width": 16}
+      ],
+      "green": {"shape": "round", "depth": 24, "width": 26, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 4, "lateral_offset": -14, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "front_right", "distance_from_green": 4, "lateral_offset": 14, "length": 9, "width": 5}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Par 3 with bunkers short. Classic Ross crowned green."
+    },
+    "4": {
+      "shape": "slight_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": -3, "width": 46},
+        {"distance": 280, "offset": -8, "width": 44},
+        {"distance": 380, "offset": -6, "width": 40},
+        {"distance": 490, "offset": -4, "width": 35},
+        {"distance": 590, "offset": -2, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 250, "offset": -42}, {"distance": 540, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 250, "offset": 40}, {"distance": 540, "offset": 36}]}
+      ],
+      "green": {"shape": "kidney", "depth": 32, "width": 34, "angle": -5, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 275, "lateral_offset": -30, "length": 22, "width": 12},
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 285, "lateral_offset": 28, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -18, "length": 14, "width": 8},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 17, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}],
+      "notes": "Long par 5 with slight left bend. Reachable for long hitters. Fairway bunkers challenge both shots."
+    },
+    "5": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 270,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": -6, "width": 44},
+        {"distance": 270, "offset": -12, "width": 42},
+        {"distance": 350, "offset": -10, "width": 38},
+        {"distance": 420, "offset": -6, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -34}, {"distance": 200, "offset": -40}, {"distance": 380, "offset": -36}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 34}, {"distance": 200, "offset": 38}, {"distance": 380, "offset": 34}]}
+      ],
+      "green": {"shape": "oval", "depth": 26, "width": 28, "angle": -8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 260, "lateral_offset": -28, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -16, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Dogleg left par 4. Fairway bunker punishes aggressive line. Ross green typical of DGC."
+    },
+    "6": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 0, "width": 44},
+        {"distance": 275, "offset": 0, "width": 42},
+        {"distance": 360, "offset": 0, "width": 38},
+        {"distance": 450, "offset": 0, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -35}, {"distance": 200, "offset": -40}, {"distance": 400, "offset": -36}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 35}, {"distance": 200, "offset": 40}, {"distance": 400, "offset": 36}]}
+      ],
+      "green": {"shape": "tiered", "depth": 28, "width": 30, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 270, "lateral_offset": 28, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -16, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 17, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long par 4 requiring two solid shots. Two-tiered green challenges putting."
+    },
+    "7": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 18},
+        {"distance": 80, "offset": 0, "width": 22},
+        {"distance": 160, "offset": 0, "width": 20},
+        {"distance": 230, "offset": 0, "width": 18}
+      ],
+      "green": {"shape": "oval", "depth": 26, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Longer par 3 with bunkers left and right. Near the historic bent tree marking original Indian Trail."
+    },
+    "8": {
+      "shape": "dogleg_right",
+      "elevation_change": "flat",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": 5, "width": 46},
+        {"distance": 280, "offset": 12, "width": 44},
+        {"distance": 380, "offset": 10, "width": 40},
+        {"distance": 500, "offset": 6, "width": 35},
+        {"distance": 600, "offset": 3, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 250, "offset": -42}, {"distance": 550, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 34}, {"distance": 250, "offset": 38}, {"distance": 550, "offset": 34}]}
+      ],
+      "green": {"shape": "kidney", "depth": 32, "width": 34, "angle": 8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 275, "lateral_offset": 30, "length": 22, "width": 12},
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 480, "lateral_offset": -28, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -17, "length": 14, "width": 8},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 18, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}],
+      "notes": "Par 5 dogleg right. Multiple bunkers challenge aggressive play. Signature hole at DGC."
+    },
+    "9": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": 0, "width": 46},
+        {"distance": 275, "offset": 0, "width": 44},
+        {"distance": 370, "offset": 0, "width": 40},
+        {"distance": 460, "offset": 0, "width": 34}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 200, "offset": -42}, {"distance": 420, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 200, "offset": 42}, {"distance": 420, "offset": 38}]}
+      ],
+      "green": {"shape": "tiered", "depth": 30, "width": 32, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 270, "lateral_offset": -30, "length": 18, "width": 10},
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 275, "lateral_offset": 28, "length": 16, "width": 9},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 18, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Tough finishing hole for the front. Fairway bunkers pinch landing area. Large Ross green."
+    },
+    "10": {
+      "shape": "slight_right",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 3, "width": 44},
+        {"distance": 275, "offset": 8, "width": 42},
+        {"distance": 360, "offset": 6, "width": 38},
+        {"distance": 450, "offset": 3, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -35}, {"distance": 200, "offset": -40}, {"distance": 400, "offset": -36}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 33}, {"distance": 200, "offset": 36}, {"distance": 400, "offset": 33}]}
+      ],
+      "green": {"shape": "oval", "depth": 26, "width": 28, "angle": 5, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 270, "lateral_offset": 26, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Par 4 to start back nine. Slight right bend with tree-lined fairway. Classic Ross routing."
+    },
+    "11": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": 0, "width": 46},
+        {"distance": 280, "offset": 0, "width": 44},
+        {"distance": 380, "offset": 0, "width": 40},
+        {"distance": 470, "offset": 0, "width": 34}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 200, "offset": -42}, {"distance": 420, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 200, "offset": 42}, {"distance": 420, "offset": 38}]}
+      ],
+      "green": {"shape": "tiered", "depth": 30, "width": 32, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 275, "lateral_offset": -30, "length": 20, "width": 11},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 18, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long par 4 requiring power and accuracy. Fairway bunker left forces decision off tee."
+    },
+    "12": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 16},
+        {"distance": 60, "offset": 0, "width": 20},
+        {"distance": 120, "offset": 0, "width": 18},
+        {"distance": 175, "offset": 0, "width": 16}
+      ],
+      "green": {"shape": "round", "depth": 24, "width": 26, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 4, "lateral_offset": -14, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 15, "length": 9, "width": 5}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Short par 3 near site of original clubhouse. Bunkers guard crowned green."
+    },
+    "13": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": -5, "width": 46},
+        {"distance": 275, "offset": -12, "width": 44},
+        {"distance": 380, "offset": -10, "width": 40},
+        {"distance": 490, "offset": -6, "width": 35},
+        {"distance": 580, "offset": -3, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 250, "offset": -44}, {"distance": 530, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 250, "offset": 40}, {"distance": 530, "offset": 36}]}
+      ],
+      "green": {"shape": "kidney", "depth": 32, "width": 34, "angle": -8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 270, "lateral_offset": -32, "length": 22, "width": 12},
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 500, "lateral_offset": 26, "length": 16, "width": 9},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -18, "length": 14, "width": 8},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 17, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}],
+      "notes": "Par 5 dogleg left. Multiple fairway bunkers. Near combined tee with South Course 14th."
+    },
+    "14": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 0, "width": 44},
+        {"distance": 275, "offset": 0, "width": 42},
+        {"distance": 360, "offset": 0, "width": 38},
+        {"distance": 430, "offset": 0, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -35}, {"distance": 200, "offset": -40}, {"distance": 390, "offset": -36}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 35}, {"distance": 200, "offset": 40}, {"distance": 390, "offset": 36}]}
+      ],
+      "green": {"shape": "oval", "depth": 26, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 270, "lateral_offset": -28, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Mid-length par 4. Fairway bunker guards left side. Ross green demands precision."
+    },
+    "15": {
+      "shape": "dogleg_right",
+      "elevation_change": "flat",
+      "landing_zone_distance": 270,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 40},
+        {"distance": 200, "offset": 5, "width": 44},
+        {"distance": 270, "offset": 10, "width": 42},
+        {"distance": 350, "offset": 8, "width": 38},
+        {"distance": 440, "offset": 5, "width": 32}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -34}, {"distance": 200, "offset": -38}, {"distance": 400, "offset": -35}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 32}, {"distance": 200, "offset": 35}, {"distance": 400, "offset": 32}]}
+      ],
+      "green": {"shape": "tiered", "depth": 28, "width": 30, "angle": 6, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 265, "lateral_offset": 26, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -16, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 17, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Dogleg right par 4. Corner bunker punishes aggressive line. Two-tiered Ross green."
+    },
+    "16": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 18},
+        {"distance": 70, "offset": 0, "width": 22},
+        {"distance": 140, "offset": 0, "width": 20},
+        {"distance": 200, "offset": 0, "width": 18}
+      ],
+      "green": {"shape": "oval", "depth": 26, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "front_right", "distance_from_green": 5, "lateral_offset": 14, "length": 9, "width": 5}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Par 3 with bunkers guarding. Club selection key on this medium-length one-shotter."
+    },
+    "17": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": -5, "width": 46},
+        {"distance": 275, "offset": -12, "width": 44},
+        {"distance": 380, "offset": -10, "width": 40},
+        {"distance": 480, "offset": -6, "width": 35},
+        {"distance": 570, "offset": -3, "width": 30}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 250, "offset": -44}, {"distance": 520, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 250, "offset": 40}, {"distance": 520, "offset": 36}]}
+      ],
+      "green": {"shape": "long_narrow", "depth": 34, "width": 28, "angle": -8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 270, "lateral_offset": -32, "length": 20, "width": 11},
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 490, "lateral_offset": 26, "length": 16, "width": 9},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -16, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}],
+      "notes": "Par 5 birdie chance before challenging 18. Reachable but requires accurate layup or bold second."
+    },
+    "18": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 44},
+        {"distance": 200, "offset": 0, "width": 48},
+        {"distance": 280, "offset": 0, "width": 46},
+        {"distance": 380, "offset": 0, "width": 42},
+        {"distance": 480, "offset": 0, "width": 36}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -38}, {"distance": 200, "offset": -44}, {"distance": 440, "offset": -40}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 38}, {"distance": 200, "offset": 44}, {"distance": 440, "offset": 40}]}
+      ],
+      "green": {"shape": "tiered", "depth": 32, "width": 34, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 275, "lateral_offset": -32, "length": 22, "width": 12},
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 280, "lateral_offset": 30, "length": 20, "width": 11},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -18, "length": 14, "width": 8},
+        {"type": "greenside_bunker", "location": "front_right", "distance_from_green": 5, "lateral_offset": 19, "length": 14, "width": 8}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Demanding finishing par 4. Fairway bunkers pinch landing area. Tiered green toward historic Albert Kahn clubhouse."
+    }
+  },
+  "a0000028-0000-0000-0000-000000000001": {
+    "1": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 285,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": 0, "width": 48},
+        {"distance": 285, "offset": 0, "width": 45},
+        {"distance": 370, "offset": 0, "width": 40},
+        {"distance": 431, "offset": 0, "width": 35}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -38}, {"distance": 200, "offset": -45}, {"distance": 380, "offset": -40}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 38}, {"distance": 200, "offset": 45}, {"distance": 380, "offset": 40}]}
+      ],
+      "green": {"shape": "oval", "depth": 28, "width": 32, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 280, "lateral_offset": 32, "length": 20, "width": 12},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -18, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 18, "length": 14, "width": 8}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Opening par 4 at TPC Craig Ranch. Tom Weiskopf design. Generous fairway to start."
+    },
+    "2": {
+      "shape": "slight_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 285,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": -3, "width": 48},
+        {"distance": 285, "offset": -8, "width": 45},
+        {"distance": 380, "offset": -6, "width": 40},
+        {"distance": 466, "offset": -3, "width": 35}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -38}, {"distance": 200, "offset": -45}, {"distance": 420, "offset": -40}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 38}, {"distance": 200, "offset": 45}, {"distance": 420, "offset": 40}]}
+      ],
+      "green": {"shape": "tiered", "depth": 30, "width": 32, "angle": -5, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 280, "lateral_offset": -30, "length": 20, "width": 11},
+        {"type": "water", "location": "right", "distance_from_tee": 350, "lateral_offset": 45, "length": 100, "width": 40},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 18, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long par 4 with slight left bend. Water right of approach. Challenging two-tiered green."
+    },
+    "3": {
+      "shape": "dogleg_right",
+      "elevation_change": "flat",
+      "landing_zone_distance": 280,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": 5, "width": 48},
+        {"distance": 280, "offset": 12, "width": 45},
+        {"distance": 360, "offset": 10, "width": 40},
+        {"distance": 420, "offset": 5, "width": 35}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -38}, {"distance": 200, "offset": -45}, {"distance": 380, "offset": -40}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 35}, {"distance": 200, "offset": 40}, {"distance": 380, "offset": 35}]}
+      ],
+      "green": {"shape": "kidney", "depth": 28, "width": 30, "angle": 8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 275, "lateral_offset": 30, "length": 22, "width": 12},
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 285, "lateral_offset": -32, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -16, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 17, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Dogleg right par 4. Multiple fairway bunkers. Kidney-shaped Weiskopf green."
+    },
+    "4": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 18},
+        {"distance": 70, "offset": 0, "width": 22},
+        {"distance": 140, "offset": 0, "width": 20},
+        {"distance": 219, "offset": 0, "width": 18}
+      ],
+      "green": {"shape": "oval", "depth": 28, "width": 30, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "water", "location": "front", "distance_from_green": 30, "lateral_offset": 0, "length": 40, "width": 80, "carry_distance": 195},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Par 3 over water. No bailout short. One of TPC Craig Ranch's signature holes."
+    },
+    "5": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 290,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 24},
+        {"distance": 100, "offset": 0, "width": 45},
+        {"distance": 200, "offset": -5, "width": 50},
+        {"distance": 290, "offset": -12, "width": 48},
+        {"distance": 400, "offset": -10, "width": 44},
+        {"distance": 520, "offset": -6, "width": 40},
+        {"distance": 635, "offset": -3, "width": 35}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -40}, {"distance": 300, "offset": -50}, {"distance": 580, "offset": -42}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 40}, {"distance": 300, "offset": 48}, {"distance": 580, "offset": 40}]}
+      ],
+      "green": {"shape": "tiered", "depth": 34, "width": 36, "angle": -8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 285, "lateral_offset": -35, "length": 24, "width": 14},
+        {"type": "water", "location": "left", "distance_from_tee": 500, "lateral_offset": -45, "length": 120, "width": 50},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -19, "length": 14, "width": 8},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 20, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}, {"distance": 300, "label": "300", "side": "left"}],
+      "notes": "Monster par 5 at 635 yards. Dogleg left with water down left side. Reachable only for longest hitters."
+    },
+    "6": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": 0, "width": 46},
+        {"distance": 275, "offset": 0, "width": 44},
+        {"distance": 361, "offset": 0, "width": 38}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 200, "offset": -42}, {"distance": 320, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 200, "offset": 42}, {"distance": 320, "offset": 38}]}
+      ],
+      "green": {"shape": "oval", "depth": 26, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Shorter par 4 birdie opportunity. Straightforward but green slopes demand precision."
+    },
+    "7": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 18},
+        {"distance": 80, "offset": 0, "width": 22},
+        {"distance": 160, "offset": 0, "width": 20},
+        {"distance": 232, "offset": 0, "width": 18}
+      ],
+      "green": {"shape": "round", "depth": 26, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -16, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "front_right", "distance_from_green": 5, "lateral_offset": 16, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "back", "distance_from_green": 4, "lateral_offset": 0, "length": 14, "width": 8}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long par 3 with bunkers front and back. No bailout. Demands precise club selection."
+    },
+    "8": {
+      "shape": "dogleg_right",
+      "elevation_change": "flat",
+      "landing_zone_distance": 290,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 44},
+        {"distance": 200, "offset": 5, "width": 48},
+        {"distance": 290, "offset": 12, "width": 46},
+        {"distance": 400, "offset": 10, "width": 42},
+        {"distance": 509, "offset": 5, "width": 36}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -38}, {"distance": 250, "offset": -45}, {"distance": 460, "offset": -40}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 35}, {"distance": 250, "offset": 40}, {"distance": 460, "offset": 35}]}
+      ],
+      "green": {"shape": "tiered", "depth": 30, "width": 32, "angle": 8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 285, "lateral_offset": 32, "length": 22, "width": 12},
+        {"type": "water", "location": "right", "distance_from_tee": 420, "lateral_offset": 48, "length": 90, "width": 35},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 18, "length": 14, "width": 8}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long par 4 dogleg right. Water on approach. Two-tiered green makes putting tricky."
+    },
+    "9": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 295,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 24},
+        {"distance": 100, "offset": 0, "width": 45},
+        {"distance": 200, "offset": -5, "width": 50},
+        {"distance": 295, "offset": -12, "width": 48},
+        {"distance": 400, "offset": -10, "width": 44},
+        {"distance": 500, "offset": -6, "width": 40},
+        {"distance": 564, "offset": -3, "width": 35}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -40}, {"distance": 300, "offset": -48}, {"distance": 520, "offset": -42}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 40}, {"distance": 300, "offset": 46}, {"distance": 520, "offset": 40}]}
+      ],
+      "green": {"shape": "kidney", "depth": 32, "width": 34, "angle": -8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 290, "lateral_offset": -35, "length": 22, "width": 12},
+        {"type": "water", "location": "left", "distance_from_green": 40, "lateral_offset": -40, "length": 80, "width": 40},
+        {"type": "greenside_bunker", "location": "front_right", "distance_from_green": 5, "lateral_offset": 18, "length": 14, "width": 8},
+        {"type": "greenside_bunker", "location": "back_left", "distance_from_green": 4, "lateral_offset": -18, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}],
+      "notes": "Par 5 finishing front nine. Dogleg left with water on approach. Birdie opportunity for aggressive play."
+    },
+    "10": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 290,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 44},
+        {"distance": 200, "offset": 0, "width": 48},
+        {"distance": 290, "offset": 0, "width": 46},
+        {"distance": 400, "offset": 0, "width": 42},
+        {"distance": 491, "offset": 0, "width": 36}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -38}, {"distance": 250, "offset": -45}, {"distance": 450, "offset": -40}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 38}, {"distance": 250, "offset": 45}, {"distance": 450, "offset": 40}]}
+      ],
+      "green": {"shape": "tiered", "depth": 30, "width": 32, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 285, "lateral_offset": 32, "length": 20, "width": 11},
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 290, "lateral_offset": -30, "length": 18, "width": 10},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 18, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long par 4 to start back nine. Fairway bunkers pinch landing area. Demanding approach."
+    },
+    "11": {
+      "shape": "slight_right",
+      "elevation_change": "flat",
+      "landing_zone_distance": 285,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 44},
+        {"distance": 200, "offset": 3, "width": 48},
+        {"distance": 285, "offset": 8, "width": 46},
+        {"distance": 380, "offset": 6, "width": 42},
+        {"distance": 467, "offset": 3, "width": 36}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -38}, {"distance": 250, "offset": -45}, {"distance": 420, "offset": -40}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 250, "offset": 42}, {"distance": 420, "offset": 38}]}
+      ],
+      "green": {"shape": "oval", "depth": 28, "width": 30, "angle": 5, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 280, "lateral_offset": 30, "length": 20, "width": 11},
+        {"type": "water", "location": "right", "distance_from_green": 35, "lateral_offset": 45, "length": 80, "width": 35},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -16, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 17, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long par 4 with slight right bend. Water guards right side of approach. Challenging second shot."
+    },
+    "12": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 290,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 44},
+        {"distance": 200, "offset": -5, "width": 48},
+        {"distance": 290, "offset": -12, "width": 46},
+        {"distance": 400, "offset": -10, "width": 42},
+        {"distance": 493, "offset": -5, "width": 36}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -38}, {"distance": 250, "offset": -48}, {"distance": 450, "offset": -42}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 38}, {"distance": 250, "offset": 45}, {"distance": 450, "offset": 40}]}
+      ],
+      "green": {"shape": "tiered", "depth": 30, "width": 32, "angle": -8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 285, "lateral_offset": -35, "length": 22, "width": 12},
+        {"type": "water", "location": "left", "distance_from_green": 50, "lateral_offset": -42, "length": 70, "width": 30},
+        {"type": "greenside_bunker", "location": "front_right", "distance_from_green": 5, "lateral_offset": 17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "back_left", "distance_from_green": 4, "lateral_offset": -18, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long par 4 dogleg left. Water left on approach. Weiskopf demands precision here."
+    },
+    "13": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 295,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 24},
+        {"distance": 100, "offset": 0, "width": 46},
+        {"distance": 200, "offset": 0, "width": 50},
+        {"distance": 295, "offset": 0, "width": 48},
+        {"distance": 400, "offset": 0, "width": 44},
+        {"distance": 512, "offset": 0, "width": 38}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -40}, {"distance": 300, "offset": -48}, {"distance": 470, "offset": -42}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 40}, {"distance": 300, "offset": 48}, {"distance": 470, "offset": 42}]}
+      ],
+      "green": {"shape": "kidney", "depth": 32, "width": 34, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 290, "lateral_offset": -34, "length": 22, "width": 12},
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 295, "lateral_offset": 32, "length": 20, "width": 11},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -18, "length": 14, "width": 8},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 19, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}],
+      "notes": "Par 4 playing over 500 yards. Fairway bunkers both sides pinch landing. Kidney green offers options."
+    },
+    "14": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "landing_zone_distance": 275,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 42},
+        {"distance": 200, "offset": 0, "width": 46},
+        {"distance": 275, "offset": 0, "width": 44},
+        {"distance": 362, "offset": 0, "width": 38}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -36}, {"distance": 200, "offset": -42}, {"distance": 320, "offset": -38}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 36}, {"distance": 200, "offset": 42}, {"distance": 320, "offset": 38}]}
+      ],
+      "green": {"shape": "oval", "depth": 26, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 5, "lateral_offset": -15, "length": 10, "width": 6},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 16, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}],
+      "notes": "Short par 4 birdie opportunity. Allows aggressive players to attack before tough finish."
+    },
+    "15": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 18},
+        {"distance": 70, "offset": 0, "width": 22},
+        {"distance": 140, "offset": 0, "width": 20},
+        {"distance": 216, "offset": 0, "width": 18}
+      ],
+      "green": {"shape": "round", "depth": 26, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "water", "location": "front", "distance_from_green": 25, "lateral_offset": 0, "length": 35, "width": 70, "carry_distance": 190},
+        {"type": "greenside_bunker", "location": "left", "distance_from_green": 0, "lateral_offset": -16, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "back_right", "distance_from_green": 4, "lateral_offset": 15, "length": 10, "width": 6}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Par 3 over water. No bailout short. Must commit to the carry."
+    },
+    "16": {
+      "shape": "dogleg_right",
+      "elevation_change": "flat",
+      "landing_zone_distance": 290,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 22},
+        {"distance": 100, "offset": 0, "width": 44},
+        {"distance": 200, "offset": 5, "width": 48},
+        {"distance": 290, "offset": 12, "width": 46},
+        {"distance": 400, "offset": 10, "width": 42},
+        {"distance": 492, "offset": 5, "width": 36}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -38}, {"distance": 250, "offset": -45}, {"distance": 450, "offset": -40}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 35}, {"distance": 250, "offset": 40}, {"distance": 450, "offset": 35}]}
+      ],
+      "green": {"shape": "tiered", "depth": 30, "width": 32, "angle": 8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "right", "distance_from_tee": 285, "lateral_offset": 32, "length": 22, "width": 12},
+        {"type": "water", "location": "right", "distance_from_green": 30, "lateral_offset": 45, "length": 90, "width": 40},
+        {"type": "greenside_bunker", "location": "front_left", "distance_from_green": 6, "lateral_offset": -17, "length": 12, "width": 7},
+        {"type": "greenside_bunker", "location": "right", "distance_from_green": 0, "lateral_offset": 18, "length": 14, "width": 8}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}],
+      "notes": "Long par 4 dogleg right. Water right guards approach. Two-tiered green challenges putts."
+    },
+    "17": {
+      "shape": "straight",
+      "elevation_change": "flat",
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 16},
+        {"distance": 50, "offset": 0, "width": 20},
+        {"distance": 100, "offset": 0, "width": 18},
+        {"distance": 147, "offset": 0, "width": 16}
+      ],
+      "green": {"shape": "kidney", "depth": 24, "width": 28, "angle": 0, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "water", "location": "surrounds", "distance_from_green": 5, "lateral_offset": 0, "length": 40, "width": 100, "carry_distance": 140},
+        {"type": "greenside_bunker", "location": "back", "distance_from_green": 4, "lateral_offset": 0, "length": 12, "width": 8}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}],
+      "notes": "Signature short par 3. Island green surrounded by water. All or nothing. Premium on accuracy."
+    },
+    "18": {
+      "shape": "dogleg_left",
+      "elevation_change": "flat",
+      "landing_zone_distance": 295,
+      "fairway_points": [
+        {"distance": 0, "offset": 0, "width": 24},
+        {"distance": 100, "offset": 0, "width": 46},
+        {"distance": 200, "offset": -5, "width": 50},
+        {"distance": 295, "offset": -12, "width": 48},
+        {"distance": 400, "offset": -10, "width": 44},
+        {"distance": 500, "offset": -6, "width": 40},
+        {"distance": 552, "offset": -3, "width": 35}
+      ],
+      "tree_lines": [
+        {"side": "left", "points": [{"distance": 50, "offset": -40}, {"distance": 300, "offset": -50}, {"distance": 500, "offset": -42}]},
+        {"side": "right", "points": [{"distance": 50, "offset": 40}, {"distance": 300, "offset": 48}, {"distance": 500, "offset": 42}]}
+      ],
+      "green": {"shape": "tiered", "depth": 34, "width": 36, "angle": -8, "slope_direction": "back_to_front"},
+      "hazards": [
+        {"type": "fairway_bunker", "location": "left", "distance_from_tee": 290, "lateral_offset": -36, "length": 24, "width": 14},
+        {"type": "water", "location": "left", "distance_from_green": 30, "lateral_offset": -40, "length": 100, "width": 45},
+        {"type": "greenside_bunker", "location": "front_right", "distance_from_green": 6, "lateral_offset": 19, "length": 14, "width": 8},
+        {"type": "greenside_bunker", "location": "back_left", "distance_from_green": 4, "lateral_offset": -20, "length": 12, "width": 7}
+      ],
+      "distance_markers": [{"distance": 100, "label": "100", "side": "left"}, {"distance": 150, "label": "150", "side": "right"}, {"distance": 200, "label": "200", "side": "left"}, {"distance": 250, "label": "250", "side": "right"}],
+      "notes": "Finishing par 5 dogleg left. Reachable for eagles but water guards left. Risk/reward to close CJ Cup Byron Nelson."
+    }
+  }
+}
