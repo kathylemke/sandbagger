@@ -1,0 +1,29 @@
+name: Send Magic Link
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'Recipient email'
+        required: true
+        type: string
+      token:
+        description: 'Magic link token'
+        required: true
+        type: string
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send email via Resend
+        run: |
+          curl -s -X POST "https://api.resend.com/emails" \
+            -H "Authorization: Bearer ${{ secrets.RESEND_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "from": "Sandbagger <noreply@sandbagger.app>",
+              "to": "'"${{ inputs.email }}"'",
+              "subject": "🔑 Your Sandbagger login link",
+              "html": "<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:20px\"><div style=\"background:#1a472a;border-radius:16px;padding:32px;max-width:480px;margin:0 auto\"><div style=\"color:#c5a528;font-size:28px;font-weight:800;text-align:center;margin-bottom:8px\">⛳ Sandbagger</div><div style=\"color:#fff;font-size:20px;font-weight:700;text-align:center;margin-bottom:24px\">Your login link</div><div style=\"background:#fff;border-radius:12px;padding:28px;text-align:center\"><p style=\"color:#333;font-size:15px;margin:0 0 8px\">Tap the button below to sign in instantly — no password needed.</p><a href=\"https://kathylemke.github.io/sandbagger/auth/magic-link?token=${{ inputs.token }}&email=${{ inputs.email }}\" style=\"display:inline-block;background:#1a472a;color:#c5a528;font-size:16px;font-weight:700;padding:14px 32px;border-radius:10px;text-decoration:none;margin:16px 0\">Sign in to Sandbagger →</a><p style=\"color:#888;font-size:12px;margin-top:16px\">This link expires in 15 minutes and can only be used once.</p><p style=\"color:#888;font-size:12px\">If you did not request this, you can safely ignore this email.</p></div></div></body></html>"
+            }'
