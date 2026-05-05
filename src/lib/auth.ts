@@ -1,18 +1,17 @@
+import 'react-native-get-random-values';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
+import * as CryptoJS from 'crypto-js';
 
 const SESSION_KEY = 'sandbagger_session';
 
 async function hashPassword(password: string, salt: string): Promise<string> {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' },
-    keyMaterial, 256
-  );
-  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const bits = CryptoJS.PBKDF2(password, salt, {
+    keySize: 256 / 32,
+    iterations: 100000,
+    hasher: CryptoJS.algo.SHA256,
+  });
+  return bits.toString(CryptoJS.enc.Hex);
 }
 
 function generateSalt(): string {
