@@ -90,6 +90,26 @@ export async function updateProfile(id: string, updates: Partial<User>): Promise
   return data;
 }
 
+export async function changeEmail(id: string, newEmail: string): Promise<User> {
+  const { data: existing } = await supabase.from('sb_users').select('id').eq('email', newEmail.toLowerCase().trim()).neq('id', id).single();
+  if (existing) throw new Error('That email is already in use');
+  const { data, error } = await supabase.from('sb_users').update({ email: newEmail.toLowerCase().trim() }).eq('id', id).select().single();
+  if (error) throw new Error(error.message);
+  await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data));
+  return data;
+}
+
+export async function changePassword(id: string, currentPassword: string, newPassword: string): Promise<void> {
+  const { data: user, error } = await supabase.from('sb_users').select('*').eq('id', id).single();
+  if (error || !user) throw new Error('User not found');
+  const hash = await hashPassword(currentPassword, user.salt);
+  if (hash !== user.password_hash) throw new Error('Current password is incorrect');
+  const newSalt = generateSalt();
+  const newHash = await hashPassword(newPassword, newSalt);
+  const { error: updateError } = await supabase.from('sb_users').update({ password_hash: newHash, salt: newSalt }).eq('id', id);
+  if (updateError) throw new Error(updateError.message);
+}
+
 export async function logout(): Promise<void> {
   await AsyncStorage.removeItem(SESSION_KEY);
 }

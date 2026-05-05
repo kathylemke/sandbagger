@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert,
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
-import { updateProfile } from '../../lib/auth';
+import { updateProfile, changeEmail, changePassword } from '../../lib/auth';
 import { colors } from '../../lib/theme';
 import { useDistanceUnit, DistanceUnit } from '../../lib/distanceUnits';
 
@@ -35,6 +35,14 @@ export default function Profile() {
   const [practicePlans, setPracticePlans] = useState<any[]>([]);
   const [bag, setBag] = useState<string[]>([]);
   const [expandedBagCat, setExpandedBagCat] = useState<string | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [curPassword, setCurPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   // Distance unit preference
   const { unit: distanceUnit, setUnit: setDistanceUnit } = useDistanceUnit();
@@ -127,6 +135,41 @@ export default function Profile() {
       Alert.alert('Saved', 'Profile updated');
     } catch (e: any) {
       Alert.alert('Error', e.message);
+    }
+  };
+
+  const handleChangeEmail = async () => {
+    if (!user || !newEmail.trim()) return;
+    setSavingEmail(true);
+    try {
+      const updated = await changeEmail(user.id, newEmail);
+      setUser(updated);
+      setNewEmail('');
+      setShowEmailModal(false);
+      Alert.alert('Updated', 'Email changed successfully');
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!user) return;
+    if (newPassword !== confirmPassword) { Alert.alert('Error', 'New passwords do not match'); return; }
+    if (newPassword.length < 6) { Alert.alert('Error', 'Password must be at least 6 characters'); return; }
+    setSavingPassword(true);
+    try {
+      await changePassword(user.id, curPassword, newPassword);
+      setCurPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordModal(false);
+      Alert.alert('Updated', 'Password changed successfully');
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -279,6 +322,24 @@ export default function Profile() {
             </View>
           </View>
         </View>
+
+        {/* Change Email */}
+        <TouchableOpacity style={settingsS.row} onPress={() => { setNewEmail(user?.email || ''); setShowEmailModal(true); }}>
+          <View style={settingsS.labelContainer}>
+            <Text style={settingsS.label}>Email</Text>
+            <Text style={settingsS.sublabel}>{user?.email}</Text>
+          </View>
+          <Text style={{ color: colors.gold, fontWeight: '600' }}>Change →</Text>
+        </TouchableOpacity>
+
+        {/* Change Password */}
+        <TouchableOpacity style={settingsS.row} onPress={() => setShowPasswordModal(true)}>
+          <View style={settingsS.labelContainer}>
+            <Text style={settingsS.label}>Password</Text>
+            <Text style={settingsS.sublabel}>••••••••</Text>
+          </View>
+          <Text style={{ color: colors.gold, fontWeight: '600' }}>Change →</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Following */}
@@ -389,6 +450,44 @@ export default function Profile() {
             />
             <TouchableOpacity style={s.closeBtn} onPress={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]); }}>
               <Text style={s.closeBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Change Email Modal */}
+      <Modal visible={showEmailModal} animationType="slide" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modal}>
+            <Text style={s.modalTitle}>Change Email</Text>
+            <Text style={s.formLabel}>New Email</Text>
+            <TextInput style={s.input} value={newEmail} onChangeText={setNewEmail} placeholder="new@email.com" placeholderTextColor={colors.gray} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+            <TouchableOpacity style={s.editBtn} onPress={handleChangeEmail} disabled={savingEmail}>
+              <Text style={s.editBtnText}>{savingEmail ? 'Saving...' : 'Update Email'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.logoutBtn} onPress={() => { setShowEmailModal(false); setNewEmail(''); }}>
+              <Text style={s.logoutBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Change Password Modal */}
+      <Modal visible={showPasswordModal} animationType="slide" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modal}>
+            <Text style={s.modalTitle}>Change Password</Text>
+            <Text style={s.formLabel}>Current Password</Text>
+            <TextInput style={s.input} value={curPassword} onChangeText={setCurPassword} placeholder="Current password" placeholderTextColor={colors.gray} secureTextEntry autoCapitalize="none" />
+            <Text style={s.formLabel}>New Password</Text>
+            <TextInput style={s.input} value={newPassword} onChangeText={setNewPassword} placeholder="At least 6 characters" placeholderTextColor={colors.gray} secureTextEntry autoCapitalize="none" />
+            <Text style={s.formLabel}>Confirm New Password</Text>
+            <TextInput style={s.input} value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Repeat new password" placeholderTextColor={colors.gray} secureTextEntry autoCapitalize="none" />
+            <TouchableOpacity style={s.editBtn} onPress={handleChangePassword} disabled={savingPassword}>
+              <Text style={s.editBtnText}>{savingPassword ? 'Saving...' : 'Update Password'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.logoutBtn} onPress={() => { setShowPasswordModal(false); setCurPassword(''); setNewPassword(''); setConfirmPassword(''); }}>
+              <Text style={s.logoutBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
