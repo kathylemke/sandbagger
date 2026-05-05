@@ -13,8 +13,12 @@
       "resizeMode": "contain",
       "backgroundColor": "#1a472a"
     },
-    "ios": { "supportsTablet": true },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.katlem5220.sandbagger"
+    },
     "android": {
+      "package": "com.katlem5220.sandbagger",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a472a"
@@ -25,9 +29,24 @@
       "output": "single",
       "bundler": "metro"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "baseUrl": "/sandbagger"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "25ce196e-6604-4137-8c2d-0dfe47b2af52"
+      }
+    },
+    "owner": "katlem5220",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/25ce196e-6604-4137-8c2d-0dfe47b2af52"
     }
   }
 }
