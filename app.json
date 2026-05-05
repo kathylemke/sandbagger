@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.katlem5220.sandbagger"
+      "bundleIdentifier": "com.katlem5220.sandbagger",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.katlem5220.sandbagger",
