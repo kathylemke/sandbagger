@@ -18,6 +18,7 @@ export default function MagicLinkCallback() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token') || window.location.hash.replace('#token=', '');
     const email = params.get('email');
+    const mode = params.get('mode'); // 'reset' for password resets
 
     if (!token || !email) {
       setStatus('error');
@@ -75,10 +76,19 @@ export default function MagicLinkCallback() {
         setStatus('success');
         setMessage('✅ Login successful!');
 
-        // Auto-redirect to the app after 1.5s
-        setTimeout(() => {
-          window.location.href = 'https://kathylemke.github.io/sandbagger/';
-        }, 1500);
+        // If password reset mode, redirect to change-password page
+        const isBrowser = typeof window !== 'undefined';
+        if (isBrowser) {
+          if (mode === 'reset') {
+            setTimeout(() => {
+              window.location.href = 'https://kathylemke.github.io/sandbagger/change-password';
+            }, 1500);
+          } else {
+            setTimeout(() => {
+              window.location.href = 'https://kathylemke.github.io/sandbagger/';
+            }, 1500);
+          }
+        }
       })
       .catch((err) => {
         setStatus('error');

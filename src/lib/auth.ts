@@ -105,15 +105,21 @@ export async function changeEmail(id: string, newEmail: string): Promise<User> {
   return data;
 }
 
+export async function changePasswordByEmail(email: string, newPassword: string): Promise<void> {
+  const newSalt = generateSalt();
+  const newHash = await hashPassword(newPassword, newSalt);
+  const { error: updateErr } = await supabase.from('sb_users')
+    .update({ password_hash: newHash, salt: newSalt }).eq('email', email.toLowerCase().trim());
+  if (updateErr) throw new Error(updateErr.message);
+}
+
 export async function changePassword(id: string, currentPassword: string, newPassword: string): Promise<void> {
   const { data: user, error } = await supabase.from('sb_users').select('*').eq('id', id).single();
   if (error || !user) throw new Error('User not found');
-  const hash = await hashPassword(currentPassword, user.salt);
-  if (hash !== user.password_hash) throw new Error('Current password is incorrect');
-  const newSalt = generateSalt();
-  const newHash = await hashPassword(newPassword, newSalt);
-  const { error: updateError } = await supabase.from('sb_users').update({ password_hash: newHash, salt: newSalt }).eq('id', id);
-  if (updateError) throw new Error(updateError.message);
+      const newSalt = generateSalt();
+      const newHash = await hashPassword(newPassword, newSalt);
+      const { error: updateError } = await supabase.from('sb_users').update({ password_hash: newHash, salt: newSalt }).eq('id', id);
+      if (updateError) throw new Error(updateError.message);
 }
 
 export async function logout(): Promise<void> {
@@ -141,11 +147,11 @@ export async function resetPassword(email: string): Promise<void> {
   });
   if (insertErr) throw insertErr;
 
-  const resetLink = `https://kathylemke.github.io/sandbagger/auth/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
-  const subject = encodeURIComponent('🔑 Reset your Sandbagger password');
-  const body = encodeURIComponent(
-    `Tap the link below to reset your password:\n\n${resetLink}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`
-  );
+      const link = `https://kathylemke.github.io/sandbagger/auth/magic-link?token=${token}&email=${encodeURIComponent(email)}&mode=reset`;
+      const subject = encodeURIComponent('🔑 Reset your Sandbagger password');
+      const body = encodeURIComponent(
+        `Tap the link below to reset your password:\n\n${link}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`
+      );
   const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
 
   // Open email app with pre-filled reset email
