@@ -5,6 +5,7 @@ import * as Linking from 'expo-linking';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { resetPassword } from '../../lib/auth';
 
 function generateToken(): string {
   const arr = new Uint8Array(32);
@@ -21,6 +22,10 @@ export default function Login() {
   const [magicSent, setMagicSent] = useState(false);
   const [sendingMagic, setSendingMagic] = useState(false);
   const [magicLinkUrl, setMagicLinkUrl] = useState('');
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
+  const [sendingForgot, setSendingForgot] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) { Alert.alert('Error', 'Please fill in all fields'); return; }
@@ -74,6 +79,19 @@ export default function Login() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!forgotEmail) { Alert.alert('Error', 'Please enter your email'); return; }
+    setSendingForgot(true);
+    try {
+      await resetPassword(forgotEmail);
+      setForgotSent(true);
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setSendingForgot(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
@@ -98,16 +116,33 @@ export default function Login() {
             <Link href="/(auth)/register" style={s.link}>
               <Text style={s.linkText}>Don't have an account? <Text style={{ color: colors.gold }}>Sign up</Text></Text>
             </Link>
+            <TouchableOpacity style={[s.forgotBtn]} onPress={() => { setForgotMode(true); setForgotSent(false); setForgotEmail(email); }}>
+              <Text style={s.forgotBtnText}>Forgot your password?</Text>
+            </TouchableOpacity>
           </View>
-        ) : magicSent ? (
+        ) : forgotSent ? (
           <View style={s.form}>
             <View style={s.successCard}>
               <Text style={s.successIcon}>📬</Text>
               <Text style={s.successTitle}>Check your email app</Text>
-              <Text style={s.successText}>We opened your email app with your login link ready to send. <Text style={{ color: colors.gold }}>Send the email to yourself</Text>, then open it and tap the link to sign in.</Text>
-              <Text style={s.successNote}>Link: {magicLinkUrl.slice(0, 50)}...</Text>
+              <Text style={s.successText}>We opened your email with a password reset link. <Text style={{ color: colors.gold }}>Send the email to yourself</Text>, open it, tap the link, and set your new password.</Text>
             </View>
-            <TouchableOpacity style={s.ghostBtn} onPress={() => { setMagicMode(false); setMagicSent(false); setEmail(''); setMagicLinkUrl(''); }}>
+            <TouchableOpacity style={s.ghostBtn} onPress={() => { setForgotMode(false); setForgotSent(false); setForgotEmail(''); }}>
+              <Text style={s.ghostBtnText}>← Back to sign in</Text>
+            </TouchableOpacity>
+          </View>
+        ) : forgotMode ? (
+          <View style={s.form}>
+            <View style={s.magicHeader}>
+              <Text style={s.magicTitle}>Reset your password</Text>
+              <Text style={s.magicSubtitle}>Enter the email for your account and we'll send you a link to reset your password.</Text>
+            </View>
+            <Text style={s.label}>Email</Text>
+            <TextInput style={s.input} value={forgotEmail} onChangeText={setForgotEmail} placeholder="you@email.com" placeholderTextColor={colors.gray} autoCapitalize="none" keyboardType="email-address" />
+            <TouchableOpacity style={[s.button, (sendingForgot || !forgotEmail) && { opacity: 0.6 }]} onPress={handleForgotPassword} disabled={sendingForgot || !forgotEmail}>
+              <Text style={s.buttonText}>{sendingForgot ? 'Sending...' : 'Open Email App'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.ghostBtn} onPress={() => { setForgotMode(false); setForgotSent(false); }}>
               <Text style={s.ghostBtnText}>← Back to sign in</Text>
             </TouchableOpacity>
           </View>
@@ -153,6 +188,8 @@ const s = StyleSheet.create({
   successTitle: { fontSize: 20, fontWeight: '700', color: colors.gold, marginBottom: 8 },
   successText: { fontSize: 15, color: colors.white, textAlign: 'center', lineHeight: 22 },
   successNote: { fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 12, textAlign: 'center', fontFamily: 'monospace' },
+  forgotBtn: { marginTop: 14, alignSelf: 'center' },
+  forgotBtnText: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
   magicHeader: { alignItems: 'center', marginBottom: 16 },
   magicTitle: { fontSize: 18, fontWeight: '700', color: colors.gold },
   magicSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 6 },

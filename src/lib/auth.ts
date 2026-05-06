@@ -1,5 +1,6 @@
 import 'react-native-get-random-values';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
 import { supabase } from './supabase';
 import * as CryptoJS from 'crypto-js';
 
@@ -16,6 +17,12 @@ async function hashPassword(password: string, salt: string): Promise<string> {
 
 function generateSalt(): string {
   const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generateToken(): string {
+  const arr = new Uint8Array(32);
   crypto.getRandomValues(arr);
   return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -111,4 +118,68 @@ export async function changePassword(id: string, currentPassword: string, newPas
 
 export async function logout(): Promise<void> {
   await AsyncStorage.removeItem(SESSION_KEY);
+}
+
+export async function resetPassword(email: string): Promise<void> {
+  const { data: user, error: userErr } = await supabase
+    .from('sb_users').select('id').eq('email', email.toLowerCase().trim()).single();
+  if (userErr || !user) {
+    // Don't reveal whether email exists — just succeed silently
+    return;
+  }
+  const token = generateToken();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+
+  // Delete old unused tokens for this email
+  await supabase.from('sb_password_resets').delete()
+    .eq('email', email.toLowerCase().trim()).is('used_at', null);
+
+  const { error: insertErr } = await supabase.from('sb_password_resets').insert({
+    email: email.toLowerCase().trim(),
+    token,
+    expires_at: expiresAt,
+  });
+  if (insertErr) throw insertErr;
+
+  const resetLink = `https://kathylemke.github.io/sandbagger/auth/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
+  const subject = encodeURIComponent('🔑 Reset your Sandbagger password');
+  const body = encodeURIComponent(
+    `Tap the link below to reset your password:\n\n${resetLink}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`
+  );
+  const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
+
+  // Open email app with pre-filled reset email
+  const canOpen = await Linking.canOpenURL(mailtoUrl);
+  if (canOpen) {
+    await Linking.openURL(mailtoUrl);
+  }
+}
+
+export async function verifyResetToken(token: string, email: string): Promise<boolean> {
+  const { data } = await supabase.from('sb_password_resets')
+    .select('*').eq('token', token).eq('email', email.toLowerCase().trim()).single();
+  if (!data) return false;
+  if (data.used_at) return false;
+  if (new Date(data.expires_at) < new Date()) return false;
+  return true;
+}
+
+export async function completePasswordReset(token: string, email: string, newPassword: string): Promise<void> {
+  const valid = await verifyResetToken(token, email);
+  if (!valid) throw new Error('Invalid or expired reset link. Please request a new one.');
+
+  const { data: user, error: userErr } = await supabase
+    .from('sb_users').select('*').eq('email', email.toLowerCase().trim()).single();
+  if (userErr || !user) throw new Error('User not found');
+
+  const newSalt = generateSalt();
+  const newHash = await hashPassword(newPassword, newSalt);
+
+  const { error: updateErr } = await supabase.from('sb_users')
+    .update({ password_hash: newHash, salt: newSalt }).eq('id', user.id);
+  if (updateErr) throw new Error(updateErr.message);
+
+  // Mark token as used
+  await supabase.from('sb_password_resets').update({ used_at: new Date().toISOString() })
+    .eq('token', token);
 }
