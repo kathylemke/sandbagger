@@ -127,29 +127,29 @@ export async function logout(): Promise<void> {
 }
 
 export async function resetPassword(email: string): Promise<void> {
-  // Check if user exists — don't reveal to non-users
+  const trimmed = email.toLowerCase().trim();
+
   const { data: user, error: userErr } = await supabase
-    .from('sb_users').select('id').eq('email', email.toLowerCase().trim()).single();
+    .from('sb_users').select('id').eq('email', trimmed).single();
+
   if (userErr || !user) {
-    // Silent success — don't tell them the email doesn't exist
-    return;
+    throw new Error('No account found with that email. Try signing up first.');
   }
 
-  // Use the magic link table — same flow, no new table needed
   const token = generateToken();
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
-  await supabase.from('sb_magic_links').delete()
-    .eq('email', email.toLowerCase().trim()).is('used_at', null);
+  const { error: deleteErr } = await supabase.from('sb_magic_links').delete()
+    .eq('email', trimmed).is('used_at', null);
+  if (deleteErr) console.warn('Cleanup error (non-fatal):', deleteErr.message);
 
   const { error: insertErr } = await supabase.from('sb_magic_links').insert({
-    email: email.toLowerCase().trim(),
+    email: trimmed,
     token,
     expires_at: expiresAt,
   });
-  if (insertErr) throw insertErr;
+  if (insertErr) throw new Error('Could not create reset link. Please try again.');
 
-  // Send as magic link with mode=reset → lands on change-password screen
   const link = `https://kathylemke.github.io/sandbagger/auth/magic-link?token=${token}&email=${encodeURIComponent(email)}&mode=reset`;
   const subject = encodeURIComponent('🔑 Reset your Sandbagger password');
   const body = encodeURIComponent(
@@ -158,9 +158,8 @@ export async function resetPassword(email: string): Promise<void> {
   const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
 
   const canOpen = await Linking.canOpenURL(mailtoUrl);
-  if (canOpen) {
-    await Linking.openURL(mailtoUrl);
-  }
+  if (!canOpen) throw new Error('Could not open email app. Please check that your device has a default email app.');
+  await Linking.openURL(mailtoUrl);
 }
 
 export async function verifyResetToken(token: string, email: string): Promise<boolean> {
