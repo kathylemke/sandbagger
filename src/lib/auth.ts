@@ -127,34 +127,36 @@ export async function logout(): Promise<void> {
 }
 
 export async function resetPassword(email: string): Promise<void> {
+  // Check if user exists — don't reveal to non-users
   const { data: user, error: userErr } = await supabase
     .from('sb_users').select('id').eq('email', email.toLowerCase().trim()).single();
   if (userErr || !user) {
-    // Don't reveal whether email exists — just succeed silently
+    // Silent success — don't tell them the email doesn't exist
     return;
   }
-  const token = generateToken();
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
 
-  // Delete old unused tokens for this email
-  await supabase.from('sb_password_resets').delete()
+  // Use the magic link table — same flow, no new table needed
+  const token = generateToken();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+  await supabase.from('sb_magic_links').delete()
     .eq('email', email.toLowerCase().trim()).is('used_at', null);
 
-  const { error: insertErr } = await supabase.from('sb_password_resets').insert({
+  const { error: insertErr } = await supabase.from('sb_magic_links').insert({
     email: email.toLowerCase().trim(),
     token,
     expires_at: expiresAt,
   });
   if (insertErr) throw insertErr;
 
-      const link = `https://kathylemke.github.io/sandbagger/auth/magic-link?token=${token}&email=${encodeURIComponent(email)}&mode=reset`;
-      const subject = encodeURIComponent('🔑 Reset your Sandbagger password');
-      const body = encodeURIComponent(
-        `Tap the link below to reset your password:\n\n${link}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`
-      );
+  // Send as magic link with mode=reset → lands on change-password screen
+  const link = `https://kathylemke.github.io/sandbagger/auth/magic-link?token=${token}&email=${encodeURIComponent(email)}&mode=reset`;
+  const subject = encodeURIComponent('🔑 Reset your Sandbagger password');
+  const body = encodeURIComponent(
+    `Tap the link below to reset your password:\n\n${link}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`
+  );
   const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
 
-  // Open email app with pre-filled reset email
   const canOpen = await Linking.canOpenURL(mailtoUrl);
   if (canOpen) {
     await Linking.openURL(mailtoUrl);
