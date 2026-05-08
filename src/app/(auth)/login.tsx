@@ -7,16 +7,41 @@ import { colors } from '../../lib/theme';
 export default function Login() {
   const { login } = useAuth();
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [pendingUsername, setPendingUsername] = useState('');
 
-  const handleLogin = async () => {
-    if (!username.trim()) { Alert.alert('Error', 'Please enter your username'); return; }
+  const handleSignIn = async () => {
+    const u = username.trim();
+    if (!u) { Alert.alert('Error', 'Please enter your username'); return; }
+
     setLoading(true);
     try {
-      await login(username.trim());
+      await login(u, password || undefined);
+      router.replace('/');
+    } catch (e: any) {
+      if (e.message === 'PASSWORD_REQUIRED') {
+        setNeedsPassword(true);
+        setPendingUsername(u);
+        setPassword('');
+      } else {
+        Alert.alert('Error', e.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!password) { Alert.alert('Error', 'Please enter your password'); return; }
+    setLoading(true);
+    try {
+      await login(pendingUsername, password);
       router.replace('/');
     } catch (e: any) {
       Alert.alert('Error', e.message);
+      setPassword('');
     } finally {
       setLoading(false);
     }
@@ -36,15 +61,30 @@ export default function Login() {
           <TextInput
             style={s.input}
             value={username}
-            onChangeText={setUsername}
+            onChangeText={txt => { setUsername(txt); setNeedsPassword(false); setPassword(''); }}
             placeholder="your username"
             placeholderTextColor={colors.gray}
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!needsPassword}
           />
+          {needsPassword && (
+            <>
+              <Text style={s.label}>Password</Text>
+              <TextInput
+                style={s.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor={colors.gray}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+            </>
+          )}
           <TouchableOpacity
             style={[s.button, loading && { opacity: 0.6 }]}
-            onPress={handleLogin}
+            onPress={needsPassword ? handlePasswordSubmit : handleSignIn}
             disabled={loading}
           >
             <Text style={s.buttonText}>{loading ? 'Signing in...' : 'Sign In'}</Text>

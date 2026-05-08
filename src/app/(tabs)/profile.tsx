@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert,
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
-import { updateProfile, changeEmail, changePassword } from '../../lib/auth';
+import { updateProfile, changeEmail, changePassword, removePassword } from '../../lib/auth';
 import { colors } from '../../lib/theme';
 import { useDistanceUnit, DistanceUnit } from '../../lib/distanceUnits';
 
@@ -161,7 +161,8 @@ export default function Profile() {
     setSavingPassword(true);
     try {
       await changePassword(user.id, newPassword);
-      setCurPassword('');
+      const refreshed = await supabase.from('sb_users').select('*').eq('id', user.id).single();
+      if (refreshed.data) { await AsyncStorage.setItem('sandbagger_session', JSON.stringify(refreshed.data)); setUser(refreshed.data); }
       setNewPassword('');
       setConfirmPassword('');
       setShowPasswordModal(false);
@@ -171,6 +172,27 @@ export default function Profile() {
     } finally {
       setSavingPassword(false);
     }
+  };
+
+  const handleRemovePassword = async () => {
+    if (!user) return;
+    Alert.alert('Remove Password', 'Are you sure? You\'ll sign in with just your username.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove', style: 'destructive',
+        onPress: async () => {
+          try {
+            await removePassword(user.id);
+            const refreshed = await supabase.from('sb_users').select('*').eq('id', user.id).single();
+            if (refreshed.data) { await AsyncStorage.setItem('sandbagger_session', JSON.stringify(refreshed.data)); setUser(refreshed.data); }
+            setShowPasswordModal(false);
+            Alert.alert('Done', 'Password removed. You can sign in with just your username.');
+          } catch (e: any) {
+            Alert.alert('Error', e.message);
+          }
+        },
+      },
+    ]);
   };
 
   const searchUsers = async (q: string) => {
@@ -323,20 +345,32 @@ export default function Profile() {
           </View>
         </View>
 
+        {/* Secure Your Account */}
+        <TouchableOpacity style={settingsS.row} onPress={() => {
+          if (user?.password_hash) {
+            setShowPasswordModal(true);
+          } else {
+            setNewPassword('');
+            setConfirmPassword('');
+            setShowPasswordModal(true);
+          }
+        }}>
+          <View style={settingsS.labelContainer}>
+            <Text style={settingsS.label}>🔐 Secure Your Account</Text>
+            <Text style={settingsS.sublabel}>
+              {user?.password_hash ? 'Password set — tap to change or remove' : 'Add a password to secure your account'}
+            </Text>
+          </View>
+          <Text style={{ color: colors.gold, fontWeight: '600' }}>
+            {user?.password_hash ? 'Manage →' : 'Set Up →'}
+          </Text>
+        </TouchableOpacity>
+
         {/* Change Email */}
         <TouchableOpacity style={settingsS.row} onPress={() => { setNewEmail(user?.email || ''); setShowEmailModal(true); }}>
           <View style={settingsS.labelContainer}>
             <Text style={settingsS.label}>Email</Text>
             <Text style={settingsS.sublabel}>{user?.email}</Text>
-          </View>
-          <Text style={{ color: colors.gold, fontWeight: '600' }}>Change →</Text>
-        </TouchableOpacity>
-
-        {/* Change Password */}
-        <TouchableOpacity style={settingsS.row} onPress={() => setShowPasswordModal(true)}>
-          <View style={settingsS.labelContainer}>
-            <Text style={settingsS.label}>Password</Text>
-            <Text style={settingsS.sublabel}>••••••••</Text>
           </View>
           <Text style={{ color: colors.gold, fontWeight: '600' }}>Change →</Text>
         </TouchableOpacity>
@@ -476,19 +510,38 @@ export default function Profile() {
       <Modal visible={showPasswordModal} animationType="slide" transparent>
         <View style={s.modalOverlay}>
           <View style={s.modal}>
-            <Text style={s.modalTitle}>Change Password</Text>
-            <Text style={s.formLabel}>Current Password</Text>
-            <TextInput style={s.input} value={curPassword} onChangeText={setCurPassword} placeholder="Current password" placeholderTextColor={colors.gray} secureTextEntry autoCapitalize="none" />
-            <Text style={s.formLabel}>New Password</Text>
-            <TextInput style={s.input} value={newPassword} onChangeText={setNewPassword} placeholder="At least 6 characters" placeholderTextColor={colors.gray} secureTextEntry autoCapitalize="none" />
-            <Text style={s.formLabel}>Confirm New Password</Text>
-            <TextInput style={s.input} value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Repeat new password" placeholderTextColor={colors.gray} secureTextEntry autoCapitalize="none" />
-            <TouchableOpacity style={s.editBtn} onPress={handleChangePassword} disabled={savingPassword}>
-              <Text style={s.editBtnText}>{savingPassword ? 'Saving...' : 'Update Password'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.logoutBtn} onPress={() => { setShowPasswordModal(false); setCurPassword(''); setNewPassword(''); setConfirmPassword(''); }}>
-              <Text style={s.logoutBtnText}>Cancel</Text>
-            </TouchableOpacity>
+            {user?.password_hash ? (
+              <>
+                <Text style={s.modalTitle}>Change Password</Text>
+                <Text style={s.formLabel}>New Password</Text>
+                <TextInput style={s.input} value={newPassword} onChangeText={setNewPassword} placeholder="At least 6 characters" placeholderTextColor={colors.gray} secureTextEntry autoCapitalize="none" />
+                <Text style={s.formLabel}>Confirm New Password</Text>
+                <TextInput style={s.input} value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Repeat new password" placeholderTextColor={colors.gray} secureTextEntry autoCapitalize="none" />
+                <TouchableOpacity style={s.editBtn} onPress={handleChangePassword} disabled={savingPassword}>
+                  <Text style={s.editBtnText}>{savingPassword ? 'Saving...' : 'Update Password'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.removeBtn} onPress={handleRemovePassword}>
+                  <Text style={s.removeBtnText}>Remove Password</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.logoutBtn} onPress={() => { setShowPasswordModal(false); setNewPassword(''); setConfirmPassword(''); }}>
+                  <Text style={s.logoutBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={s.modalTitle}>🔐 Set Up Password</Text>
+                <Text style={s.formLabel}>Choose a Password</Text>
+                <TextInput style={s.input} value={newPassword} onChangeText={setNewPassword} placeholder="At least 6 characters" placeholderTextColor={colors.gray} secureTextEntry autoCapitalize="none" />
+                <Text style={s.formLabel}>Confirm Password</Text>
+                <TextInput style={s.input} value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Repeat password" placeholderTextColor={colors.gray} secureTextEntry autoCapitalize="none" />
+                <TouchableOpacity style={s.editBtn} onPress={handleChangePassword} disabled={savingPassword}>
+                  <Text style={s.editBtnText}>{savingPassword ? 'Saving...' : 'Set Password'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.logoutBtn} onPress={() => { setShowPasswordModal(false); setNewPassword(''); setConfirmPassword(''); }}>
+                  <Text style={s.logoutBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -512,10 +565,12 @@ const s = StyleSheet.create({
   statNum: { fontSize: 20, fontWeight: '800', color: colors.primary },
   statLabel: { fontSize: 11, color: colors.grayDark, marginTop: 2 },
   actionRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginVertical: 16 },
-  editBtn: { backgroundColor: colors.gold, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12 },
-  editBtnText: { color: colors.primaryDark, fontWeight: '700' },
   logoutBtn: { borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12, borderWidth: 1, borderColor: colors.red },
   logoutBtnText: { color: colors.red, fontWeight: '600' },
+  removeBtn: { marginTop: 8, padding: 12, alignItems: 'center' },
+  removeBtnText: { color: colors.red, fontWeight: '600', fontSize: 14 },
+  editBtn: { backgroundColor: colors.gold, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12 },
+  editBtnText: { color: colors.primaryDark, fontWeight: '700' },
   editForm: { backgroundColor: colors.white, borderRadius: 12, padding: 16 },
   formLabel: { fontSize: 13, fontWeight: '600', color: colors.primary, marginBottom: 6, marginTop: 12 },
   input: { backgroundColor: colors.offWhite, borderRadius: 8, padding: 12, fontSize: 15, borderWidth: 1, borderColor: colors.grayLight },

@@ -20,12 +20,6 @@ function generateSalt(): string {
   return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function generateToken(): string {
-  const arr = new Uint8Array(32);
-  crypto.getRandomValues(arr);
-  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 export interface User {
   id: string;
   email: string;
@@ -35,16 +29,21 @@ export interface User {
   bio: string | null;
   handicap: number | null;
   created_at: string;
+  password_hash: string | null;
+  salt: string | null;
 }
 
 export async function register(email: string, username: string, password: string, displayName: string, profileType: string): Promise<User> {
-  // Check username uniqueness
   const { data: existingUsername } = await supabase
     .from('sb_users').select('id').eq('username', username.toLowerCase().trim()).single();
   if (existingUsername) throw new Error('That username is already taken');
 
-  const salt = generateSalt();
-  const password_hash = await hashPassword(password, salt);
+  let password_hash: string | null = null;
+  let salt: string | null = null;
+  if (password) {
+    salt = generateSalt();
+    password_hash = await hashPassword(password, salt);
+  }
 
   const { data, error } = await supabase.from('sb_users').insert({
     email: email.toLowerCase().trim(),
@@ -60,13 +59,23 @@ export async function register(email: string, username: string, password: string
   return data;
 }
 
-export async function login(username: string): Promise<User> {
+export async function login(username: string, password?: string): Promise<User> {
   const { data: user, error } = await supabase.from('sb_users')
     .select('*')
     .eq('username', username.toLowerCase().trim())
     .single();
 
   if (error || !user) throw new Error('Invalid username. Check your spelling or create a new account.');
+
+  // If user has a password set, password is required
+  if (user.password_hash) {
+    if (!password) throw new Error('PASSWORD_REQUIRED');
+    const hash = await hashPassword(password, user.salt || '');
+    if (hash !== user.password_hash) throw new Error('Incorrect password');
+  } else if (password) {
+    // User typed a password but account has none — treat as wrong password
+    throw new Error('Incorrect password');
+  }
 
   await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user));
   return user;
@@ -106,19 +115,17 @@ export async function changeEmail(id: string, newEmail: string): Promise<User> {
   return data;
 }
 
-export async function changePasswordByEmail(email: string, newPassword: string): Promise<void> {
-  const newSalt = generateSalt();
-  const newHash = await hashPassword(newPassword, newSalt);
-  const { error: updateErr } = await supabase.from('sb_users')
-    .update({ password_hash: newHash, salt: newSalt }).eq('email', email.toLowerCase().trim());
-  if (updateErr) throw new Error(updateErr.message);
-}
-
 export async function changePassword(id: string, newPassword: string): Promise<void> {
   const newSalt = generateSalt();
   const newHash = await hashPassword(newPassword, newSalt);
   const { error } = await supabase.from('sb_users')
     .update({ password_hash: newHash, salt: newSalt }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function removePassword(id: string): Promise<void> {
+  const { error } = await supabase.from('sb_users')
+    .update({ password_hash: null, salt: null }).eq('id', id);
   if (error) throw new Error(error.message);
 }
 

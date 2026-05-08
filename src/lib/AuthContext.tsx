@@ -4,7 +4,7 @@ import { User, getCurrentUser, login as authLogin, register as authRegister, log
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (username: string) => Promise<void>;
+  login: (username: string, password?: string) => Promise<void>;
   register: (email: string, username: string, password: string, displayName: string, profileType: string) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (u: User) => void;
@@ -20,8 +20,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getCurrentUser().then(u => { setUser(u); setLoading(false); });
   }, []);
 
-  const login = async (username: string) => {
-    const u = await authLogin(username);
+  const login = async (username: string, password?: string) => {
+    const u = await authLogin(username, password);
     setUser(u);
   };
 
