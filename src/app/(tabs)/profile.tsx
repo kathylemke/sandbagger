@@ -343,39 +343,27 @@ export default function Profile() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Secure Your Account */}
-          <TouchableOpacity
-            style={[settingsS.row, { borderTopWidth: 1, borderTopColor: colors.grayLight }]}
-            onPress={() => {
-              setNewPassword('');
-              setConfirmPassword('');
-              setShowPasswordModal(true);
-            }}
-          >
-            <View style={settingsS.labelContainer}>
-              <Text style={settingsS.label}>🔐 Secure Your Account</Text>
-              <Text style={settingsS.sublabel}>
-                {user && user.password_hash ? 'Password set — tap to change or remove' : 'Add a password to secure your account'}
-              </Text>
-            </View>
-            <Text style={{ color: colors.gold, fontWeight: '600' }}>
-              {user && user.password_hash ? 'Manage →' : 'Set Up →'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Change Email */}
-          <TouchableOpacity
-            style={[settingsS.row, { borderTopWidth: 1, borderTopColor: colors.grayLight }]}
-            onPress={() => { setNewEmail(user?.email || ''); setShowEmailModal(true); }}
-          >
-            <View style={settingsS.labelContainer}>
-              <Text style={settingsS.label}>Email</Text>
-              <Text style={settingsS.sublabel}>{user?.email || ''}</Text>
-            </View>
-            <Text style={{ color: colors.gold, fontWeight: '600' }}>Change →</Text>
-          </TouchableOpacity>
         </View>
+
+        <TouchableOpacity style={[settingsS.card, { marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }]} onPress={() => setShowEmailModal(true)}>
+          <View style={settingsS.labelContainer}>
+            <Text style={settingsS.label}>Email</Text>
+            <Text style={settingsS.sublabel}>{user?.email || ''}</Text>
+          </View>
+          <Text style={{ color: colors.gold, fontWeight: '600' }}>Change →</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[settingsS.card, { marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }]} onPress={() => { setNewPassword(''); setConfirmPassword(''); setShowPasswordModal(true); }}>
+          <View style={settingsS.labelContainer}>
+            <Text style={settingsS.label}>🔐 Secure Your Account</Text>
+            <Text style={settingsS.sublabel}>
+              {user && user.password_hash ? 'Password set — tap to change or remove' : 'Add a password to secure your account'}
+            </Text>
+          </View>
+          <Text style={{ color: colors.gold, fontWeight: '600' }}>
+            {user && user.password_hash ? 'Manage →' : 'Set Up →'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Following */}
