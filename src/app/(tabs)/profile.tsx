@@ -329,51 +329,53 @@ export default function Profile() {
               <Text style={settingsS.sublabel}>Used throughout the app for distances</Text>
             </View>
             <View style={settingsS.toggle}>
-              <TouchableOpacity 
-                style={[settingsS.toggleOption, distanceUnit === 'yards' && settingsS.toggleActive]} 
+              <TouchableOpacity
+                style={[settingsS.toggleOption, distanceUnit === 'yards' && settingsS.toggleActive]}
                 onPress={() => setDistanceUnit('yards')}
               >
                 <Text style={[settingsS.toggleText, distanceUnit === 'yards' && settingsS.toggleTextActive]}>Yards</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[settingsS.toggleOption, distanceUnit === 'meters' && settingsS.toggleActive]} 
+              <TouchableOpacity
+                style={[settingsS.toggleOption, distanceUnit === 'meters' && settingsS.toggleActive]}
                 onPress={() => setDistanceUnit('meters')}
               >
                 <Text style={[settingsS.toggleText, distanceUnit === 'meters' && settingsS.toggleTextActive]}>Meters</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
 
-        {/* Secure Your Account */}
-        <TouchableOpacity style={settingsS.row} onPress={() => {
-          if (user?.password_hash) {
-            setShowPasswordModal(true);
-          } else {
-            setNewPassword('');
-            setConfirmPassword('');
-            setShowPasswordModal(true);
-          }
-        }}>
-          <View style={settingsS.labelContainer}>
-            <Text style={settingsS.label}>🔐 Secure Your Account</Text>
-            <Text style={settingsS.sublabel}>
-              {user?.password_hash ? 'Password set — tap to change or remove' : 'Add a password to secure your account'}
+          {/* Secure Your Account */}
+          <TouchableOpacity
+            style={[settingsS.row, { borderTopWidth: 1, borderTopColor: colors.grayLight }]}
+            onPress={() => {
+              setNewPassword('');
+              setConfirmPassword('');
+              setShowPasswordModal(true);
+            }}
+          >
+            <View style={settingsS.labelContainer}>
+              <Text style={settingsS.label}>🔐 Secure Your Account</Text>
+              <Text style={settingsS.sublabel}>
+                {user && user.password_hash ? 'Password set — tap to change or remove' : 'Add a password to secure your account'}
+              </Text>
+            </View>
+            <Text style={{ color: colors.gold, fontWeight: '600' }}>
+              {user && user.password_hash ? 'Manage →' : 'Set Up →'}
             </Text>
-          </View>
-          <Text style={{ color: colors.gold, fontWeight: '600' }}>
-            {user?.password_hash ? 'Manage →' : 'Set Up →'}
-          </Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
 
-        {/* Change Email */}
-        <TouchableOpacity style={settingsS.row} onPress={() => { setNewEmail(user?.email || ''); setShowEmailModal(true); }}>
-          <View style={settingsS.labelContainer}>
-            <Text style={settingsS.label}>Email</Text>
-            <Text style={settingsS.sublabel}>{user?.email}</Text>
-          </View>
-          <Text style={{ color: colors.gold, fontWeight: '600' }}>Change →</Text>
-        </TouchableOpacity>
+          {/* Change Email */}
+          <TouchableOpacity
+            style={[settingsS.row, { borderTopWidth: 1, borderTopColor: colors.grayLight }]}
+            onPress={() => { setNewEmail(user?.email || ''); setShowEmailModal(true); }}
+          >
+            <View style={settingsS.labelContainer}>
+              <Text style={settingsS.label}>Email</Text>
+              <Text style={settingsS.sublabel}>{user?.email || ''}</Text>
+            </View>
+            <Text style={{ color: colors.gold, fontWeight: '600' }}>Change →</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Following */}
