@@ -160,7 +160,7 @@ export default function Profile() {
     if (newPassword.length < 6) { Alert.alert('Error', 'Password must be at least 6 characters'); return; }
     setSavingPassword(true);
     try {
-      await changePassword(user.id, curPassword, newPassword);
+      await changePassword(user.id, newPassword);
       setCurPassword('');
       setNewPassword('');
       setConfirmPassword('');
