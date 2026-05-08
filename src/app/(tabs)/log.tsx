@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -1596,7 +1596,11 @@ export default function LogRound() {
             </TouchableOpacity>
           ) : (
             <View style={{ position: 'relative', alignSelf: 'flex-start' }}>
-              <img src={roundPhoto} style={{ width: 120, height: 120, borderRadius: 10, objectFit: 'cover' } as any} />
+              {Platform.OS === 'web' ? (
+                <img src={roundPhoto} style={{ width: 120, height: 120, borderRadius: 10, objectFit: 'cover' } as any} />
+              ) : (
+                <Image source={{ uri: roundPhoto }} style={{ width: 120, height: 120, borderRadius: 10 }} />
+              )}
               <TouchableOpacity
                 style={{ position: 'absolute', top: -8, right: -8, backgroundColor: colors.red, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
                 onPress={() => setRoundPhoto(null)}

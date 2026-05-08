@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -276,7 +276,11 @@ export default function Feed() {
           </View>
           {item.weather && <Text style={s.weather}>🌤 {item.weather}</Text>}
           {item.caption && <Text style={{ fontSize: 14, color: colors.black, marginTop: 8, fontStyle: 'italic' }}>"{item.caption}"</Text>}
-          {item.photo_url && <img src={item.photo_url} style={{ width: '100%', maxWidth: 300, borderRadius: 10, marginTop: 8, objectFit: 'cover' } as any} />}
+          {item.photo_url && (
+            <View style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden' }}>
+              <Image source={{ uri: item.photo_url }} style={{ width: '100%', maxWidth: 300, height: 200 }} resizeMode="cover" />
+            </View>
+          )}
 
           {/* Expanded scorecard */}
           {isExpanded && (
