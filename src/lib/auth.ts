@@ -60,16 +60,13 @@ export async function register(email: string, username: string, password: string
   return data;
 }
 
-export async function login(username: string, password: string): Promise<User> {
+export async function login(username: string): Promise<User> {
   const { data: user, error } = await supabase.from('sb_users')
     .select('*')
     .eq('username', username.toLowerCase().trim())
     .single();
 
-  if (error || !user) throw new Error('Invalid username or password');
-
-  const hash = await hashPassword(password, user.salt);
-  if (hash !== user.password_hash) throw new Error('Invalid username or password');
+  if (error || !user) throw new Error('Invalid username. Check your spelling or create a new account.');
 
   await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user));
   return user;

@@ -7,14 +7,13 @@ import { colors } from '../../lib/theme';
 export default function Login() {
   const { login } = useAuth();
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!username || !password) { Alert.alert('Error', 'Please fill in all fields'); return; }
+    if (!username.trim()) { Alert.alert('Error', 'Please enter your username'); return; }
     setLoading(true);
     try {
-      await login(username, password);
+      await login(username.trim());
       router.replace('/');
     } catch (e: any) {
       Alert.alert('Error', e.message);
@@ -42,15 +41,6 @@ export default function Login() {
             placeholderTextColor={colors.gray}
             autoCapitalize="none"
             autoCorrect={false}
-          />
-          <Text style={s.label}>Password</Text>
-          <TextInput
-            style={s.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            placeholderTextColor={colors.gray}
-            secureTextEntry
           />
           <TouchableOpacity
             style={[s.button, loading && { opacity: 0.6 }]}
