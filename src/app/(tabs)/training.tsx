@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
@@ -180,9 +181,11 @@ const FULL_SWING_SUBS: { key: FullSwingSubcategory; label: string }[] = [
 ];
 
 export default function Training() {
+  const router = useRouter();
   const { user } = useAuth();
-  const [tab, setTab] = useState<'log' | 'drills' | 'history'>('log');
+  const [tab, setTab] = useState<'log' | 'drills' | 'history' | 'rounds'>('log');
   const [sessions, setSessions] = useState<PracticeSession[]>([]);
+  const [drillRounds, setDrillRounds] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<DrillCategory>('putting');
   const [selectedSubcategory, setSelectedSubcategory] = useState<FullSwingSubcategory>('irons');
   const [drillType, setDrillType] = useState<'evaluation' | 'technique'>('evaluation');
@@ -200,7 +203,23 @@ export default function Training() {
 
   useEffect(() => {
     loadSessions();
+    loadDrillRounds();
   }, [user]);
+
+  const loadDrillRounds = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from('sb_drill_rounds')
+        .select('*, sb_drills(name, type, category)')
+        .eq('user_id', user.id)
+        .order('started_at', { ascending: false })
+        .limit(50);
+      setDrillRounds(data || []);
+    } catch (e) {
+      console.error('Error loading drill rounds:', e);
+    }
+  };
 
   const loadSessions = async () => {
     try {
@@ -701,6 +720,9 @@ export default function Training() {
         <TouchableOpacity style={[s.tab, tab === 'history' && s.tabActive]} onPress={() => setTab('history')}>
           <Text style={[s.tabText, tab === 'history' && s.tabTextActive]}>History</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[s.tab, tab === 'rounds' && s.tabActive]} onPress={() => setTab('rounds')}>
+          <Text style={[s.tabText, tab === 'rounds' && s.tabTextActive]}>Drill Rounds</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tab content */}
@@ -779,6 +801,59 @@ export default function Training() {
 
       {tab === 'drills' && renderDrillLibrary()}
       {tab === 'history' && renderHistory()}
+      {tab === 'rounds' && (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: colors.primary }}>🎯 My Drill Rounds</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/build-drill')}>
+              <Text style={{ color: colors.gold, fontWeight: '700', fontSize: 14 }}>+ New Drill</Text>
+            </TouchableOpacity>
+          </View>
+          {drillRounds.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingTop: 60 }}>
+              <Text style={{ fontSize: 48, marginBottom: 12 }}>⛳</Text>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.primary }}>No Drill Rounds Yet</Text>
+              <Text style={{ fontSize: 14, color: colors.gray, marginTop: 6, textAlign: 'center' }}>
+                Start a round in the Log tab and select a drill to see it here
+              </Text>
+            </View>
+          ) : (
+            drillRounds.map(dr => {
+              const drillInfo = dr.sb_drills;
+              const isScore = drillInfo?.type === 'score-based';
+              return (
+                <View key={dr.id} style={{ backgroundColor: colors.white, borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: colors.primary }}>{drillInfo?.name || 'Unknown Drill'}</Text>
+                      <Text style={{ fontSize: 12, color: colors.gray, marginTop: 2 }}>
+                        {new Date(dr.started_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+                      {isScore ? (
+                        <Text style={{ fontSize: 18, fontWeight: '800', color: colors.gold }}>{dr.total_score ?? '—'}</Text>
+                      ) : (
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.gold }}>Shot Log</Text>
+                      )}
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    <View style={{ backgroundColor: colors.offWhite, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 }}>
+                      <Text style={{ fontSize: 11, color: colors.primary, fontWeight: '600' }}>
+                        {drillInfo?.type === 'score-based' ? '🎯 Score' : '📝 Shot-Log'}
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: colors.offWhite, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 }}>
+                      <Text style={{ fontSize: 11, color: colors.primary, fontWeight: '600' }}>{drillInfo?.category || 'general'}</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }

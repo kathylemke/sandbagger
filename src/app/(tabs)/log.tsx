@@ -13,6 +13,14 @@ import WindDirectionDial from '../../components/WindDirectionDial';
 
 type TrackingMode = 'basic' | 'advanced' | 'strategy' | 'mental';
 
+interface DrillTemplate {
+  id: string;
+  name: string;
+  type: 'score-based' | 'shot-log';
+  category: string;
+  description: string;
+}
+
 interface Course { id: string; name: string; city: string; state: string; num_holes: number; }
 interface Hole { id: string; hole_number: number; par: number; distance_yards: number; }
 interface TeeSet { id: string; course_id: string; color: string; name: string; total_yardage: number; total_par: number; rating: number; slope: number; }
@@ -217,6 +225,16 @@ export default function LogRound() {
   const [draftCourseName, setDraftCourseName] = useState('');
   const [draftDate, setDraftDate] = useState('');
 
+  // Drill feature state
+  const [selectedDrill, setSelectedDrill] = useState<DrillTemplate | null>(null);
+  const [drillLogs, setDrillLogs] = useState<Record<string, any>[]>([]);
+  const [currentDrillHole, setCurrentDrillHole] = useState(0);
+  const [drillHoleEntries, setDrillHoleEntries] = useState<any[]>([]);
+  const [activeDrillShots, setActiveDrillShots] = useState<any[]>([]);
+  const [drillRoundId, setDrillRoundId] = useState<string | null>(null);
+  const [showDrillPicker, setShowDrillPicker] = useState(false);
+  const [userDrills, setUserDrills] = useState<DrillTemplate[]>([]);
+
   const DRAFT_KEY = user?.id ? `sandbagger_draft_${user.id}` : 'sandbagger_draft';
 
   const saveDraft = async () => {
@@ -296,6 +314,10 @@ export default function LogRound() {
     if (user?.id) {
       AsyncStorage.getItem(`sandbagger_bag_${user.id}`).then(stored => {
         if (stored) { try { setUserBag(JSON.parse(stored)); } catch {} }
+      });
+      // Load user's custom drills + default drills
+      supabase.from('sb_drills').select('*').or(`user_id.eq.${user.id},is_default.eq.true`).order('name').then(({ data }) => {
+        setUserDrills(data || []);
       });
     }
   }, []);
@@ -716,6 +738,49 @@ export default function LogRound() {
         return base;
       });
       await supabase.from('sb_hole_scores').insert(scoreInserts);
+
+      // If a drill was selected, create a drill round and log entries
+      if (selectedDrill && user) {
+        try {
+          // Create drill round
+          const { data: drillRound, error: drillErr } = await supabase.from('sb_drill_rounds').insert({
+            drill_id: selectedDrill.id,
+            user_id: user.id,
+            started_at: new Date().toISOString(),
+          }).select().single();
+
+          if (!drillErr && drillRound) {
+            // Calculate total score for score-based drills
+            let totalScore_drill: number | null = null;
+            if (selectedDrill.type === 'score-based' && drillHoleEntries.length > 0) {
+              totalScore_drill = drillHoleEntries.reduce((sum: number, e: any) => sum + (parseFloat(e.score) || 0), 0);
+              await supabase.from('sb_drill_rounds').update({ total_score: totalScore_drill, completed_at: new Date().toISOString() }).eq('id', drillRound.id);
+            }
+
+            // Insert drill logs for shot-log drills
+            if (selectedDrill.type === 'shot-log' && activeIndices.length > 0) {
+              const drillLogInserts = activeIndices.map((i) => {
+                const de = drillHoleEntries[i] || {};
+                return {
+                  drill_round_id: drillRound.id,
+                  hole_number: i + 1,
+                  shot_intent: de.shot_intent || null,
+                  success: de.success || false,
+                  miss_direction: de.miss_direction || null,
+                  score: de.score != null ? parseFloat(de.score) : null,
+                  club: de.club || null,
+                  shot_shape: de.shot_shape || null,
+                  notes: de.notes || null,
+                };
+              });
+              await supabase.from('sb_drill_logs').insert(drillLogInserts);
+            }
+          }
+        } catch (drillErr) {
+          console.error('Drill round save error:', drillErr);
+        }
+      }
+
       await AsyncStorage.removeItem(DRAFT_KEY);
       setHasDraft(false);
       const msg = editingRoundId ? `Round updated! Total: ${totalScore}` : `Round saved! Total: ${totalScore}`;
@@ -728,7 +793,7 @@ export default function LogRound() {
       if (editingRoundId) {
         router.push('/(tabs)/feed');
       }
-      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false); setRoundType('practice'); setRoundCaption(''); setRoundPhoto(null); setScannedFromPhoto(false);
+      setStep(1); setSelectedCourse(null); setHoles([]); setHoleEntries([]); setSelectedTee(null); setMixedTees(false); setHoleSelection('all'); setSelectedHoles(Array.from({ length: 18 }, (_, i) => i + 1)); setTrackWedgeAndIn(false); setRoundType('practice'); setRoundCaption(''); setRoundPhoto(null); setScannedFromPhoto(false); setSelectedDrill(null); setDrillRoundId(null); setDrillHoleEntries([]); setDrillLogs([]);
     } catch (e: any) {
       console.error('Save round error:', e);
       if (Platform.OS === 'web') {
@@ -779,6 +844,164 @@ export default function LogRound() {
       ))}
     </View>
   );
+
+  // Drill picker modal
+  const renderDrillPicker = () => (
+    <View style={[s.modalOverlay, { display: showDrillPicker ? 'flex' : 'none' }]}>
+      <View style={s.modal}>
+        <View style={s.modalHeader}>
+          <Text style={s.modalTitle}>🎯 Choose a Drill</Text>
+          <TouchableOpacity onPress={() => setShowDrillPicker(false)}>
+            <Text style={s.modalClose}>✕</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={{ flex: 1, padding: 16 }}>
+          {userDrills.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingTop: 40 }}>
+              <Text style={{ fontSize: 16, color: colors.grayDark }}>No drills found</Text>
+              <Text style={{ fontSize: 13, color: colors.gray, marginTop: 8 }}>Create custom drills in the Training tab</Text>
+            </View>
+          ) : (
+            userDrills.map(drill => (
+              <TouchableOpacity
+                key={drill.id}
+                style={s.drillPickerCard}
+                onPress={() => {
+                  setSelectedDrill(drill);
+                  // Initialize drill hole entries based on active hole count
+                  const numHoles = activeIndices.length || 9;
+                  const initialEntries = Array(numHoles).fill(null).map(() => ({
+                    shot_intent: '', success: false, miss_direction: '', score: null, club: '', shot_shape: '', notes: '',
+                  }));
+                  setDrillHoleEntries(initialEntries);
+                  setShowDrillPicker(false);
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.drillPickerName}>{drill.name}</Text>
+                    <Text style={s.drillPickerType}>
+                      {drill.type === 'score-based' ? '🎯 Score-Based' : '📝 Shot-Log'} · {drill.category}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.gray }}>›</Text>
+                </View>
+                <Text style={s.drillPickerDesc} numberOfLines={2}>{drill.description}</Text>
+                {drill.is_default && (
+                  <View style={s.defaultBadge}><Text style={s.defaultBadgeText}>Default</Text></View>
+                )}
+              </TouchableOpacity>
+            ))
+          )}
+          <TouchableOpacity
+            style={{ marginTop: 16, backgroundColor: colors.offWhite, borderRadius: 10, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.grayLight }}
+            onPress={() => { setShowDrillPicker(false); router.push('/(tabs)/build-drill'); }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary }}>+ Create New Drill</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </View>
+  );
+
+  // Update a single drill hole entry
+  const updateDrillHoleEntry = (idx: number, field: string, value: any) => {
+    setDrillHoleEntries(prev => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], [field]: value };
+      return next;
+    });
+  };
+
+  // Render drill entry for a single hole (used inside hole-by-hole step when drill is active)
+  const renderDrillEntrySection = (holeIdx: number) => {
+    if (!selectedDrill || !activeIndices.includes(holeIdx)) return null;
+    const drillHoleIdx = activeIndices.indexOf(holeIdx);
+    const entry = drillHoleEntries[drillHoleIdx] || {};
+    const drillType = selectedDrill.type;
+
+    return (
+      <View style={{ marginTop: 16, backgroundColor: '#fefce8', borderRadius: 12, padding: 14, borderWidth: 2, borderColor: colors.gold }}>
+        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 12 }}>
+          🎯 Drill Entry: {selectedDrill.name}
+        </Text>
+
+        {drillType === 'score-based' && (
+          <>
+            <Text style={s.formLabel}>Score (points earned)</Text>
+            <View style={s.counterRow}>
+              <TouchableOpacity style={s.counterBtn} onPress={() => updateDrillHoleEntry(drillHoleIdx, 'score', Math.max(0, (parseFloat(entry.score as any) || 0) - 1))}>
+                <Text style={s.counterBtnText}>−</Text>
+              </TouchableOpacity>
+              <Text style={s.counterVal}>{entry.score ?? 0}</Text>
+              <TouchableOpacity style={s.counterBtn} onPress={() => updateDrillHoleEntry(drillHoleIdx, 'score', (parseFloat(entry.score as any) || 0) + 1)}>
+                <Text style={s.counterBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        {drillType === 'shot-log' && (
+          <>
+            <Text style={s.formLabel}>Shot Intent</Text>
+            <PillRow
+              options={['Hit Green', 'Lay Up', 'Punch Out', 'Recovery', 'Hit Fairway', 'Other']}
+              value={entry.shot_intent || ''}
+              onChange={v => updateDrillHoleEntry(drillHoleIdx, 'shot_intent', v)}
+              wrap
+            />
+
+            <Text style={s.formLabel}>Shot Shape</Text>
+            <PillRow
+              options={['Straight', 'Draw', 'Fade', 'Punch', 'Flop', 'Knockdown', 'High', 'Low']}
+              value={entry.shot_shape || ''}
+              onChange={v => updateDrillHoleEntry(drillHoleIdx, 'shot_shape', v)}
+              wrap
+            />
+
+            <Text style={s.formLabel}>Club Used</Text>
+            <PillRow
+              options={['Driver', '3W', '5W', '7W', '4H', '5H', '3i', '4i', '5i', '6i', '7i', '8i', '9i', 'PW', 'GW', 'SW', 'LW', 'Putter']}
+              value={entry.club || ''}
+              onChange={v => updateDrillHoleEntry(drillHoleIdx, 'club', v)}
+              wrap
+            />
+
+            <Text style={s.formLabel}>Success? (did shot accomplish goal)</Text>
+            <View style={s.visRow}>
+              {(['Yes', 'No'] as const).map(opt => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[s.visBtn, entry.success === (opt === 'Yes') && s.visBtnActive]}
+                  onPress={() => updateDrillHoleEntry(drillHoleIdx, 'success', opt === 'Yes')}
+                >
+                  <Text style={[s.visBtnText, entry.success === (opt === 'Yes') && s.visBtnTextActive]}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={s.formLabel}>Miss Direction (if not successful)</Text>
+            <PillRow
+              options={['Left', 'Right', 'Short', 'Long', 'On Target']}
+              value={entry.miss_direction || ''}
+              onChange={v => updateDrillHoleEntry(drillHoleIdx, 'miss_direction', v)}
+              wrap
+            />
+          </>
+        )}
+
+        <Text style={s.formLabel}>Notes</Text>
+        <TextInput
+          style={[s.input, { minHeight: 60 }]}
+          value={entry.notes || ''}
+          onChangeText={v => updateDrillHoleEntry(drillHoleIdx, 'notes', v)}
+          placeholder="Optional notes for this hole..."
+          placeholderTextColor={colors.gray}
+          multiline
+        />
+      </View>
+    );
+  };
 
   // Expandable section
   const Section = ({ title, id, children }: { title: string; id: string; children: React.ReactNode }) => {
@@ -1268,6 +1491,47 @@ export default function LogRound() {
           ))}
         </View>
 
+        {/* Drill selection for practice rounds */}
+        {roundType === 'practice' && (
+          <View style={{ marginTop: 16 }}>
+            <Text style={s.formLabel}>🎯 Include a Drill?</Text>
+            <Text style={{ fontSize: 12, color: colors.grayDark, marginBottom: 10 }}>
+              Choose a drill to practice alongside your round, or skip to log a regular round.
+            </Text>
+            {selectedDrill ? (
+              <View style={{ backgroundColor: '#fefce8', borderRadius: 12, padding: 14, borderWidth: 2, borderColor: colors.gold }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: colors.primary }}>{selectedDrill.name}</Text>
+                    <Text style={{ fontSize: 12, color: colors.grayDark, marginTop: 2 }}>
+                      {selectedDrill.type === 'score-based' ? '🎯 Score-Based' : '📝 Shot-Log'} · {selectedDrill.category}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => { setSelectedDrill(null); setDrillRoundId(null); setDrillHoleEntries([]); setDrillLogs([]); }}>
+                    <Text style={{ fontSize: 20, color: colors.gray }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={{ fontSize: 12, color: colors.grayDark, marginTop: 6 }} numberOfLines={2}>{selectedDrill.description}</Text>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  style={[s.goldBtn, { flex: 1, paddingVertical: 12 }]}
+                  onPress={() => setShowDrillPicker(true)}
+                >
+                  <Text style={s.goldBtnText}>🏋️ Choose Drill</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: colors.offWhite, borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.grayLight }}
+                  onPress={() => {}}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: colors.grayDark }}>Skip — Log Round Only</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
         <Text style={s.formLabel}>Tracking Mode</Text>
         <View style={s.modeGrid}>
           {TRACKING_MODES.map(m => (
@@ -1514,6 +1778,9 @@ export default function LogRound() {
         {trackingMode === 'strategy' && renderStrategyFields(actualHoleIdx)}
         {trackingMode === 'mental' && renderMentalFields(actualHoleIdx)}
 
+        {/* Drill entry section — shown alongside hole logging when a drill is active */}
+        {renderDrillEntrySection(actualHoleIdx)}
+
         <View style={s.holeNav}>
           {safePos > 0 && (
             <TouchableOpacity style={s.backBtn} onPress={() => { setCurrentHole(safePos - 1); setExpandedSection(null); setExpandedShots({}); }}>
@@ -1555,6 +1822,42 @@ export default function LogRound() {
       <View style={s.modeBadge}>
         <Text style={s.modeBadgeText}>{TRACKING_MODES.find(m => m.key === trackingMode)?.emoji} {TRACKING_MODES.find(m => m.key === trackingMode)?.label} Mode</Text>
       </View>
+
+      {/* Drill summary in review step */}
+      {selectedDrill && (
+        <View style={{ backgroundColor: '#fefce8', borderRadius: 12, padding: 14, marginTop: 12, borderWidth: 2, borderColor: colors.gold }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.primary }}>🎯 {selectedDrill.name}</Text>
+            <View style={s.defaultBadge}><Text style={s.defaultBadgeText}>{selectedDrill.type === 'score-based' ? 'Score-Based' : 'Shot-Log'}</Text></View>
+          </View>
+          <Text style={{ fontSize: 12, color: colors.grayDark, marginTop: 6 }} numberOfLines={2}>{selectedDrill.description}</Text>
+          {selectedDrill.type === 'score-based' && drillHoleEntries.length > 0 && (
+            <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ fontSize: 13, color: colors.grayDark }}>Drill Total: </Text>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.gold }}>
+                {drillHoleEntries.reduce((sum: number, e: any) => sum + (parseFloat(e.score) || 0), 0)}
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.grayDark, marginLeft: 4 }}>points</Text>
+            </View>
+          )}
+          {selectedDrill.type === 'shot-log' && drillHoleEntries.length > 0 && (
+            <View style={{ marginTop: 10, flexDirection: 'row', gap: 8 }}>
+              <View style={{ backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.gold }}>
+                  {drillHoleEntries.filter((e: any) => e.success === true).length}
+                </Text>
+                <Text style={{ fontSize: 10, color: colors.white }}>Successes</Text>
+              </View>
+              <View style={{ backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.gold }}>
+                  {drillHoleEntries.filter((e: any) => e.success === false && e.shot_intent).length}
+                </Text>
+                <Text style={{ fontSize: 10, color: colors.white }}>Misses</Text>
+              </View>
+            </View>
+          )}
+        </View>
+      )}
 
       {visibility !== 'private' && (
         <View style={{ marginBottom: 16 }}>
@@ -1804,4 +2107,17 @@ const s = StyleSheet.create({
   grid5CellText: { fontSize: 12, fontWeight: '700' },
   grid5OnGreenText: { color: colors.white },
   grid5OffGreenText: { color: colors.grayDark },
+
+  // Drill picker styles
+  modalOverlay: { position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 999 },
+  modal: { backgroundColor: colors.white, borderRadius: 20, width: '92%' as any, maxHeight: '85%' as any, flex: 1, overflow: 'hidden' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.grayLight, backgroundColor: colors.primary },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: colors.gold },
+  modalClose: { fontSize: 24, color: colors.gold },
+  drillPickerCard: { backgroundColor: colors.cardBg, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.grayLight },
+  drillPickerName: { fontSize: 15, fontWeight: '700', color: colors.primary },
+  drillPickerType: { fontSize: 12, color: colors.grayDark, marginTop: 2, marginBottom: 4 },
+  drillPickerDesc: { fontSize: 12, color: colors.gray, lineHeight: 17 },
+  defaultBadge: { backgroundColor: colors.gold, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start', marginTop: 6 },
+  defaultBadgeText: { fontSize: 10, fontWeight: '700', color: colors.primary },
 });
