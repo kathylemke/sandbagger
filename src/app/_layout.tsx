@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from '../lib/AuthContext';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { colors } from '../lib/theme';
-import ErrorBoundary from '../components/ErrorBoundary';
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
@@ -32,9 +31,7 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="light" />
-      <ErrorBoundary>
-        <Slot />
-      </ErrorBoundary>
+      <Slot />
     </>
   );
 }
