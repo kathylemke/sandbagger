@@ -28,6 +28,7 @@ export default function Login() {
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
+  const [forgotLink, setForgotLink] = useState('');
   const [sendingForgot, setSendingForgot] = useState(false);
 
   const handleLogin = async () => {
@@ -84,7 +85,8 @@ export default function Login() {
     if (!forgotEmail) { Alert.alert('Error', 'Please enter your email'); return; }
     setSendingForgot(true);
     try {
-      await resetPassword(forgotEmail);
+      const link = await resetPassword(forgotEmail);
+      setForgotLink(link);
       setForgotSent(true);
     } catch (e: any) {
       Alert.alert('Error', e.message);
@@ -109,11 +111,16 @@ export default function Login() {
                 <Text style={s.successIcon}>📬</Text>
                 <Text style={s.successTitle}>Check your email</Text>
                 <Text style={s.successText}>
-                  We opened your email with your password reset link.{'\n'}
-                  <Text style={{ color: colors.gold }}>Send the email to yourself</Text>, open it, tap the link, and set your new password.
+                  We tried to open your email app with your password reset link.
                 </Text>
+                {forgotLink ? (
+                  <View style={{marginTop: 16, padding: 12, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 8, width: '100%'}}>
+                    <Text style={{color: colors.goldLight, fontSize: 11, marginBottom: 6}}>Or copy this link:</Text>
+                    <Text style={{color: '#fff', fontSize: 12, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'}} numberOfLines={3}>{forgotLink}</Text>
+                  </View>
+                ) : null}
               </View>
-              <TouchableOpacity style={s.ghostBtn} onPress={() => { setForgotMode(false); setForgotSent(false); setForgotEmail(''); }}>
+              <TouchableOpacity style={s.ghostBtn} onPress={() => { setForgotMode(false); setForgotSent(false); setForgotEmail(''); setForgotLink(''); }}>
                 <Text style={s.ghostBtnText}>← Back to sign in</Text>
               </TouchableOpacity>
             </View>

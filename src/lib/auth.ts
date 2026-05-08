@@ -126,7 +126,7 @@ export async function logout(): Promise<void> {
   await AsyncStorage.removeItem(SESSION_KEY);
 }
 
-export async function resetPassword(email: string): Promise<void> {
+export async function resetPassword(email: string): Promise<string> {
   const trimmed = email.toLowerCase().trim();
 
   const { data: user, error: userErr } = await supabase
@@ -151,15 +151,22 @@ export async function resetPassword(email: string): Promise<void> {
   if (insertErr) throw new Error('Could not create reset link. Please try again.');
 
   const link = `https://kathylemke.github.io/sandbagger/auth/magic-link?token=${token}&email=${encodeURIComponent(email)}&mode=reset`;
-  const subject = encodeURIComponent('🔑 Reset your Sandbagger password');
-  const body = encodeURIComponent(
-    `Tap the link below to reset your password:\n\n${link}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`
-  );
-  const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
 
-  const canOpen = await Linking.canOpenURL(mailtoUrl);
-  if (!canOpen) throw new Error('Could not open email app. Please check that your device has a default email app.');
-  await Linking.openURL(mailtoUrl);
+  // Try to open email app; if that fails, still return the link so caller can show it
+  try {
+    const canOpen = await Linking.canOpenURL('mailto:');
+    if (canOpen) {
+      const subject = encodeURIComponent('🔑 Reset your Sandbagger password');
+      const body = encodeURIComponent(
+        `Tap the link below to reset your password:\n\n${link}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`
+      );
+      await Linking.openURL(`mailto:?subject=${subject}&body=${body}`);
+    }
+  } catch (e) {
+    // email app unavailable — that's fine, return the link so the caller can display it
+  }
+
+  return link;
 }
 
 export async function verifyResetToken(token: string, email: string): Promise<boolean> {
