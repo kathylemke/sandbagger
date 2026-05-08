@@ -1,6 +1,5 @@
 import 'react-native-get-random-values';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Linking from 'expo-linking';
 import { supabase } from './supabase';
 import * as CryptoJS from 'crypto-js';
 
@@ -39,9 +38,14 @@ export interface User {
 }
 
 export async function register(email: string, username: string, password: string, displayName: string, profileType: string): Promise<User> {
+  // Check username uniqueness
+  const { data: existingUsername } = await supabase
+    .from('sb_users').select('id').eq('username', username.toLowerCase().trim()).single();
+  if (existingUsername) throw new Error('That username is already taken');
+
   const salt = generateSalt();
   const password_hash = await hashPassword(password, salt);
-  
+
   const { data, error } = await supabase.from('sb_users').insert({
     email: email.toLowerCase().trim(),
     username: username.toLowerCase().trim(),
@@ -56,16 +60,16 @@ export async function register(email: string, username: string, password: string
   return data;
 }
 
-export async function login(email: string, password: string): Promise<User> {
+export async function login(username: string, password: string): Promise<User> {
   const { data: user, error } = await supabase.from('sb_users')
     .select('*')
-    .eq('email', email.toLowerCase().trim())
+    .eq('username', username.toLowerCase().trim())
     .single();
 
-  if (error || !user) throw new Error('Invalid email or password');
+  if (error || !user) throw new Error('Invalid username or password');
 
   const hash = await hashPassword(password, user.salt);
-  if (hash !== user.password_hash) throw new Error('Invalid email or password');
+  if (hash !== user.password_hash) throw new Error('Invalid username or password');
 
   await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user));
   return user;
@@ -113,87 +117,14 @@ export async function changePasswordByEmail(email: string, newPassword: string):
   if (updateErr) throw new Error(updateErr.message);
 }
 
-export async function changePassword(id: string, currentPassword: string, newPassword: string): Promise<void> {
-  const { data: user, error } = await supabase.from('sb_users').select('*').eq('id', id).single();
-  if (error || !user) throw new Error('User not found');
-      const newSalt = generateSalt();
-      const newHash = await hashPassword(newPassword, newSalt);
-      const { error: updateError } = await supabase.from('sb_users').update({ password_hash: newHash, salt: newSalt }).eq('id', id);
-      if (updateError) throw new Error(updateError.message);
+export async function changePassword(id: string, newPassword: string): Promise<void> {
+  const newSalt = generateSalt();
+  const newHash = await hashPassword(newPassword, newSalt);
+  const { error } = await supabase.from('sb_users')
+    .update({ password_hash: newHash, salt: newSalt }).eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export async function logout(): Promise<void> {
   await AsyncStorage.removeItem(SESSION_KEY);
-}
-
-export async function resetPassword(email: string): Promise<string> {
-  const trimmed = email.toLowerCase().trim();
-
-  const { data: user, error: userErr } = await supabase
-    .from('sb_users').select('id').eq('email', trimmed).single();
-
-  if (userErr || !user) {
-    throw new Error('No account found with that email. Try signing up first.');
-  }
-
-  const token = generateToken();
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-
-  const { error: deleteErr } = await supabase.from('sb_magic_links').delete()
-    .eq('email', trimmed).is('used_at', null);
-  if (deleteErr) console.warn('Cleanup error (non-fatal):', deleteErr.message);
-
-  const { error: insertErr } = await supabase.from('sb_magic_links').insert({
-    email: trimmed,
-    token,
-    expires_at: expiresAt,
-  });
-  if (insertErr) throw new Error('Could not create reset link. Please try again.');
-
-  const link = `https://kathylemke.github.io/sandbagger/auth/magic-link?token=${token}&email=${encodeURIComponent(email)}&mode=reset`;
-
-  // Try to open email app; if that fails, still return the link so caller can show it
-  try {
-    const canOpen = await Linking.canOpenURL('mailto:');
-    if (canOpen) {
-      const subject = encodeURIComponent('🔑 Reset your Sandbagger password');
-      const body = encodeURIComponent(
-        `Tap the link below to reset your password:\n\n${link}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`
-      );
-      await Linking.openURL(`mailto:?subject=${subject}&body=${body}`);
-    }
-  } catch (e) {
-    // email app unavailable — that's fine, return the link so the caller can display it
-  }
-
-  return link;
-}
-
-export async function verifyResetToken(token: string, email: string): Promise<boolean> {
-  const { data } = await supabase.from('sb_password_resets')
-    .select('*').eq('token', token).eq('email', email.toLowerCase().trim()).single();
-  if (!data) return false;
-  if (data.used_at) return false;
-  if (new Date(data.expires_at) < new Date()) return false;
-  return true;
-}
-
-export async function completePasswordReset(token: string, email: string, newPassword: string): Promise<void> {
-  const valid = await verifyResetToken(token, email);
-  if (!valid) throw new Error('Invalid or expired reset link. Please request a new one.');
-
-  const { data: user, error: userErr } = await supabase
-    .from('sb_users').select('*').eq('email', email.toLowerCase().trim()).single();
-  if (userErr || !user) throw new Error('User not found');
-
-  const newSalt = generateSalt();
-  const newHash = await hashPassword(newPassword, newSalt);
-
-  const { error: updateErr } = await supabase.from('sb_users')
-    .update({ password_hash: newHash, salt: newSalt }).eq('id', user.id);
-  if (updateErr) throw new Error(updateErr.message);
-
-  // Mark token as used
-  await supabase.from('sb_password_resets').update({ used_at: new Date().toISOString() })
-    .eq('token', token);
 }
