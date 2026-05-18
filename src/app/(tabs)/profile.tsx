@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Modal, FlatList } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { updateProfile, changeEmail, changePassword, removePassword } from '../../lib/auth';
@@ -44,6 +45,15 @@ export default function Profile() {
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
+  // Calendar state
+  const [profileTab, setProfileTab] = useState<'settings' | 'calendar'>('settings');
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [calendarView, setCalendarView] = useState<'month' | 'week'>('month');
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [dayRounds, setDayRounds] = useState<any[]>([]);
+  const [daySessions, setDaySessions] = useState<any[]>([]);
+  const [loadingDay, setLoadingDay] = useState(false);
+
   // Distance unit preference
   const { unit: distanceUnit, setUnit: setDistanceUnit } = useDistanceUnit();
 
@@ -63,6 +73,111 @@ export default function Profile() {
       try { await AsyncStorage.setItem(bagKey, JSON.stringify(newBag)); } catch {}
     }
   }, [bagKey]);
+
+  // Calendar helpers
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days: Date[] = [];
+    // Add padding days from previous month
+    const startPad = firstDay.getDay();
+    for (let i = startPad - 1; i >= 0; i--) {
+      days.push(new Date(year, month, -i));
+    }
+    // Add days of current month
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      days.push(new Date(year, month, d));
+    }
+    // Add padding days from next month
+    const endPad = 42 - days.length;
+    for (let i = 1; i <= endPad; i++) {
+      days.push(new Date(year, month + 1, i));
+    }
+    return days;
+  };
+
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  const formatDateKey = (d: Date) => d.toISOString().split('T')[0];
+
+  const monthName = (date: Date) => date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const getWeekDays = (date: Date) => {
+    const start = new Date(date);
+    start.setDate(start.getDate() - start.getDay());
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  };
+
+  // Load day detail (rounds + sessions)
+  const loadDayDetail = async (day: Date) => {
+    if (!user) return;
+    setLoadingDay(true);
+    setSelectedDay(day);
+    const dateStr = formatDateKey(day);
+
+    // Load rounds
+    const { data: rounds } = await supabase.from('sb_rounds')
+      .select('*, sb_courses(name)')
+      .eq('user_id', user.id)
+      .eq('date_played', dateStr);
+    setDayRounds(rounds || []);
+
+    // Load practice sessions from AsyncStorage
+    const sessionsKey = `sandbagger_training_${user.id}`;
+    try {
+      const stored = await AsyncStorage.getItem(sessionsKey);
+      if (stored) {
+        const allSessions = JSON.parse(stored);
+        const daySessions = allSessions.filter((s: any) => s.date === dateStr);
+        setDaySessions(daySessions);
+      } else {
+        setDaySessions([]);
+      }
+    } catch { setDaySessions([]); }
+
+    setLoadingDay(false);
+  };
+
+  // Get activity dates for a given month
+  const getActivityDates = async (date: Date) => {
+    if (!user) return new Set<string>();
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-31`;
+
+    // Rounds
+    const { data: rounds } = await supabase.from('sb_rounds')
+      .select('date_played')
+      .eq('user_id', user.id)
+      .gte('date_played', startDate)
+      .lte('date_played', endDate);
+    const activity = new Set<string>();
+    (rounds || []).forEach((r: any) => activity.add(r.date_played + '_round'));
+
+    // Sessions
+    const sessionsKey = `sandbagger_training_${user.id}`;
+    try {
+      const stored = await AsyncStorage.getItem(sessionsKey);
+      if (stored) {
+        const allSessions = JSON.parse(stored);
+        allSessions.forEach((s: any) => {
+          if (s.date >= startDate && s.date <= endDate) activity.add(s.date + '_session');
+        });
+      }
+    } catch {}
+
+    return activity;
+  };
 
   const toggleClub = (club: string) => {
     if (bag.includes(club)) {
@@ -245,7 +360,24 @@ export default function Profile() {
         </View>
       </View>
 
-      {/* Edit / Logout */}
+      {/* Sub-tab: Settings | Calendar */}
+      <View style={profileSubTabsS.tabRow}>
+        <TouchableOpacity
+          style={[profileSubTabsS.tab, profileTab === 'settings' && profileSubTabsS.tabActive]}
+          onPress={() => setProfileTab('settings')}
+        >
+          <Text style={[profileSubTabsS.tabText, profileTab === 'settings' && profileSubTabsS.tabTextActive]}>⚙️ Settings</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[profileSubTabsS.tab, profileTab === 'calendar' && profileSubTabsS.tabActive]}
+          onPress={() => { setProfileTab('calendar'); setSelectedDay(null); }}
+        >
+          <Text style={[profileSubTabsS.tabText, profileTab === 'calendar' && profileSubTabsS.tabTextActive]}>📅 Calendar</Text>
+        </TouchableOpacity>
+      </View>
+
+      {profileTab === 'settings' ? (
+        <>{/* Edit / Logout */}
       {!editing ? (
         <View style={s.actionRow}>
           <TouchableOpacity style={s.editBtn} onPress={() => setEditing(true)}>
@@ -535,9 +667,100 @@ export default function Profile() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
-  );
-}
+      </>
+    ) : (
+      /* Calendar View */
+      <View style={calS.container}>
+        {/* Calendar header */}
+        <View style={calS.header}>
+          <TouchableOpacity onPress={() => calendarView === 'month'
+            ? setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1))
+            : setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), calendarDate.getDate() - 7))}>
+            <Text style={calS.navArrow}>‹</Text>
+          </TouchableOpacity>
+          <Text style={calS.monthTitle}>
+            {calendarView === 'month' ? monthName(calendarDate) : `Week of ${getWeekDays(calendarDate)[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+          </Text>
+          <TouchableOpacity onPress={() => calendarView === 'month'
+            ? setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1))
+            : setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), calendarDate.getDate() + 7))}>
+            <Text style={calS.navArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* View toggle */}
+        <View style={calS.viewToggle}>
+          <TouchableOpacity style={[calS.viewBtn, calendarView === 'month' && calS.viewBtnActive]} onPress={() => setCalendarView('month')}>
+            <Text style={[calS.viewBtnText, calendarView === 'month' && calS.viewBtnTextActive]}>Month</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[calS.viewBtn, calendarView === 'week' && calS.viewBtnActive]} onPress={() => setCalendarView('week')}>
+            <Text style={[calS.viewBtnText, calendarView === 'week' && calS.viewBtnTextActive]}>Week</Text>
+          </TouchableOpacity>
+        </View>
+
+        {calendarView === 'month' ? (
+          <CalendarMonthView
+            date={calendarDate}
+            onDayPress={loadDayDetail}
+            getActivityDates={getActivityDates}
+          />
+        ) : (
+          <CalendarWeekView
+            date={calendarDate}
+            onDayPress={loadDayDetail}
+            getActivityDates={getActivityDates}
+          />
+        )}
+
+        {/* Day detail */}
+        {selectedDay && (
+          <View style={calS.dayDetail}>
+            <View style={calS.dayDetailHeader}>
+              <Text style={calS.dayDetailTitle}>
+                {selectedDay.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              </Text>
+              <TouchableOpacity onPress={() => setSelectedDay(null)}>
+                <Text style={calS.dayDetailClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {loadingDay ? (
+              <Text style={calS.loadingText}>Loading...</Text>
+            ) : dayRounds.length === 0 && daySessions.length === 0 ? (
+              <View style={calS.emptyDay}>
+                <Text style={calS.emptyDayIcon}>🏌️</Text>
+                <Text style={calS.emptyDayText}>No activity on this day</Text>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 300 }}>
+                {dayRounds.map(round => (
+                  <View key={round.id} style={calS.activityCard}>
+                    <View style={calS.activityHeader}>
+                      <Text style={calS.activityEmoji}>🏌️</Text>
+                      <Text style={calS.activityType}>Round Played</Text>
+                    </View>
+                    <Text style={calS.activityName}>{(round as any).sb_courses?.name || 'Unknown Course'}</Text>
+                    <Text style={calS.activityScore}>Score: {round.total_score}</Text>
+                  </View>
+                ))}
+                {daySessions.map((session, idx) => (
+                  <View key={idx} style={calS.activityCard}>
+                    <View style={calS.activityHeader}>
+                      <Text style={calS.activityEmoji}>🎯</Text>
+                      <Text style={calS.activityType}>Practice Session</Text>
+                    </View>
+                    <Text style={calS.activityName}>{session.category}</Text>
+                    <Text style={calS.activityScore}>{session.duration_minutes} min · {session.drills?.filter((d: any) => d.completed).length || 0} drills</Text>
+                    {session.focus_area && <Text style={calS.activityFocus}>Focus: {session.focus_area}</Text>}
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        )}
+      </View>
+    )}
+  </ScrollView>
+);
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.offWhite },
@@ -625,3 +848,169 @@ const settingsS = StyleSheet.create({
   toggleText: { fontSize: 13, fontWeight: '600', color: colors.grayDark },
   toggleTextActive: { color: colors.gold },
 });
+
+const profileSubTabsS = StyleSheet.create({
+  tabRow: { flexDirection: 'row', marginHorizontal: 16, marginTop: 16, backgroundColor: colors.white, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: colors.grayLight },
+  tab: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  tabActive: { backgroundColor: colors.primary },
+  tabText: { fontSize: 14, fontWeight: '600', color: colors.grayDark },
+  tabTextActive: { color: colors.gold },
+});
+
+const calS = StyleSheet.create({
+  container: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 16, marginBottom: 12 },
+  navArrow: { fontSize: 28, color: colors.gold, fontWeight: '300', paddingHorizontal: 12 },
+  monthTitle: { fontSize: 17, fontWeight: '800', color: colors.gold },
+  viewToggle: { flexDirection: 'row', backgroundColor: colors.white, borderRadius: 10, padding: 4, marginBottom: 12, borderWidth: 1, borderColor: colors.grayLight },
+  viewBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+  viewBtnActive: { backgroundColor: colors.primary },
+  viewBtnText: { fontSize: 13, fontWeight: '600', color: colors.grayDark },
+  viewBtnTextActive: { color: colors.gold },
+  dayDetail: { backgroundColor: colors.white, borderRadius: 12, padding: 16, marginTop: 12, borderWidth: 1, borderColor: colors.grayLight },
+  dayDetailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  dayDetailTitle: { fontSize: 15, fontWeight: '700', color: colors.primary },
+  dayDetailClose: { fontSize: 18, color: colors.gray, padding: 4 },
+  loadingText: { textAlign: 'center', color: colors.gray, padding: 20 },
+  emptyDay: { alignItems: 'center', paddingVertical: 24 },
+  emptyDayIcon: { fontSize: 32, marginBottom: 8 },
+  emptyDayText: { fontSize: 14, color: colors.grayDark },
+  activityCard: { backgroundColor: colors.offWhite, borderRadius: 10, padding: 12, marginBottom: 8 },
+  activityHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  activityEmoji: { fontSize: 16 },
+  activityType: { fontSize: 12, fontWeight: '700', color: colors.primary },
+  activityName: { fontSize: 14, fontWeight: '600', color: colors.primaryDark, marginLeft: 22 },
+  activityScore: { fontSize: 13, color: colors.gold, fontWeight: '700', marginLeft: 22 },
+  activityFocus: { fontSize: 12, color: colors.grayDark, marginLeft: 22, marginTop: 2 },
+});
+
+const dayS = StyleSheet.create({
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  cell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', padding: 2 },
+  cellOther: { opacity: 0.3 },
+  cellToday: { backgroundColor: colors.gold, borderRadius: 20 },
+  cellSelected: { backgroundColor: colors.primary, borderRadius: 20 },
+  dayText: { fontSize: 13, fontWeight: '600', color: colors.primaryDark },
+  dayTextToday: { color: colors.primary, fontWeight: '800' },
+  dayTextSelected: { color: colors.gold },
+  dotRow: { flexDirection: 'row', gap: 2, marginTop: 2 },
+  dot: { width: 5, height: 5, borderRadius: 3 },
+  dotRound: { backgroundColor: '#3b82f6' },
+  dotSession: { backgroundColor: '#10b981' },
+});
+
+const weekDayS = StyleSheet.create({
+  container: { flexDirection: 'row', marginBottom: 8 },
+  cell: { flex: 1, alignItems: 'center', paddingVertical: 8 },
+  label: { fontSize: 11, fontWeight: '700', color: colors.gray, marginBottom: 6, textTransform: 'uppercase' },
+  dayBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  dayBtnToday: { backgroundColor: colors.gold },
+  dayBtnSelected: { backgroundColor: colors.primary },
+  dayText: { fontSize: 14, fontWeight: '600', color: colors.primaryDark },
+  dayTextToday: { color: colors.primary },
+  dayTextSelected: { color: colors.gold },
+  dotRow: { flexDirection: 'row', gap: 2, marginTop: 3 },
+  dot: { width: 4, height: 4, borderRadius: 2 },
+  dotRound: { backgroundColor: '#3b82f6' },
+  dotSession: { backgroundColor: '#10b981' },
+});
+
+// Calendar Month View Component
+function CalendarMonthView({ date, onDayPress, getActivityDates }: {
+  date: Date;
+  onDayPress: (d: Date) => void;
+  getActivityDates: (d: Date) => Promise<Set<string>>;
+}) {
+  const [activityDates, setActivityDates] = useState<Set<string>>(new Set());
+  const [today] = useState(new Date());
+  const days = getDaysInMonth(date);
+
+  useEffect(() => {
+    getActivityDates(date).then(setActivityDates);
+  }, [date]);
+
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  return (
+    <View>
+      {/* Week day headers */}
+      <View style={dayS.grid}>
+        {weekDays.map(d => (
+          <View key={d} style={{ width: '14.28%', alignItems: 'center', marginBottom: 4 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: colors.gray, textTransform: 'uppercase' }}>{d}</Text>
+          </View>
+        ))}
+      </View>
+      {/* Days grid */}
+      <View style={dayS.grid}>
+        {days.map((day, idx) => {
+          const isCurrentMonth = day.getMonth() === date.getMonth();
+          const isToday = isSameDay(day, today);
+          const dateKey = formatDateKey(day);
+          const hasRound = activityDates.has(dateKey + '_round');
+          const hasSession = activityDates.has(dateKey + '_session');
+          return (
+            <TouchableOpacity
+              key={idx}
+              style={[dayS.cell, !isCurrentMonth && dayS.cellOther]}
+              onPress={() => onDayPress(day)}
+            >
+              <View style={[isToday && dayS.cellToday]}>
+                <Text style={[dayS.dayText, isToday && dayS.dayTextToday]}>{day.getDate()}</Text>
+              </View>
+              {(hasRound || hasSession) && (
+                <View style={dayS.dotRow}>
+                  {hasRound && <View style={[dayS.dot, dayS.dotRound]} />}
+                  {hasSession && <View style={[dayS.dot, dayS.dotSession]} />}
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// Calendar Week View Component
+function CalendarWeekView({ date, onDayPress, getActivityDates }: {
+  date: Date;
+  onDayPress: (d: Date) => void;
+  getActivityDates: (d: Date) => Promise<Set<string>>;
+}) {
+  const [activityDates, setActivityDates] = useState<Set<string>>(new Set());
+  const [today] = useState(new Date());
+  const weekDays = getWeekDays(date);
+
+  useEffect(() => {
+    getActivityDates(date).then(setActivityDates);
+  }, [date]);
+
+  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  return (
+    <View style={weekDayS.container}>
+      {weekDays.map((day, idx) => {
+        const isToday = isSameDay(day, today);
+        const dateKey = formatDateKey(day);
+        const hasRound = activityDates.has(dateKey);
+        const hasSession = activityDates.has(dateKey);
+        return (
+          <View key={idx} style={weekDayS.cell}>
+            <Text style={weekDayS.label}>{dayLabels[idx]}</Text>
+            <TouchableOpacity
+              style={[weekDayS.dayBtn, isToday && weekDayS.dayBtnToday]}
+              onPress={() => onDayPress(day)}
+            >
+              <Text style={[weekDayS.dayText, isToday && weekDayS.dayTextToday]}>{day.getDate()}</Text>
+            </TouchableOpacity>
+            <View style={weekDayS.dotRow}>
+              {hasRound && <View style={[weekDayS.dot, weekDayS.dotRound]} />}
+              {hasSession && <View style={[weekDayS.dot, weekDayS.dotSession]} />}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}

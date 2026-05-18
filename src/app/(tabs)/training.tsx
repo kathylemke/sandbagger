@@ -36,6 +36,7 @@ interface DrillLog {
   results?: Record<string, any>;
   notes?: string;
   completed: boolean;
+  duration_minutes?: number;
 }
 
 type DrillCategory = 'putting' | 'short_game' | 'distance_wedges' | 'full_swing';
@@ -205,8 +206,22 @@ export default function Training() {
     loadSessions();
     // Load user's custom drills from Supabase
     if (user?.id) {
-      supabase.from('sb_drills').select('*').or(`user_id.eq.${user.id},is_default.eq.true`).order('name').then(({ data }) => {
-        setUserDrills(data || []);
+      supabase.from('sb_drills').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data }) => {
+        if (data) {
+          // Map DB fields to DrillTemplate format
+          const mapped: DrillTemplate[] = data.map(d => ({
+            id: d.id,
+            name: d.name,
+            category: d.category as DrillCategory,
+            subcategory: d.subcategory,
+            type: d.type === 'score-based' ? 'evaluation' : 'technique',
+            description: d.description,
+            metrics: d.metrics || [],
+            issue: d.issue || undefined,
+            fix: d.fix || undefined,
+          }));
+          setUserDrills(mapped);
+        }
       });
     }
   }, [user]);
@@ -264,7 +279,7 @@ export default function Training() {
     if (!activeDrill) return;
     const updated = sessionDrills.map(d => {
       if (d.drill_id === activeDrill.drill_id && !d.completed) {
-        return { ...d, results: drillResults, notes: drillNotes, completed: true };
+        return { ...d, results: drillResults, notes: drillNotes, completed: true, duration_minutes: activeDrill.duration_minutes };
       }
       return d;
     });
@@ -461,6 +476,16 @@ export default function Training() {
                 placeholder="How did it go? What did you notice?"
                 placeholderTextColor={colors.gray}
                 multiline
+              />
+
+              <Text style={[s.sectionTitle, { marginTop: 16 }]}>Duration (minutes)</Text>
+              <TextInput
+                style={[s.input, { width: 120 }]}
+                value={activeDrill.duration_minutes?.toString() || ''}
+                onChangeText={v => setActiveDrill({ ...activeDrill, duration_minutes: parseInt(v) || 0 } as any)}
+                keyboardType="number-pad"
+                placeholder="5"
+                placeholderTextColor={colors.gray}
               />
             </ScrollView>
             <View style={s.modalFooter}>
