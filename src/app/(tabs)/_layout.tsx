@@ -27,6 +27,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="stats" options={{ title: 'Stats', headerTitle: 'STATS', tabBarIcon: ({ focused }) => <TabIcon name="stats" focused={focused} /> }} />
       <Tabs.Screen name="training" options={{ title: 'Training', headerTitle: 'TRAINING', tabBarIcon: ({ focused }) => <TabIcon name="training" focused={focused} /> }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', headerTitle: 'PROFILE', tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} /> }} />
+      <Tabs.Screen name="build-drill" options={{ href: null, headerShown: false, tabBarButton: () => null }} />
     </Tabs>
   );
 }
