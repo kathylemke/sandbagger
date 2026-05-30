@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Modal, FlatList } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { updateProfile, changeEmail, changePassword, removePassword } from '../../lib/auth';
@@ -74,6 +73,14 @@ export default function Profile() {
     }
   }, [bagKey]);
 
+  const toggleClub = (club: string) => {
+    if (bag.includes(club)) {
+      saveBag(bag.filter(c => c !== club));
+    } else if (bag.length < MAX_BAG) {
+      saveBag([...bag, club]);
+    }
+  };
+
   // Calendar helpers
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -81,110 +88,54 @@ export default function Profile() {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const days: Date[] = [];
-    // Add padding days from previous month
     const startPad = firstDay.getDay();
-    for (let i = startPad - 1; i >= 0; i--) {
-      days.push(new Date(year, month, -i));
-    }
-    // Add days of current month
-    for (let d = 1; d <= lastDay.getDate(); d++) {
-      days.push(new Date(year, month, d));
-    }
-    // Add padding days from next month
+    for (let i = startPad - 1; i >= 0; i--) { days.push(new Date(year, month, -i)); }
+    for (let d = 1; d <= lastDay.getDate(); d++) { days.push(new Date(year, month, d)); }
     const endPad = 42 - days.length;
-    for (let i = 1; i <= endPad; i++) {
-      days.push(new Date(year, month + 1, i));
-    }
+    for (let i = 1; i <= endPad; i++) { days.push(new Date(year, month + 1, i)); }
     return days;
   };
 
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+  const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
   const formatDateKey = (d: Date) => d.toISOString().split('T')[0];
 
   const monthName = (date: Date) => date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   const getWeekDays = (date: Date) => {
-    const start = new Date(date);
-    start.setDate(start.getDate() - start.getDay());
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
+    const start = new Date(date); start.setDate(start.getDate() - start.getDay());
+    return Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
   };
 
-  // Load day detail (rounds + sessions)
   const loadDayDetail = async (day: Date) => {
     if (!user) return;
     setLoadingDay(true);
     setSelectedDay(day);
     const dateStr = formatDateKey(day);
-
-    // Load rounds
-    const { data: rounds } = await supabase.from('sb_rounds')
-      .select('*, sb_courses(name)')
-      .eq('user_id', user.id)
-      .eq('date_played', dateStr);
+    const { data: rounds } = await supabase.from('sb_rounds').select('*, sb_courses(name)').eq('user_id', user.id).eq('date_played', dateStr);
     setDayRounds(rounds || []);
-
-    // Load practice sessions from AsyncStorage
     const sessionsKey = `sandbagger_training_${user.id}`;
     try {
       const stored = await AsyncStorage.getItem(sessionsKey);
-      if (stored) {
-        const allSessions = JSON.parse(stored);
-        const daySessions = allSessions.filter((s: any) => s.date === dateStr);
-        setDaySessions(daySessions);
-      } else {
-        setDaySessions([]);
-      }
+      if (stored) { const allSessions = JSON.parse(stored); setDaySessions(allSessions.filter((s: any) => s.date === dateStr)); } else { setDaySessions([]); }
     } catch { setDaySessions([]); }
-
     setLoadingDay(false);
   };
 
-  // Get activity dates for a given month
   const getActivityDates = async (date: Date) => {
     if (!user) return new Set<string>();
-    const year = date.getFullYear();
-    const month = date.getMonth();
+    const year = date.getFullYear(); const month = date.getMonth();
     const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
     const endDate = `${year}-${String(month + 1).padStart(2, '0')}-31`;
-
-    // Rounds
-    const { data: rounds } = await supabase.from('sb_rounds')
-      .select('date_played')
-      .eq('user_id', user.id)
-      .gte('date_played', startDate)
-      .lte('date_played', endDate);
+    const { data: rounds } = await supabase.from('sb_rounds').select('date_played').eq('user_id', user.id).gte('date_played', startDate).lte('date_played', endDate);
     const activity = new Set<string>();
     (rounds || []).forEach((r: any) => activity.add(r.date_played + '_round'));
-
-    // Sessions
     const sessionsKey = `sandbagger_training_${user.id}`;
     try {
       const stored = await AsyncStorage.getItem(sessionsKey);
-      if (stored) {
-        const allSessions = JSON.parse(stored);
-        allSessions.forEach((s: any) => {
-          if (s.date >= startDate && s.date <= endDate) activity.add(s.date + '_session');
-        });
-      }
+      if (stored) { const allSessions = JSON.parse(stored); allSessions.forEach((s: any) => { if (s.date >= startDate && s.date <= endDate) activity.add(s.date + '_session'); }); }
     } catch {}
-
     return activity;
-  };
-
-  const toggleClub = (club: string) => {
-    if (bag.includes(club)) {
-      saveBag(bag.filter(c => c !== club));
-    } else if (bag.length < MAX_BAG) {
-      saveBag([...bag, club]);
-    }
   };
 
   useEffect(() => { loadData(); loadBag(); }, [user]);
@@ -339,8 +290,25 @@ export default function Profile() {
 
   return (
     <ScrollView style={s.container} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-      {/* Profile Header */}
-      <View style={s.profileHeader}>
+      {/* Sub-tab: Settings | Calendar */}
+      <View style={profileSubTabsS.tabRow}>
+        <TouchableOpacity
+          style={[profileSubTabsS.tab, profileTab === 'settings' && profileSubTabsS.tabActive]}
+          onPress={() => setProfileTab('settings')}
+        >
+          <Text style={[profileSubTabsS.tabText, profileTab === 'settings' && profileSubTabsS.tabTextActive]}>⚙️ Settings</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[profileSubTabsS.tab, profileTab === 'calendar' && profileSubTabsS.tabActive]}
+          onPress={() => { setProfileTab('calendar'); setSelectedDay(null); }}
+        >
+          <Text style={[profileSubTabsS.tabText, profileTab === 'calendar' && profileSubTabsS.tabTextActive]}>📅 Calendar</Text>
+        </TouchableOpacity>
+      </View>
+
+      {profileTab === 'settings' ? (
+        <>
+        <View style={s.profileHeader}>
         <View style={s.avatar}>
           <Text style={s.avatarText}>{(user?.display_name || '?')[0].toUpperCase()}</Text>
         </View>
@@ -360,24 +328,7 @@ export default function Profile() {
         </View>
       </View>
 
-      {/* Sub-tab: Settings | Calendar */}
-      <View style={profileSubTabsS.tabRow}>
-        <TouchableOpacity
-          style={[profileSubTabsS.tab, profileTab === 'settings' && profileSubTabsS.tabActive]}
-          onPress={() => setProfileTab('settings')}
-        >
-          <Text style={[profileSubTabsS.tabText, profileTab === 'settings' && profileSubTabsS.tabTextActive]}>⚙️ Settings</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[profileSubTabsS.tab, profileTab === 'calendar' && profileSubTabsS.tabActive]}
-          onPress={() => { setProfileTab('calendar'); setSelectedDay(null); }}
-        >
-          <Text style={[profileSubTabsS.tabText, profileTab === 'calendar' && profileSubTabsS.tabTextActive]}>📅 Calendar</Text>
-        </TouchableOpacity>
-      </View>
-
-      {profileTab === 'settings' ? (
-        <>{/* Edit / Logout */}
+      {/* Edit / Logout */}
       {!editing ? (
         <View style={s.actionRow}>
           <TouchableOpacity style={s.editBtn} onPress={() => setEditing(true)}>
@@ -667,7 +618,7 @@ export default function Profile() {
           </View>
         </View>
       </Modal>
-      </>
+    </>
     ) : (
       /* Calendar View */
       <View style={calS.container}>
@@ -760,7 +711,8 @@ export default function Profile() {
       </View>
     )}
   </ScrollView>
-);
+  );
+}
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.offWhite },
@@ -993,8 +945,8 @@ function CalendarWeekView({ date, onDayPress, getActivityDates }: {
       {weekDays.map((day, idx) => {
         const isToday = isSameDay(day, today);
         const dateKey = formatDateKey(day);
-        const hasRound = activityDates.has(dateKey);
-        const hasSession = activityDates.has(dateKey);
+        const hasRound = activityDates.has(dateKey + '_round');
+        const hasSession = activityDates.has(dateKey + '_session');
         return (
           <View key={idx} style={weekDayS.cell}>
             <Text style={weekDayS.label}>{dayLabels[idx]}</Text>
