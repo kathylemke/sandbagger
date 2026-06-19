@@ -6,6 +6,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
 import ScoreCell from '../../components/ScoreCell';
 import ConditionFilteredStats from '../../components/ConditionFilteredStats';
+import ErrorBoundary from '../../components/ErrorBoundary';
 
 // --- Custom Dropdown ---
 function Dropdown<T extends string>({ options, value, onChange, labelMap }: { options: T[]; value: T; onChange: (v: T) => void; labelMap?: Record<string, string> }) {
@@ -344,7 +345,7 @@ export default function Stats() {
   const [recentRounds, setRecentRounds] = useState<RecentRound[]>([]);
   const [wedgeTotalsByRound, setWedgeTotalsByRound] = useState<Map<string, number>>(new Map());
   const [expandedRoundId, setExpandedRoundId] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedCategory, setAdvancedCategory] = useState<'tee' | 'approach' | 'chip' | 'putting'>('tee');
   const [advancedShots, setAdvancedShots] = useState<any[]>([]);
   const [shapeFilter, setShapeFilter] = useState<string>('all');
@@ -542,12 +543,13 @@ export default function Stats() {
 
           {/* Advanced Stats Dashboard */}
           {advancedShots.length > 0 && (
-            <>
-              <TouchableOpacity style={{ backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }} onPress={() => setShowAdvanced(!showAdvanced)}>
-                <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '800' }}>🎯 Advanced Stats Dashboard {showAdvanced ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
+            <ErrorBoundary key={`adv-${advancedCategory}-${shapeFilter}`}>
+              <>
+                <TouchableOpacity style={{ backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }} onPress={() => setShowAdvanced(!showAdvanced)}>
+                  <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '800' }}>🎯 Advanced Stats Dashboard {showAdvanced ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
 
-              {showAdvanced && (() => {
+                {showAdvanced && (() => {
                 const categories: { key: typeof advancedCategory; label: string }[] = [
                   { key: 'tee', label: 'Tee Shots' },
                   { key: 'approach', label: 'Approach Shots' },
@@ -745,6 +747,7 @@ export default function Stats() {
                 );
               })()}
             </>
+            </ErrorBoundary>
           )}
 
           {/* Condition-Filtered Stats */}
