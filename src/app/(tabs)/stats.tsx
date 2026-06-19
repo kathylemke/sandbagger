@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Platform } from 'react-native';
-import Svg, { Circle, Line, Path, G, Text as SvgText } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
@@ -70,7 +69,7 @@ function BarChart({ data, maxVal, label }: { data: { label: string; value: numbe
   );
 }
 
-// --- Petal Chart for shot dispersion (React Native SVG) ---
+// --- Petal Chart for shot dispersion (pure React Native) ---
 const PETAL_DIRECTIONS: { key: string; angle: number; label: string }[] = [
   { key: 'Long', angle: 0, label: 'Long' },
   { key: 'Long-Right', angle: 45, label: 'Long R' },
@@ -81,18 +80,6 @@ const PETAL_DIRECTIONS: { key: string; angle: number; label: string }[] = [
   { key: 'Left', angle: 270, label: 'Left' },
   { key: 'Long-Left', angle: 315, label: 'Long L' },
 ];
-
-function petalPath(cx: number, cy: number, angle: number, length: number, width: number): string {
-  const rad = (angle - 90) * Math.PI / 180;
-  const perpRad = rad + Math.PI / 2;
-  const tipX = cx + Math.cos(rad) * length;
-  const tipY = cy + Math.sin(rad) * length;
-  const cp1X = cx + Math.cos(rad) * length * 0.6 + Math.cos(perpRad) * width;
-  const cp1Y = cy + Math.sin(rad) * length * 0.6 + Math.sin(perpRad) * width;
-  const cp2X = cx + Math.cos(rad) * length * 0.6 - Math.cos(perpRad) * width;
-  const cp2Y = cy + Math.sin(rad) * length * 0.6 - Math.sin(perpRad) * width;
-  return `M ${cx} ${cy} C ${cp1X} ${cp1Y}, ${cp1X} ${cp1Y}, ${tipX} ${tipY} C ${cp2X} ${cp2Y}, ${cp2X} ${cp2Y}, ${cx} ${cy} Z`;
-}
 
 function normalizeMissDir(dir: string): string | null {
   const map: Record<string, string | null> = {
@@ -109,89 +96,69 @@ function normalizeMissDir(dir: string): string | null {
   return dir in map ? map[dir] : dir;
 }
 
+// Pure RN petal chart — uses View rotation, no SVG/native modules
 function PetalChart({ missCounts, totalShots, onTargetCount, title, directions = PETAL_DIRECTIONS, centerText, centerTextColor }: { missCounts: Record<string, number>; totalShots: number; onTargetCount: number; title?: string; directions?: { key: string; angle: number; label: string }[]; centerText?: string; centerTextColor?: string }) {
   const size = 240;
-  const cx = size / 2;
-  const cy = size / 2;
-  const maxR = 80;
   const vals = Object.values(missCounts);
   const maxCount = vals.length > 0 ? Math.max(...vals, 1) : 1;
-  const otR = onTargetCount > 0 ? Math.min(12, 6 + (onTargetCount / Math.max(totalShots, 1)) * 6) : 0;
+  const cx = size / 2;
+  const cy = size / 2;
 
   return (
     <View style={{ alignItems: 'center', marginBottom: 16 }}>
       {title && <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>{title}</Text>}
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* outer + inner grid circles */}
-        <Circle cx={cx} cy={cy} r={maxR} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
-        <Circle cx={cx} cy={cy} r={maxR * 0.5} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
-        {/* radial guide lines */}
-        {directions.map((d, i) => {
-          const rad = (d.angle - 90) * Math.PI / 180;
-          return (
-            <Line
-              key={`gl-${i}`}
-              x1={cx} y1={cy}
-              x2={cx + Math.cos(rad) * maxR}
-              y2={cy + Math.sin(rad) * maxR}
-              stroke="#e5e7eb" strokeWidth={0.5}
-            />
-          );
-        })}
-        {/* petals */}
+      <View style={{ width: size, height: size, position: 'relative', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa', borderRadius: 8 }}>
+        {/* Outer ring */}
+        <View style={{ position: 'absolute', width: size - 20, height: size - 20, borderRadius: (size - 20) / 2, borderWidth: 1, borderColor: '#e5e7eb' }} />
+        {/* Inner ring */}
+        <View style={{ position: 'absolute', width: (size - 20) / 2, height: (size - 20) / 2, borderRadius: (size - 20) / 4, borderWidth: 1, borderColor: '#e5e7eb' }} />
+        {/* Petals — rotated rectangles */}
         {directions.map((d, i) => {
           const count = missCounts[d.key] || 0;
           if (count === 0) return null;
-          const length = (count / maxCount) * maxR;
-          const width = Math.max(8, length * 0.35);
+          const length = Math.max(20, (count / maxCount) * 90);
+          const width = Math.max(12, length * 0.35);
           return (
-            <Path
+            <View
               key={`p-${i}`}
-              d={petalPath(cx, cy, d.angle, length, width)}
-              fill={colors.gold}
-              opacity={0.75}
+              style={{
+                position: 'absolute',
+                width: length,
+                height: width,
+                backgroundColor: colors.gold,
+                opacity: 0.75,
+                borderRadius: width / 2,
+                top: cy - width / 2,
+                left: cx - length / 2,
+                transform: [{ rotate: `${d.angle - 90}deg`, translateX: length / 2 }],
+              }}
             />
           );
         })}
-        {/* center: dark primary circle, then green on-target dot on top */}
-        <Circle cx={cx} cy={cy} r={12} fill={colors.primary} />
-        {onTargetCount > 0 && (
-          <Circle cx={cx} cy={cy} r={otR} fill="#16a34a" />
-        )}
-        {centerText && (
-          <SvgText
-            x={cx} y={cy + 1}
-            fontSize={9}
-            fill={centerTextColor || colors.gold}
-            fontWeight="800"
-            textAnchor="middle"
-            alignmentBaseline="central"
-          >
-            {centerText}
-          </SvgText>
-        )}
-        {/* labels around perimeter */}
+        {/* Center dot */}
+        <View style={{ position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+          {onTargetCount > 0 && (
+            <View style={{ width: Math.min(20, 10 + (onTargetCount / Math.max(totalShots, 1)) * 10), height: Math.min(20, 10 + (onTargetCount / Math.max(totalShots, 1)) * 10), borderRadius: 10, backgroundColor: '#16a34a' }} />
+          )}
+          {centerText && (
+            <Text style={{ position: 'absolute', fontSize: 9, fontWeight: '800', color: centerTextColor || colors.gold }}>{centerText}</Text>
+          )}
+        </View>
+        {/* Direction labels around the perimeter */}
         {directions.map((d, i) => {
           const count = missCounts[d.key] || 0;
           if (count === 0) return null;
           const rad = (d.angle - 90) * Math.PI / 180;
-          const lx = cx + Math.cos(rad) * (maxR + 16);
-          const ly = cy + Math.sin(rad) * (maxR + 16);
+          const labelR = 110;
+          const lx = cx + Math.cos(rad) * labelR;
+          const ly = cy + Math.sin(rad) * labelR;
           return (
-            <SvgText
-              key={`lbl-${i}`}
-              x={lx} y={ly}
-              fontSize={9}
-              fill={colors.primary}
-              fontWeight="700"
-              textAnchor="middle"
-              alignmentBaseline="central"
-            >
-              {`${d.label} ${count}`}
-            </SvgText>
+            <View key={`lbl-${i}`} style={{ position: 'absolute', left: lx - 30, top: ly - 10, width: 60, alignItems: 'center' }}>
+              <Text style={{ fontSize: 9, fontWeight: '700', color: colors.primary }}>{`${d.label} ${count}`}</Text>
+            </View>
           );
         })}
-      </Svg>
+      </View>
       {onTargetCount > 0 && <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>On Target: {onTargetCount} ({Math.round(onTargetCount / Math.max(totalShots, 1) * 100)}%)</Text>}
     </View>
   );
@@ -208,7 +175,6 @@ const PUTT_DIRECTIONS: { key: string; angle: number; label: string }[] = [
 ];
 
 function PuttPetalChart({ shots }: { shots: any[] }) {
-  const size = 240;
   const counts: Record<string, number> = {};
   let madeCount = 0;
   shots.forEach(sh => {
