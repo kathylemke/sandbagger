@@ -497,211 +497,203 @@ export default function Stats() {
             <FairwayMissBar leftPct={missLPct} rightPct={missRPct} leftCount={missLCount} rightCount={missRCount} />
           )}
 
-          {/* Advanced Stats Dashboard */}
+          {/* Advanced Stats Dashboard — text/list-only, no charts */}
           {advancedShots.length > 0 && (
-            <>
-              <TouchableOpacity style={{ backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }} onPress={() => setShowAdvanced(!showAdvanced)}>
-                <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '800' }}>🎯 Advanced Stats Dashboard {showAdvanced ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
+            <View style={{ marginBottom: 20 }}>
+              <View style={{ backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '800' }}>🎯 Advanced Stats Dashboard</Text>
+              </View>
 
-              {showAdvanced && (() => {
-                const categories: { key: typeof advancedCategory; label: string }[] = [
-                  { key: 'tee', label: 'Tee Shots' },
-                  { key: 'approach', label: 'Approach Shots' },
-                  { key: 'chip', label: 'Chip/Pitch' },
-                  { key: 'putting', label: 'Putting' },
-                ];
+              {/* Category selector dropdown */}
+              <Dropdown
+                options={['tee', 'approach', 'chip', 'putting']}
+                value={advancedCategory}
+                onChange={(v) => { setAdvancedCategory(v); setShapeFilter('all'); }}
+                labelMap={{ tee: 'Tee Shots', approach: 'Approach Shots', chip: 'Chip/Pitch', putting: 'Putting' }}
+              />
 
-                const isPutt = (sh: any) => !!sh.is_putt || !!sh.putt_result || !!sh.putt_break || !!sh.putt_distance || !!sh.putt_hit_line || !!sh.putt_hit_speed;
-                const catShots = advancedShots.filter(sh => {
-                  if (advancedCategory === 'tee') return sh.shot_number === 1 && !isPutt(sh);
-                  if (advancedCategory === 'approach') return sh.intention === 'hit_green' && !isPutt(sh);
-                  if (advancedCategory === 'chip') return (sh.intention === 'chip_pitch' || sh.intention === 'recovery' || sh.intention === 'punch_out') && !isPutt(sh);
-                  if (advancedCategory === 'putting') return isPutt(sh);
-                  return false;
-                });
-
-                const totalShots = catShots.length;
-
-                // Get unique shot shapes for filter
-                const uniqueShapes = new Set<string>();
-                catShots.forEach(sh => { if (sh.shot_shape) uniqueShapes.add(sh.shot_shape); });
-                const shapeOptions = ['all', ...Array.from(uniqueShapes)];
-
-                // Apply shape filter for non-putting
-                const filteredCatShots = advancedCategory !== 'putting' && shapeFilter !== 'all'
-                  ? catShots.filter(sh => sh.shot_shape === shapeFilter)
-                  : catShots;
-
-                // Build petal miss counts for non-putting categories
-                const petalMissCounts: Record<string, number> = {};
-                let onTargetCount = 0;
-                if (advancedCategory !== 'putting') {
-                  filteredCatShots.forEach(sh => {
-                    if (!sh.miss_direction) return;
-                    const normalized = normalizeMissDir(sh.miss_direction);
-                    if (normalized === null) { onTargetCount++; return; }
-                    petalMissCounts[normalized] = (petalMissCounts[normalized] || 0) + 1;
+              {(() => {
+                try {
+                  const isPutt = (sh: any) => !!sh.is_putt || !!sh.putt_result || !!sh.putt_break || !!sh.putt_distance || !!sh.putt_hit_line || !!sh.putt_hit_speed;
+                  const catShots = advancedShots.filter(sh => {
+                    if (advancedCategory === 'tee') return sh.shot_number === 1 && !isPutt(sh);
+                    if (advancedCategory === 'approach') return sh.intention === 'hit_green' && !isPutt(sh);
+                    if (advancedCategory === 'chip') return (sh.intention === 'chip_pitch' || sh.intention === 'recovery' || sh.intention === 'punch_out') && !isPutt(sh);
+                    if (advancedCategory === 'putting') return isPutt(sh);
+                    return false;
                   });
+
+                  const totalShots = catShots.length;
+
+                  // Shot shape breakdown
+                  const shapes: Record<string, number> = {};
+                  catShots.forEach(sh => {
+                    if (sh.shot_shape) shapes[sh.shot_shape] = (shapes[sh.shot_shape] || 0) + 1;
+                  });
+
+                  // Miss direction breakdown (non-putting)
+                  const misses: Record<string, number> = {};
+                  let onTargetCount = 0;
+                  if (advancedCategory !== 'putting') {
+                    catShots.forEach(sh => {
+                      if (!sh.miss_direction) return;
+                      const normalized = normalizeMissDir(sh.miss_direction);
+                      if (normalized === null) { onTargetCount++; return; }
+                      misses[normalized] = (misses[normalized] || 0) + 1;
+                    });
+                  }
+
+                  // Result lies
+                  const results: Record<string, number> = {};
+                  catShots.forEach(sh => {
+                    if (sh.result_lie) results[sh.result_lie] = (results[sh.result_lie] || 0) + 1;
+                  });
+
+                  // Putt stats
+                  const puttLineHit = catShots.filter(sh => sh.putt_hit_line === 'yes').length;
+                  const puttLineMiss = catShots.filter(sh => sh.putt_hit_line === 'no').length;
+                  const puttLineTotal = puttLineHit + puttLineMiss;
+                  const pullCount = catShots.filter(sh => sh.putt_line_miss === 'Pull').length;
+                  const pushCount = catShots.filter(sh => sh.putt_line_miss === 'Push').length;
+
+                  const puttSpeedHit = catShots.filter(sh => sh.putt_hit_speed === 'yes').length;
+                  const puttSpeedMiss = catShots.filter(sh => sh.putt_hit_speed === 'no').length;
+                  const puttSpeedTotal = puttSpeedHit + puttSpeedMiss;
+                  const hardCount = catShots.filter(sh => sh.putt_speed_miss === 'Hard').length;
+                  const softCount = catShots.filter(sh => sh.putt_speed_miss === 'Soft').length;
+
+                  const madePuttCount = catShots.filter(sh => sh.putt_result === 'made').length;
+                  const totalPuttAttempts = catShots.filter(sh => sh.putt_result).length;
+                  const makePct = totalPuttAttempts > 0 ? Math.round(madePuttCount / totalPuttAttempts * 100) : 0;
+
+                  const directedShots = catShots.filter(sh => sh.miss_direction).length;
+
+                  return (
+                    <>
+                      <Text style={{ fontSize: 13, color: colors.gray, marginBottom: 12 }}>{totalShots} shots tracked</Text>
+
+                      {totalShots === 0 ? (
+                        <Text style={{ fontSize: 13, color: colors.gray, fontStyle: 'italic', textAlign: 'center', padding: 16 }}>No shots tracked in this category yet</Text>
+                      ) : (
+                        <>
+                          {/* Miss direction breakdown (non-putting) — text list */}
+                          {advancedCategory !== 'putting' && (
+                            <View style={{ backgroundColor: colors.white, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.grayLight }}>
+                              <Text style={s.sectionTitle}>Shot Dispersion</Text>
+                              <Text style={{ fontSize: 13, color: colors.primary, marginBottom: 8 }}>🎯 On Target: {onTargetCount} of {directedShots} ({Math.round(onTargetCount / Math.max(directedShots, 1) * 100)}%)</Text>
+                              {Object.entries(misses).sort(([,a],[,b]) => b - a).map(([dir, count]) => (
+                                <View key={dir} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                                  <Text style={{ width: 100, fontSize: 13, fontWeight: '600', color: colors.primary }}>{dir}</Text>
+                                  <View style={{ flex: 1, height: 20, backgroundColor: colors.grayLight, borderRadius: 10, overflow: 'hidden', marginHorizontal: 8 }}>
+                                    <View style={{ height: '100%', width: `${(count / Math.max(directedShots, 1)) * 100}%`, backgroundColor: colors.gold, borderRadius: 10 }} />
+                                  </View>
+                                  <Text style={{ width: 40, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{count}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+
+                          {/* Shot shape breakdown (non-putting) */}
+                          {advancedCategory !== 'putting' && Object.keys(shapes).length > 0 && (
+                            <View style={{ backgroundColor: colors.white, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.grayLight }}>
+                              <Text style={s.sectionTitle}>Intended Shot Shape</Text>
+                              {Object.entries(shapes).sort(([,a],[,b]) => b - a).map(([shape, count]) => (
+                                <View key={shape} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                                  <Text style={{ width: 100, fontSize: 13, fontWeight: '600', color: colors.primary }}>{shape}</Text>
+                                  <View style={{ flex: 1, height: 20, backgroundColor: colors.grayLight, borderRadius: 10, overflow: 'hidden', marginHorizontal: 8 }}>
+                                    <View style={{ height: '100%', width: `${(count / totalShots) * 100}%`, backgroundColor: colors.gold, borderRadius: 10 }} />
+                                  </View>
+                                  <Text style={{ width: 40, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((count / totalShots) * 100)}%</Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+
+                          {/* Result lie breakdown (non-putting) */}
+                          {advancedCategory !== 'putting' && Object.keys(results).length > 0 && (
+                            <View style={{ backgroundColor: colors.white, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.grayLight }}>
+                              <Text style={s.sectionTitle}>Where You Ended Up</Text>
+                              {Object.entries(results).sort(([,a],[,b]) => b - a).map(([lie, count]) => (
+                                <View key={lie} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                                  <Text style={{ width: 100, fontSize: 13, fontWeight: '600', color: colors.primary }}>{lie}</Text>
+                                  <View style={{ flex: 1, height: 20, backgroundColor: colors.grayLight, borderRadius: 10, overflow: 'hidden', marginHorizontal: 8 }}>
+                                    <View style={{ height: '100%', width: `${(count / totalShots) * 100}%`, backgroundColor: lie === 'Green' || lie === 'Fairway' ? '#16a34a' : colors.gold, borderRadius: 10 }} />
+                                  </View>
+                                  <Text style={{ width: 40, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((count / totalShots) * 100)}%</Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+
+                          {/* Putting: make % + line/speed */}
+                          {advancedCategory === 'putting' && (
+                            <>
+                              <View style={{ backgroundColor: colors.white, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.grayLight }}>
+                                <Text style={s.sectionTitle}>Putting</Text>
+                                <Text style={{ fontSize: 28, fontWeight: '800', color: colors.primary, textAlign: 'center', marginVertical: 8 }}>{makePct}%</Text>
+                                <Text style={{ fontSize: 12, color: colors.gray, textAlign: 'center', marginBottom: 8 }}>Made {madePuttCount} of {totalPuttAttempts} attempts</Text>
+                              </View>
+
+                              {puttLineTotal > 0 && (
+                                <View style={{ backgroundColor: colors.white, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.grayLight }}>
+                                  <Text style={s.sectionTitle}>Hit Your Line</Text>
+                                  <View style={s.summaryRow}>
+                                    <View style={s.summaryCard}>
+                                      <Text style={s.summaryNum}>{Math.round((puttLineHit / puttLineTotal) * 100)}%</Text>
+                                      <Text style={s.summaryLabel}>Yes ({puttLineHit})</Text>
+                                    </View>
+                                    <View style={s.summaryCard}>
+                                      <Text style={s.summaryNum}>{Math.round((puttLineMiss / puttLineTotal) * 100)}%</Text>
+                                      <Text style={s.summaryLabel}>No ({puttLineMiss})</Text>
+                                    </View>
+                                  </View>
+                                  {puttLineMiss > 0 && (
+                                    <View style={s.summaryRow}>
+                                      <View style={s.summaryCard}><Text style={s.summaryNum}>{pullCount}</Text><Text style={s.summaryLabel}>Pull</Text></View>
+                                      <View style={s.summaryCard}><Text style={s.summaryNum}>{pushCount}</Text><Text style={s.summaryLabel}>Push</Text></View>
+                                    </View>
+                                  )}
+                                </View>
+                              )}
+
+                              {puttSpeedTotal > 0 && (
+                                <View style={{ backgroundColor: colors.white, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.grayLight }}>
+                                  <Text style={s.sectionTitle}>Hit Your Speed</Text>
+                                  <View style={s.summaryRow}>
+                                    <View style={s.summaryCard}>
+                                      <Text style={s.summaryNum}>{Math.round((puttSpeedHit / puttSpeedTotal) * 100)}%</Text>
+                                      <Text style={s.summaryLabel}>Yes ({puttSpeedHit})</Text>
+                                    </View>
+                                    <View style={s.summaryCard}>
+                                      <Text style={s.summaryNum}>{Math.round((puttSpeedMiss / puttSpeedTotal) * 100)}%</Text>
+                                      <Text style={s.summaryLabel}>No ({puttSpeedMiss})</Text>
+                                    </View>
+                                  </View>
+                                  {puttSpeedMiss > 0 && (
+                                    <View style={s.summaryRow}>
+                                      <View style={s.summaryCard}><Text style={s.summaryNum}>{hardCount}</Text><Text style={s.summaryLabel}>Hard</Text></View>
+                                      <View style={s.summaryCard}><Text style={s.summaryNum}>{softCount}</Text><Text style={s.summaryLabel}>Soft</Text></View>
+                                    </View>
+                                  )}
+                                </View>
+                              )}
+
+                              <PuttDistanceStats shots={catShots} />
+                            </>
+                          )}
+                        </>
+                      )}
+                    </>
+                  );
+                } catch (e: any) {
+                  return (
+                    <View style={{ padding: 16, backgroundColor: '#fef3c7', borderRadius: 8 }}>
+                      <Text style={{ fontSize: 13, color: '#92400e' }}>Could not render advanced stats: {e?.message || 'unknown error'}</Text>
+                    </View>
+                  );
                 }
-
-                // Shot shape breakdown
-                const shapes: Record<string, number> = {};
-                catShots.forEach(sh => {
-                  if (sh.shot_shape) shapes[sh.shot_shape] = (shapes[sh.shot_shape] || 0) + 1;
-                });
-
-                // Putt stats
-                const puttLineHit = catShots.filter(sh => sh.putt_hit_line === 'yes').length;
-                const puttLineMiss = catShots.filter(sh => sh.putt_hit_line === 'no').length;
-                const puttLineTotal = puttLineHit + puttLineMiss;
-                const pullCount = catShots.filter(sh => sh.putt_line_miss === 'Pull').length;
-                const pushCount = catShots.filter(sh => sh.putt_line_miss === 'Push').length;
-
-                const puttSpeedHit = catShots.filter(sh => sh.putt_hit_speed === 'yes').length;
-                const puttSpeedMiss = catShots.filter(sh => sh.putt_hit_speed === 'no').length;
-                const puttSpeedTotal = puttSpeedHit + puttSpeedMiss;
-                const hardCount = catShots.filter(sh => sh.putt_speed_miss === 'Hard').length;
-                const softCount = catShots.filter(sh => sh.putt_speed_miss === 'Soft').length;
-
-                // Result lies
-                const results: Record<string, number> = {};
-                catShots.forEach(sh => {
-                  if (sh.result_lie) results[sh.result_lie] = (results[sh.result_lie] || 0) + 1;
-                });
-
-                return (
-                  <View style={{ marginBottom: 20 }}>
-                    {/* Category selector dropdown */}
-                    <Dropdown
-                      options={categories.map(c => c.key)}
-                      value={advancedCategory}
-                      onChange={(v) => { setAdvancedCategory(v); setShapeFilter('all'); }}
-                      labelMap={Object.fromEntries(categories.map(c => [c.key, c.label]))}
-                    />
-
-                    <Text style={{ fontSize: 13, color: colors.gray, marginBottom: 12 }}>{totalShots} shots tracked</Text>
-
-                    {totalShots > 0 && (
-                      <>
-                        {/* PETAL CHART for non-putting */}
-                        {advancedCategory !== 'putting' && (
-                          <>
-                            {/* Shape filter dropdown */}
-                            {uniqueShapes.size > 0 && (
-                              <Dropdown
-                                options={shapeOptions}
-                                value={shapeFilter}
-                                onChange={setShapeFilter}
-                                labelMap={{ all: 'Overall' }}
-                              />
-                            )}
-                            <PetalChart missCounts={petalMissCounts} totalShots={filteredCatShots.length} onTargetCount={onTargetCount} title="Shot Dispersion" />
-                          </>
-                        )}
-
-                        {/* PUTTING: Petal + Distance Stats */}
-                        {advancedCategory === 'putting' && (
-                          <>
-                            <PuttPetalChart shots={catShots} />
-                            <PuttDistanceStats shots={catShots} />
-                          </>
-                        )}
-
-                        {/* Shot shape breakdown (non-putting) */}
-                        {advancedCategory !== 'putting' && Object.keys(shapes).length > 0 && (
-                          <>
-                            <Text style={s.sectionTitle}>Intended Shot Shape</Text>
-                            {Object.entries(shapes).sort(([,a],[,b]) => b - a).map(([shape, count]) => (
-                              <View key={shape} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                                <Text style={{ width: 90, fontSize: 13, fontWeight: '600', color: colors.primary }}>{shape}</Text>
-                                <View style={{ flex: 1, height: 24, backgroundColor: colors.grayLight, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 }}>
-                                  <View style={{ height: '100%', width: `${(count / totalShots) * 100}%`, backgroundColor: colors.gold, borderRadius: 12 }} />
-                                </View>
-                                <Text style={{ width: 50, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((count / totalShots) * 100)}%</Text>
-                              </View>
-                            ))}
-                          </>
-                        )}
-
-                        {/* Result lie breakdown (non-putting) */}
-                        {advancedCategory !== 'putting' && Object.keys(results).length > 0 && (
-                          <>
-                            <Text style={s.sectionTitle}>Where You Ended Up</Text>
-                            {Object.entries(results).sort(([,a],[,b]) => b - a).map(([lie, count]) => (
-                              <View key={lie} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                                <Text style={{ width: 90, fontSize: 13, fontWeight: '600', color: colors.primary }}>{lie}</Text>
-                                <View style={{ flex: 1, height: 24, backgroundColor: colors.grayLight, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 }}>
-                                  <View style={{ height: '100%', width: `${(count / totalShots) * 100}%`, backgroundColor: lie === 'Green' || lie === 'Fairway' ? '#16a34a' : colors.gold, borderRadius: 12 }} />
-                                </View>
-                                <Text style={{ width: 50, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((count / totalShots) * 100)}%</Text>
-                              </View>
-                            ))}
-                          </>
-                        )}
-
-                        {/* Putting-specific: line & speed */}
-                        {advancedCategory === 'putting' && puttLineTotal > 0 && (
-                          <>
-                            <Text style={s.sectionTitle}>Hit Your Line</Text>
-                            <View style={s.summaryRow}>
-                              <View style={s.summaryCard}>
-                                <Text style={s.summaryNum}>{Math.round((puttLineHit / puttLineTotal) * 100)}%</Text>
-                                <Text style={s.summaryLabel}>Yes</Text>
-                              </View>
-                              <View style={s.summaryCard}>
-                                <Text style={s.summaryNum}>{Math.round((puttLineMiss / puttLineTotal) * 100)}%</Text>
-                                <Text style={s.summaryLabel}>No</Text>
-                              </View>
-                            </View>
-                            {puttLineMiss > 0 && (
-                              <View style={s.summaryRow}>
-                                <View style={s.summaryCard}>
-                                  <Text style={s.summaryNum}>{pullCount}</Text>
-                                  <Text style={s.summaryLabel}>Pull</Text>
-                                </View>
-                                <View style={s.summaryCard}>
-                                  <Text style={s.summaryNum}>{pushCount}</Text>
-                                  <Text style={s.summaryLabel}>Push</Text>
-                                </View>
-                              </View>
-                            )}
-                          </>
-                        )}
-
-                        {advancedCategory === 'putting' && puttSpeedTotal > 0 && (
-                          <>
-                            <Text style={s.sectionTitle}>Hit Your Speed</Text>
-                            <View style={s.summaryRow}>
-                              <View style={s.summaryCard}>
-                                <Text style={s.summaryNum}>{Math.round((puttSpeedHit / puttSpeedTotal) * 100)}%</Text>
-                                <Text style={s.summaryLabel}>Yes</Text>
-                              </View>
-                              <View style={s.summaryCard}>
-                                <Text style={s.summaryNum}>{Math.round((puttSpeedMiss / puttSpeedTotal) * 100)}%</Text>
-                                <Text style={s.summaryLabel}>No</Text>
-                              </View>
-                            </View>
-                            {puttSpeedMiss > 0 && (
-                              <View style={s.summaryRow}>
-                                <View style={s.summaryCard}>
-                                  <Text style={s.summaryNum}>{hardCount}</Text>
-                                  <Text style={s.summaryLabel}>Hard</Text>
-                                </View>
-                                <View style={s.summaryCard}>
-                                  <Text style={s.summaryNum}>{softCount}</Text>
-                                  <Text style={s.summaryLabel}>Soft</Text>
-                                </View>
-                              </View>
-                            )}
-                          </>
-                        )}
-                      </>
-                    )}
-                  </View>
-                );
               })()}
-            </>
+            </View>
           )}
 
           {/* Condition-Filtered Stats */}
