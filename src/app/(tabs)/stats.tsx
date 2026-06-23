@@ -1,37 +1,10 @@
-import { useState, useEffect, useCallback, useRef, Component, ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Platform } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
 import ScoreCell from '../../components/ScoreCell';
 import ConditionFilteredStats from '../../components/ConditionFilteredStats';
-
-// ErrorBoundary to catch render errors and surface them as text
-interface EBState { hasError: boolean; errorMessage: string; errorStack: string; }
-class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
-  state: EBState = { hasError: false, errorMessage: '', errorStack: '' };
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true, errorMessage: error?.message || String(error), errorStack: error?.stack || '' };
-  }
-  componentDidCatch(error: any, info: any) {
-    console.error('Dashboard render error:', error?.message, error?.stack);
-    console.error('Component stack:', info?.componentStack);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={{ backgroundColor: '#fee', borderRadius: 8, padding: 12, marginVertical: 12, borderWidth: 1, borderColor: '#fcc' }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#c00', marginBottom: 6 }}>Dashboard error</Text>
-          <Text style={{ fontSize: 11, color: '#600', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{this.state.errorMessage}</Text>
-          {this.state.errorStack ? (
-            <Text style={{ fontSize: 9, color: '#800', marginTop: 6, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{this.state.errorStack.split('\n').slice(0, 5).join('\n')}</Text>
-          ) : null}
-        </View>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 // --- Custom Dropdown ---
 function Dropdown<T extends string>({ options, value, onChange, labelMap }: { options: T[]; value: T; onChange: (v: T) => void; labelMap?: Record<string, string> }) {
@@ -163,37 +136,20 @@ function buildSvgPetal(cx: number, cy: number, directions: typeof PETAL_DIRECTIO
 }
 
 function PetalChart({ missCounts, totalShots, onTargetCount, title }: { missCounts: Record<string, number>; totalShots: number; onTargetCount: number; title?: string }) {
-  // Text-based shot dispersion display (avoids react-native-svg render issues)
-  const directionsWithCounts = PETAL_DIRECTIONS.map(d => ({
-    ...d,
-    count: missCounts[d.key] || 0,
-  }));
-  const totalMisses = directionsWithCounts.reduce((sum, d) => sum + d.count, 0);
+  const size = 240;
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = 80;
+  const otR = onTargetCount > 0 ? Math.min(12, 6 + (onTargetCount / Math.max(totalShots, 1)) * 6) : 0;
+  const center = `<circle cx="${cx}" cy="${cy}" r="12" fill="${colors.primary}"/>` + (onTargetCount > 0 ? `<circle cx="${cx}" cy="${cy}" r="${otR}" fill="#16a34a"/>` : '');
+  const inner = buildSvgPetal(cx, cy, PETAL_DIRECTIONS, missCounts, maxR, center);
+  const svgHtml = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
 
   return (
-    <View style={{ marginBottom: 16, backgroundColor: colors.white, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.grayLight }}>
-      {title && <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8, textAlign: 'center' }}>{title}</Text>}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-        {directionsWithCounts.map(d => {
-          const pct = totalShots > 0 ? Math.round((d.count / totalShots) * 100) : 0;
-          return (
-            <View key={d.key} style={{ width: '48%', flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Text style={{ width: 60, fontSize: 11, fontWeight: '600', color: colors.primary }}>{d.label}</Text>
-              <View style={{ flex: 1, height: 16, backgroundColor: colors.grayLight, borderRadius: 8, overflow: 'hidden', marginHorizontal: 6 }}>
-                {d.count > 0 && (
-                  <View style={{ height: '100%', width: `${Math.max(15, pct)}%`, backgroundColor: colors.gold, borderRadius: 8 }} />
-                )}
-              </View>
-              <Text style={{ width: 28, fontSize: 11, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{d.count}</Text>
-            </View>
-          );
-        })}
-      </View>
-      {onTargetCount > 0 && (
-        <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 8, textAlign: 'center' }}>
-          On Target: {onTargetCount} ({Math.round(onTargetCount / Math.max(totalShots, 1) * 100)}%)
-        </Text>
-      )}
+    <View style={{ alignItems: 'center', marginBottom: 16 }}>
+      {title && <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>{title}</Text>}
+      <Text style={{ fontSize: 12, color: colors.primary }}>Shot dispersion chart (text view)</Text>
+      {onTargetCount > 0 && <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>On Target: {onTargetCount} ({Math.round(onTargetCount / Math.max(totalShots, 1) * 100)}%)</Text>}
     </View>
   );
 }
@@ -209,7 +165,10 @@ const PUTT_DIRECTIONS: { key: string; angle: number; label: string }[] = [
 ];
 
 function PuttPetalChart({ shots }: { shots: any[] }) {
-  // Text-based putt dispersion display (avoids react-native-svg render issues)
+  const size = 240;
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = 80;
   const counts: Record<string, number> = {};
   let madeCount = 0;
   shots.forEach(sh => {
@@ -219,34 +178,15 @@ function PuttPetalChart({ shots }: { shots: any[] }) {
   });
   const total = shots.filter(sh => sh.putt_result).length;
   const makePct = total > 0 ? Math.round(madeCount / total * 100) : 0;
-  const directionsWithCounts = PUTT_DIRECTIONS.map(d => ({
-    ...d,
-    count: counts[d.key] || 0,
-  }));
-  const totalMisses = directionsWithCounts.reduce((sum, d) => sum + d.count, 0);
+  const center = `<circle cx="${cx}" cy="${cy}" r="16" fill="${madeCount > 0 ? '#16a34a' : colors.primary}"/><circle cx="${cx}" cy="${cy}" r="10" fill="${colors.primary}"/><text x="${cx}" y="${cy + 1}" font-size="9" fill="${colors.gold}" font-weight="800" text-anchor="middle" alignment-baseline="central">${makePct}%</text>`;
+  const inner = buildSvgPetal(cx, cy, PUTT_DIRECTIONS, counts, maxR, center);
+  const svgHtml = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
 
   return (
-    <View style={{ marginBottom: 16, backgroundColor: colors.white, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.grayLight }}>
-      <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8, textAlign: 'center' }}>Putt Dispersion</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-        {directionsWithCounts.map(d => {
-          const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
-          return (
-            <View key={d.key} style={{ width: '48%', flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Text style={{ width: 60, fontSize: 11, fontWeight: '600', color: colors.primary }}>{d.label}</Text>
-              <View style={{ flex: 1, height: 16, backgroundColor: colors.grayLight, borderRadius: 8, overflow: 'hidden', marginHorizontal: 6 }}>
-                {d.count > 0 && (
-                  <View style={{ height: '100%', width: `${Math.max(15, pct)}%`, backgroundColor: colors.gold, borderRadius: 8 }} />
-                )}
-              </View>
-              <Text style={{ width: 28, fontSize: 11, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{d.count}</Text>
-            </View>
-          );
-        })}
-      </View>
-      <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 8, textAlign: 'center' }}>
-        Made: {madeCount} ({makePct}%)
-      </Text>
+    <View style={{ alignItems: 'center', marginBottom: 16 }}>
+      <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>Putt Dispersion</Text>
+      <Text style={{ fontSize: 12, color: colors.primary }}>Putt dispersion chart (text view)</Text>
+      <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>Made: {madeCount} ({makePct}%)</Text>
     </View>
   );
 }
@@ -361,7 +301,7 @@ export default function Stats() {
   const [recentRounds, setRecentRounds] = useState<RecentRound[]>([]);
   const [wedgeTotalsByRound, setWedgeTotalsByRound] = useState<Map<string, number>>(new Map());
   const [expandedRoundId, setExpandedRoundId] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedCategory, setAdvancedCategory] = useState<'tee' | 'approach' | 'chip' | 'putting'>('tee');
   const [advancedShots, setAdvancedShots] = useState<any[]>([]);
   const [shapeFilter, setShapeFilter] = useState<string>('all');
@@ -502,7 +442,6 @@ export default function Stats() {
   ];
 
   return (
-    <ErrorBoundary>
     <ScrollView style={s.container} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
       {allRounds.length === 0 ? (
         <View style={s.empty}>
@@ -632,7 +571,6 @@ export default function Stats() {
                 });
 
                 return (
-                  <ErrorBoundary key={`adv-${advancedCategory}-${shapeFilter}-${range}`}>
                   <View style={{ marginBottom: 20 }}>
                     {/* Category selector dropdown */}
                     <Dropdown
@@ -761,7 +699,6 @@ export default function Stats() {
                       </>
                     )}
                   </View>
-                  </ErrorBoundary>
                 );
               })()}
             </>
@@ -903,7 +840,6 @@ export default function Stats() {
         </>
       )}
     </ScrollView>
-    </ErrorBoundary>
   );
 }
 
