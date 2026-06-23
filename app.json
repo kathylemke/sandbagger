@@ -26,8 +26,11 @@
       "bundler": "metro"
     },
     "plugins": ["expo-router"],
-    "experiments": {
-      "baseUrl": "/sandbagger"
+    "experiments": {},
+    "extra": {
+      "eas": {
+        "projectId": "25ce196e-6604-4137-8c2d-0dfe47b2af52"
+      }
     }
   }
 }
