@@ -502,6 +502,7 @@ export default function Stats() {
   ];
 
   return (
+    <ErrorBoundary>
     <ScrollView style={s.container} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
       {allRounds.length === 0 ? (
         <View style={s.empty}>
@@ -902,6 +903,7 @@ export default function Stats() {
         </>
       )}
     </ScrollView>
+    </ErrorBoundary>
   );
 }
 
