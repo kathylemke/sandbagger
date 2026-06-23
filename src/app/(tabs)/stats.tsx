@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Platform } from 'react-native';
-import Svg, { Circle, Line, Path, G, Text as SvgText } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
@@ -137,74 +136,37 @@ function buildSvgPetal(cx: number, cy: number, directions: typeof PETAL_DIRECTIO
 }
 
 function PetalChart({ missCounts, totalShots, onTargetCount, title }: { missCounts: Record<string, number>; totalShots: number; onTargetCount: number; title?: string }) {
-  const size = 240;
-  const cx = size / 2;
-  const cy = size / 2;
-  const maxR = 80;
-  const otR = onTargetCount > 0 ? Math.min(12, 6 + (onTargetCount / Math.max(totalShots, 1)) * 6) : 0;
-  const vals = Object.values(missCounts);
-  const maxCount = vals.length > 0 ? Math.max(...vals, 1) : 1;
+  // Text-based shot dispersion display (avoids react-native-svg render issues)
+  const directionsWithCounts = PETAL_DIRECTIONS.map(d => ({
+    ...d,
+    count: missCounts[d.key] || 0,
+  }));
+  const totalMisses = directionsWithCounts.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <View style={{ alignItems: 'center', marginBottom: 16 }}>
-      {title && <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>{title}</Text>}
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* Outer reference circle */}
-        <Circle cx={cx} cy={cy} r={maxR} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
-        {/* Inner reference circle */}
-        <Circle cx={cx} cy={cy} r={maxR * 0.5} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
-        {/* Direction guide lines */}
-        {PETAL_DIRECTIONS.map(d => {
-          const rad = (d.angle - 90) * Math.PI / 180;
+    <View style={{ marginBottom: 16, backgroundColor: colors.white, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.grayLight }}>
+      {title && <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8, textAlign: 'center' }}>{title}</Text>}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+        {directionsWithCounts.map(d => {
+          const pct = totalShots > 0 ? Math.round((d.count / totalShots) * 100) : 0;
           return (
-            <Line
-              key={d.key}
-              x1={cx} y1={cy}
-              x2={cx + Math.cos(rad) * maxR}
-              y2={cy + Math.sin(rad) * maxR}
-              stroke="#e5e7eb" strokeWidth={0.5}
-            />
+            <View key={d.key} style={{ width: '48%', flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={{ width: 60, fontSize: 11, fontWeight: '600', color: colors.primary }}>{d.label}</Text>
+              <View style={{ flex: 1, height: 16, backgroundColor: colors.grayLight, borderRadius: 8, overflow: 'hidden', marginHorizontal: 6 }}>
+                {d.count > 0 && (
+                  <View style={{ height: '100%', width: `${Math.max(15, pct)}%`, backgroundColor: colors.gold, borderRadius: 8 }} />
+                )}
+              </View>
+              <Text style={{ width: 28, fontSize: 11, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{d.count}</Text>
+            </View>
           );
         })}
-        {/* Petals (miss directions) */}
-        {PETAL_DIRECTIONS.map(d => {
-          const count = missCounts[d.key] || 0;
-          if (count === 0) return null;
-          const length = (count / maxCount) * maxR;
-          const width = Math.max(8, length * 0.35);
-          return (
-            <Path
-              key={`p-${d.key}`}
-              d={petalPath(cx, cy, d.angle, length, width)}
-              fill={colors.gold}
-              opacity={0.75}
-            />
-          );
-        })}
-        {/* Center on-target dot */}
-        <Circle cx={cx} cy={cy} r={12} fill={colors.primary} />
-        {onTargetCount > 0 && <Circle cx={cx} cy={cy} r={otR} fill="#16a34a" />}
-        {/* Direction labels */}
-        {PETAL_DIRECTIONS.map(d => {
-          const count = missCounts[d.key] || 0;
-          if (count === 0) return null;
-          const rad = (d.angle - 90) * Math.PI / 180;
-          const lx = cx + Math.cos(rad) * (maxR + 16);
-          const ly = cy + Math.sin(rad) * (maxR + 16);
-          return (
-            <SvgText
-              key={`l-${d.key}`}
-              x={lx} y={ly}
-              fontSize={9}
-              fill={colors.primary}
-              fontWeight="700"
-              textAnchor="middle"
-              alignmentBaseline="central"
-            >{`${d.label} ${count}`}</SvgText>
-          );
-        })}
-      </Svg>
-      {onTargetCount > 0 && <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>On Target: {onTargetCount} ({Math.round(onTargetCount / Math.max(totalShots, 1) * 100)}%)</Text>}
+      </View>
+      {onTargetCount > 0 && (
+        <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 8, textAlign: 'center' }}>
+          On Target: {onTargetCount} ({Math.round(onTargetCount / Math.max(totalShots, 1) * 100)}%)
+        </Text>
+      )}
     </View>
   );
 }
@@ -220,10 +182,7 @@ const PUTT_DIRECTIONS: { key: string; angle: number; label: string }[] = [
 ];
 
 function PuttPetalChart({ shots }: { shots: any[] }) {
-  const size = 240;
-  const cx = size / 2;
-  const cy = size / 2;
-  const maxR = 80;
+  // Text-based putt dispersion display (avoids react-native-svg render issues)
   const counts: Record<string, number> = {};
   let madeCount = 0;
   shots.forEach(sh => {
@@ -233,71 +192,34 @@ function PuttPetalChart({ shots }: { shots: any[] }) {
   });
   const total = shots.filter(sh => sh.putt_result).length;
   const makePct = total > 0 ? Math.round(madeCount / total * 100) : 0;
-  const vals = Object.values(counts);
-  const maxCount = vals.length > 0 ? Math.max(...vals, 1) : 1;
+  const directionsWithCounts = PUTT_DIRECTIONS.map(d => ({
+    ...d,
+    count: counts[d.key] || 0,
+  }));
+  const totalMisses = directionsWithCounts.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <View style={{ alignItems: 'center', marginBottom: 16 }}>
-      <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>Putt Dispersion</Text>
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <Circle cx={cx} cy={cy} r={maxR} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
-        <Circle cx={cx} cy={cy} r={maxR * 0.5} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
-        {PUTT_DIRECTIONS.map(d => {
-          const rad = (d.angle - 90) * Math.PI / 180;
+    <View style={{ marginBottom: 16, backgroundColor: colors.white, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.grayLight }}>
+      <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8, textAlign: 'center' }}>Putt Dispersion</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+        {directionsWithCounts.map(d => {
+          const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
           return (
-            <Line
-              key={d.key}
-              x1={cx} y1={cy}
-              x2={cx + Math.cos(rad) * maxR}
-              y2={cy + Math.sin(rad) * maxR}
-              stroke="#e5e7eb" strokeWidth={0.5}
-            />
+            <View key={d.key} style={{ width: '48%', flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={{ width: 60, fontSize: 11, fontWeight: '600', color: colors.primary }}>{d.label}</Text>
+              <View style={{ flex: 1, height: 16, backgroundColor: colors.grayLight, borderRadius: 8, overflow: 'hidden', marginHorizontal: 6 }}>
+                {d.count > 0 && (
+                  <View style={{ height: '100%', width: `${Math.max(15, pct)}%`, backgroundColor: colors.gold, borderRadius: 8 }} />
+                )}
+              </View>
+              <Text style={{ width: 28, fontSize: 11, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{d.count}</Text>
+            </View>
           );
         })}
-        {PUTT_DIRECTIONS.map(d => {
-          const count = counts[d.key] || 0;
-          if (count === 0) return null;
-          const length = (count / maxCount) * maxR;
-          const width = Math.max(8, length * 0.35);
-          return (
-            <Path
-              key={`p-${d.key}`}
-              d={petalPath(cx, cy, d.angle, length, width)}
-              fill={colors.gold}
-              opacity={0.75}
-            />
-          );
-        })}
-        <Circle cx={cx} cy={cy} r={16} fill={madeCount > 0 ? '#16a34a' : colors.primary} />
-        <Circle cx={cx} cy={cy} r={10} fill={colors.primary} />
-        <SvgText
-          x={cx} y={cy + 1}
-          fontSize={9}
-          fill={colors.gold}
-          fontWeight="800"
-          textAnchor="middle"
-          alignmentBaseline="central"
-        >{`${makePct}%`}</SvgText>
-        {PUTT_DIRECTIONS.map(d => {
-          const count = counts[d.key] || 0;
-          if (count === 0) return null;
-          const rad = (d.angle - 90) * Math.PI / 180;
-          const lx = cx + Math.cos(rad) * (maxR + 16);
-          const ly = cy + Math.sin(rad) * (maxR + 16);
-          return (
-            <SvgText
-              key={`l-${d.key}`}
-              x={lx} y={ly}
-              fontSize={9}
-              fill={colors.primary}
-              fontWeight="700"
-              textAnchor="middle"
-              alignmentBaseline="central"
-            >{`${d.label} ${count}`}</SvgText>
-          );
-        })}
-      </Svg>
-      <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>Made: {madeCount} ({makePct}%)</Text>
+      </View>
+      <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 8, textAlign: 'center' }}>
+        Made: {madeCount} ({makePct}%)
+      </Text>
     </View>
   );
 }
