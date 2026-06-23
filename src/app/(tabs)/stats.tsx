@@ -1,10 +1,37 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Component, ReactNode } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Platform } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
 import ScoreCell from '../../components/ScoreCell';
 import ConditionFilteredStats from '../../components/ConditionFilteredStats';
+
+// ErrorBoundary to catch render errors and surface them as text
+interface EBState { hasError: boolean; errorMessage: string; errorStack: string; }
+class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
+  state: EBState = { hasError: false, errorMessage: '', errorStack: '' };
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, errorMessage: error?.message || String(error), errorStack: error?.stack || '' };
+  }
+  componentDidCatch(error: any, info: any) {
+    console.error('Dashboard render error:', error?.message, error?.stack);
+    console.error('Component stack:', info?.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ backgroundColor: '#fee', borderRadius: 8, padding: 12, marginVertical: 12, borderWidth: 1, borderColor: '#fcc' }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#c00', marginBottom: 6 }}>Dashboard error</Text>
+          <Text style={{ fontSize: 11, color: '#600', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{this.state.errorMessage}</Text>
+          {this.state.errorStack ? (
+            <Text style={{ fontSize: 9, color: '#800', marginTop: 6, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{this.state.errorStack.split('\n').slice(0, 5).join('\n')}</Text>
+          ) : null}
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // --- Custom Dropdown ---
 function Dropdown<T extends string>({ options, value, onChange, labelMap }: { options: T[]; value: T; onChange: (v: T) => void; labelMap?: Record<string, string> }) {
@@ -604,6 +631,7 @@ export default function Stats() {
                 });
 
                 return (
+                  <ErrorBoundary key={`adv-${advancedCategory}-${shapeFilter}-${range}`}>
                   <View style={{ marginBottom: 20 }}>
                     {/* Category selector dropdown */}
                     <Dropdown
@@ -732,6 +760,7 @@ export default function Stats() {
                       </>
                     )}
                   </View>
+                  </ErrorBoundary>
                 );
               })()}
             </>
