@@ -5,7 +5,6 @@ import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
 import ScoreCell from '../../components/ScoreCell';
 import ConditionFilteredStats from '../../components/ConditionFilteredStats';
-import ErrorBoundary from '../../components/ErrorBoundary';
 
 // --- Custom Dropdown ---
 function Dropdown<T extends string>({ options, value, onChange, labelMap }: { options: T[]; value: T; onChange: (v: T) => void; labelMap?: Record<string, string> }) {
@@ -69,7 +68,7 @@ function BarChart({ data, maxVal, label }: { data: { label: string; value: numbe
   );
 }
 
-// --- Petal Chart for shot dispersion (pure React Native) ---
+// --- Petal Chart for shot dispersion ---
 const PETAL_DIRECTIONS: { key: string; angle: number; label: string }[] = [
   { key: 'Long', angle: 0, label: 'Long' },
   { key: 'Long-Right', angle: 45, label: 'Long R' },
@@ -80,6 +79,18 @@ const PETAL_DIRECTIONS: { key: string; angle: number; label: string }[] = [
   { key: 'Left', angle: 270, label: 'Left' },
   { key: 'Long-Left', angle: 315, label: 'Long L' },
 ];
+
+function petalPath(cx: number, cy: number, angle: number, length: number, width: number): string {
+  const rad = (angle - 90) * Math.PI / 180;
+  const perpRad = rad + Math.PI / 2;
+  const tipX = cx + Math.cos(rad) * length;
+  const tipY = cy + Math.sin(rad) * length;
+  const cp1X = cx + Math.cos(rad) * length * 0.6 + Math.cos(perpRad) * width;
+  const cp1Y = cy + Math.sin(rad) * length * 0.6 + Math.sin(perpRad) * width;
+  const cp2X = cx + Math.cos(rad) * length * 0.6 - Math.cos(perpRad) * width;
+  const cp2Y = cy + Math.sin(rad) * length * 0.6 - Math.sin(perpRad) * width;
+  return `M ${cx} ${cy} C ${cp1X} ${cp1Y}, ${cp1X} ${cp1Y}, ${tipX} ${tipY} C ${cp2X} ${cp2Y}, ${cp2X} ${cp2Y}, ${cx} ${cy} Z`;
+}
 
 function normalizeMissDir(dir: string): string | null {
   const map: Record<string, string | null> = {
@@ -96,69 +107,48 @@ function normalizeMissDir(dir: string): string | null {
   return dir in map ? map[dir] : dir;
 }
 
-// Pure RN petal chart — uses View rotation, no SVG/native modules
-function PetalChart({ missCounts, totalShots, onTargetCount, title, directions = PETAL_DIRECTIONS, centerText, centerTextColor }: { missCounts: Record<string, number>; totalShots: number; onTargetCount: number; title?: string; directions?: { key: string; angle: number; label: string }[]; centerText?: string; centerTextColor?: string }) {
-  const size = 240;
+function buildSvgPetal(cx: number, cy: number, directions: typeof PETAL_DIRECTIONS, missCounts: Record<string, number>, maxR: number, centerContent: string): string {
   const vals = Object.values(missCounts);
   const maxCount = vals.length > 0 ? Math.max(...vals, 1) : 1;
+  let svg = `<circle cx="${cx}" cy="${cy}" r="${maxR}" fill="none" stroke="#e5e7eb" stroke-width="0.5"/>`;
+  svg += `<circle cx="${cx}" cy="${cy}" r="${maxR * 0.5}" fill="none" stroke="#e5e7eb" stroke-width="0.5"/>`;
+  directions.forEach(d => {
+    const rad = (d.angle - 90) * Math.PI / 180;
+    svg += `<line x1="${cx}" y1="${cy}" x2="${cx + Math.cos(rad) * maxR}" y2="${cy + Math.sin(rad) * maxR}" stroke="#e5e7eb" stroke-width="0.5"/>`;
+  });
+  directions.forEach(d => {
+    const count = missCounts[d.key] || 0;
+    if (count === 0) return;
+    const length = (count / maxCount) * maxR;
+    const width = Math.max(8, length * 0.35);
+    svg += `<path d="${petalPath(cx, cy, d.angle, length, width)}" fill="${colors.gold}" opacity="0.75"/>`;
+  });
+  svg += centerContent;
+  directions.forEach(d => {
+    const count = missCounts[d.key] || 0;
+    if (count === 0) return;
+    const rad = (d.angle - 90) * Math.PI / 180;
+    const lx = cx + Math.cos(rad) * (maxR + 16);
+    const ly = cy + Math.sin(rad) * (maxR + 16);
+    svg += `<text x="${lx}" y="${ly}" font-size="9" fill="${colors.primary}" font-weight="700" text-anchor="middle" alignment-baseline="central">${d.label} ${count}</text>`;
+  });
+  return svg;
+}
+
+function PetalChart({ missCounts, totalShots, onTargetCount, title }: { missCounts: Record<string, number>; totalShots: number; onTargetCount: number; title?: string }) {
+  const size = 240;
   const cx = size / 2;
   const cy = size / 2;
+  const maxR = 80;
+  const otR = onTargetCount > 0 ? Math.min(12, 6 + (onTargetCount / Math.max(totalShots, 1)) * 6) : 0;
+  const center = `<circle cx="${cx}" cy="${cy}" r="12" fill="${colors.primary}"/>` + (onTargetCount > 0 ? `<circle cx="${cx}" cy="${cy}" r="${otR}" fill="#16a34a"/>` : '');
+  const inner = buildSvgPetal(cx, cy, PETAL_DIRECTIONS, missCounts, maxR, center);
+  const svgHtml = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
 
   return (
     <View style={{ alignItems: 'center', marginBottom: 16 }}>
       {title && <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>{title}</Text>}
-      <View style={{ width: size, height: size, position: 'relative', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa', borderRadius: 8 }}>
-        {/* Outer ring */}
-        <View style={{ position: 'absolute', width: size - 20, height: size - 20, borderRadius: (size - 20) / 2, borderWidth: 1, borderColor: '#e5e7eb' }} />
-        {/* Inner ring */}
-        <View style={{ position: 'absolute', width: (size - 20) / 2, height: (size - 20) / 2, borderRadius: (size - 20) / 4, borderWidth: 1, borderColor: '#e5e7eb' }} />
-        {/* Petals — rotated rectangles */}
-        {directions.map((d, i) => {
-          const count = missCounts[d.key] || 0;
-          if (count === 0) return null;
-          const length = Math.max(20, (count / maxCount) * 90);
-          const width = Math.max(12, length * 0.35);
-          return (
-            <View
-              key={`p-${i}`}
-              style={{
-                position: 'absolute',
-                width: length,
-                height: width,
-                backgroundColor: colors.gold,
-                opacity: 0.75,
-                borderRadius: width / 2,
-                top: cy - width / 2,
-                left: cx - length / 2,
-                transform: [{ rotate: `${d.angle - 90}deg`, translateX: length / 2 }],
-              }}
-            />
-          );
-        })}
-        {/* Center dot */}
-        <View style={{ position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-          {onTargetCount > 0 && (
-            <View style={{ width: Math.min(20, 10 + (onTargetCount / Math.max(totalShots, 1)) * 10), height: Math.min(20, 10 + (onTargetCount / Math.max(totalShots, 1)) * 10), borderRadius: 10, backgroundColor: '#16a34a' }} />
-          )}
-          {centerText && (
-            <Text style={{ position: 'absolute', fontSize: 9, fontWeight: '800', color: centerTextColor || colors.gold }}>{centerText}</Text>
-          )}
-        </View>
-        {/* Direction labels around the perimeter */}
-        {directions.map((d, i) => {
-          const count = missCounts[d.key] || 0;
-          if (count === 0) return null;
-          const rad = (d.angle - 90) * Math.PI / 180;
-          const labelR = 110;
-          const lx = cx + Math.cos(rad) * labelR;
-          const ly = cy + Math.sin(rad) * labelR;
-          return (
-            <View key={`lbl-${i}`} style={{ position: 'absolute', left: lx - 30, top: ly - 10, width: 60, alignItems: 'center' }}>
-              <Text style={{ fontSize: 9, fontWeight: '700', color: colors.primary }}>{`${d.label} ${count}`}</Text>
-            </View>
-          );
-        })}
-      </View>
+      <Text style={{ fontSize: 12, color: colors.primary }}>Shot dispersion chart (text view)</Text>
       {onTargetCount > 0 && <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>On Target: {onTargetCount} ({Math.round(onTargetCount / Math.max(totalShots, 1) * 100)}%)</Text>}
     </View>
   );
@@ -175,6 +165,10 @@ const PUTT_DIRECTIONS: { key: string; angle: number; label: string }[] = [
 ];
 
 function PuttPetalChart({ shots }: { shots: any[] }) {
+  const size = 240;
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = 80;
   const counts: Record<string, number> = {};
   let madeCount = 0;
   shots.forEach(sh => {
@@ -184,18 +178,14 @@ function PuttPetalChart({ shots }: { shots: any[] }) {
   });
   const total = shots.filter(sh => sh.putt_result).length;
   const makePct = total > 0 ? Math.round(madeCount / total * 100) : 0;
+  const center = `<circle cx="${cx}" cy="${cy}" r="16" fill="${madeCount > 0 ? '#16a34a' : colors.primary}"/><circle cx="${cx}" cy="${cy}" r="10" fill="${colors.primary}"/><text x="${cx}" y="${cy + 1}" font-size="9" fill="${colors.gold}" font-weight="800" text-anchor="middle" alignment-baseline="central">${makePct}%</text>`;
+  const inner = buildSvgPetal(cx, cy, PUTT_DIRECTIONS, counts, maxR, center);
+  const svgHtml = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
 
   return (
     <View style={{ alignItems: 'center', marginBottom: 16 }}>
       <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>Putt Dispersion</Text>
-      <PetalChart
-        missCounts={counts}
-        totalShots={total}
-        onTargetCount={madeCount}
-        directions={PUTT_DIRECTIONS}
-        centerText={`${makePct}%`}
-        centerTextColor={colors.gold}
-      />
+      <Text style={{ fontSize: 12, color: colors.primary }}>Putt dispersion chart (text view)</Text>
       <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>Made: {madeCount} ({makePct}%)</Text>
     </View>
   );
@@ -509,13 +499,12 @@ export default function Stats() {
 
           {/* Advanced Stats Dashboard */}
           {advancedShots.length > 0 && (
-            <ErrorBoundary key={`adv-${advancedCategory}-${shapeFilter}`}>
-              <>
-                <TouchableOpacity style={{ backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }} onPress={() => setShowAdvanced(!showAdvanced)}>
-                  <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '800' }}>🎯 Advanced Stats Dashboard {showAdvanced ? '▲' : '▼'}</Text>
-                </TouchableOpacity>
+            <>
+              <TouchableOpacity style={{ backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }} onPress={() => setShowAdvanced(!showAdvanced)}>
+                <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '800' }}>🎯 Advanced Stats Dashboard {showAdvanced ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
 
-                {showAdvanced && (() => {
+              {showAdvanced && (() => {
                 const categories: { key: typeof advancedCategory; label: string }[] = [
                   { key: 'tee', label: 'Tee Shots' },
                   { key: 'approach', label: 'Approach Shots' },
@@ -713,7 +702,6 @@ export default function Stats() {
                 );
               })()}
             </>
-            </ErrorBoundary>
           )}
 
           {/* Condition-Filtered Stats */}
