@@ -7,6 +7,250 @@ import ScoreCell from '../../components/ScoreCell';
 import ConditionFilteredStats from '../../components/ConditionFilteredStats';
 import ErrorBoundary from '../../components/ErrorBoundary';
 
+// --- Safe wrapper: renders nothing if children throw ---
+function SafeChart({ children }: { children: React.ReactNode }) {
+  try {
+    return <>{children}</>;
+  } catch {
+    return null;
+  }
+}
+
+// --- Advanced Stats Dashboard (isolated component) ---
+function AdvancedStatsDashboard({ advancedShots }: { advancedShots: any[] }) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [advancedCategory, setAdvancedCategory] = useState<'tee' | 'approach' | 'chip' | 'putting'>('tee');
+  const [shapeFilter, setShapeFilter] = useState<string>('all');
+
+  if (!Array.isArray(advancedShots) || advancedShots.length === 0) return null;
+
+  const safe = (v: any, fallback: any = null) => (v == null ? fallback : v);
+  const safeNum = (v: any) => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const safeStr = (v: any) => (v == null ? '' : String(v));
+
+  const isPutt = (sh: any) => {
+    if (!sh) return false;
+    return !!sh.is_putt || !!sh.putt_result || !!sh.putt_break || !!sh.putt_distance || !!sh.putt_hit_line || !!sh.putt_hit_speed;
+  };
+
+  let catShots: any[] = [];
+  try {
+    if (advancedCategory === 'tee') {
+      catShots = advancedShots.filter(sh => sh && sh.shot_number === 1 && !isPutt(sh));
+    } else if (advancedCategory === 'approach') {
+      catShots = advancedShots.filter(sh => sh && sh.intention === 'hit_green' && !isPutt(sh));
+    } else if (advancedCategory === 'chip') {
+      catShots = advancedShots.filter(sh => sh && (sh.intention === 'chip_pitch' || sh.intention === 'recovery' || sh.intention === 'punch_out') && !isPutt(sh));
+    } else if (advancedCategory === 'putting') {
+      catShots = advancedShots.filter(sh => sh && isPutt(sh));
+    }
+  } catch {
+    catShots = [];
+  }
+
+  const totalShots = catShots.length;
+
+  const uniqueShapes = new Set<string>();
+  catShots.forEach(sh => { const s = safeStr(sh?.shot_shape); if (s) uniqueShapes.add(s); });
+  const shapeOptions: string[] = ['all', ...Array.from(uniqueShapes)];
+
+  const filteredCatShots = advancedCategory !== 'putting' && shapeFilter !== 'all'
+    ? catShots.filter(sh => safeStr(sh?.shot_shape) === shapeFilter)
+    : catShots;
+
+  const petalMissCounts: Record<string, number> = {};
+  let onTargetCount = 0;
+  if (advancedCategory !== 'putting') {
+    filteredCatShots.forEach(sh => {
+      const dir = safeStr(sh?.miss_direction);
+      if (!dir) return;
+      const normalized = normalizeMissDir(dir);
+      if (normalized === null) { onTargetCount++; return; }
+      petalMissCounts[normalized] = (petalMissCounts[normalized] || 0) + 1;
+    });
+  }
+
+  const shapes: Record<string, number> = {};
+  catShots.forEach(sh => { const s = safeStr(sh?.shot_shape); if (s) shapes[s] = (shapes[s] || 0) + 1; });
+
+  const puttLineHit = catShots.filter(sh => safeStr(sh?.putt_hit_line) === 'yes').length;
+  const puttLineMiss = catShots.filter(sh => safeStr(sh?.putt_hit_line) === 'no').length;
+  const puttLineTotal = puttLineHit + puttLineMiss;
+  const pullCount = catShots.filter(sh => safeStr(sh?.putt_line_miss) === 'Pull').length;
+  const pushCount = catShots.filter(sh => safeStr(sh?.putt_line_miss) === 'Push').length;
+
+  const puttSpeedHit = catShots.filter(sh => safeStr(sh?.putt_hit_speed) === 'yes').length;
+  const puttSpeedMiss = catShots.filter(sh => safeStr(sh?.putt_hit_speed) === 'no').length;
+  const puttSpeedTotal = puttSpeedHit + puttSpeedMiss;
+  const hardCount = catShots.filter(sh => safeStr(sh?.putt_speed_miss) === 'Hard').length;
+  const softCount = catShots.filter(sh => safeStr(sh?.putt_speed_miss) === 'Soft').length;
+
+  const results: Record<string, number> = {};
+  catShots.forEach(sh => { const r = safeStr(sh?.result_lie); if (r) results[r] = (results[r] || 0) + 1; });
+
+  const categories: { key: typeof advancedCategory; label: string }[] = [
+    { key: 'tee', label: 'Tee Shots' },
+    { key: 'approach', label: 'Approach Shots' },
+    { key: 'chip', label: 'Chip/Pitch' },
+    { key: 'putting', label: 'Putting' },
+  ];
+
+  return (
+    <View style={{ marginBottom: 20 }}>
+      <TouchableOpacity
+        style={{ backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }}
+        onPress={() => setShowAdvanced(!showAdvanced)}
+        activeOpacity={0.7}
+      >
+        <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '800' }}>
+          🎯 Advanced Stats Dashboard {showAdvanced ? '▲' : '▼'}
+        </Text>
+      </TouchableOpacity>
+
+      {showAdvanced && (
+        <>
+          <Dropdown
+            options={categories.map(c => c.key)}
+            value={advancedCategory}
+            onChange={(v) => { setAdvancedCategory(v); setShapeFilter('all'); }}
+            labelMap={Object.fromEntries(categories.map(c => [c.key, c.label]))}
+          />
+
+          <Text style={{ fontSize: 13, color: colors.gray, marginBottom: 12 }}>
+            {totalShots} shots tracked {advancedShots.length > totalShots ? `(of ${advancedShots.length} total)` : ''}
+          </Text>
+
+          {totalShots === 0 && (
+            <Text style={{ fontSize: 12, color: colors.gray, fontStyle: 'italic', marginBottom: 12 }}>
+              No shots in this category yet — partial data from other shots is preserved.
+            </Text>
+          )}
+
+          {totalShots > 0 && (
+            <>
+              {advancedCategory !== 'putting' && (
+                <>
+                  {uniqueShapes.size > 0 && (
+                    <Dropdown
+                      options={shapeOptions}
+                      value={shapeFilter}
+                      onChange={setShapeFilter}
+                      labelMap={{ all: 'Overall' }}
+                    />
+                  )}
+                  <SafeChart>
+                    <PetalChart missCounts={petalMissCounts} totalShots={filteredCatShots.length} onTargetCount={onTargetCount} title="Shot Dispersion" />
+                  </SafeChart>
+                </>
+              )}
+
+              {advancedCategory === 'putting' && (
+                <>
+                  <SafeChart>
+                    <PuttPetalChart shots={catShots} />
+                  </SafeChart>
+                  <SafeChart>
+                    <PuttDistanceStats shots={catShots} />
+                  </SafeChart>
+                </>
+              )}
+
+              {advancedCategory !== 'putting' && Object.keys(shapes).length > 0 && (
+                <>
+                  <Text style={s.sectionTitle}>Intended Shot Shape</Text>
+                  {Object.entries(shapes).sort(([,a],[,b]) => Number(b) - Number(a)).map(([shape, count]) => (
+                    <View key={shape} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                      <Text style={{ width: 90, fontSize: 13, fontWeight: '600', color: colors.primary }}>{shape}</Text>
+                      <View style={{ flex: 1, height: 24, backgroundColor: colors.grayLight, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 }}>
+                        <View style={{ height: '100%', width: `${Math.min(100, (Number(count) / Math.max(totalShots, 1)) * 100)}%`, backgroundColor: colors.gold, borderRadius: 12 }} />
+                      </View>
+                      <Text style={{ width: 50, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((Number(count) / Math.max(totalShots, 1)) * 100)}%</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {advancedCategory !== 'putting' && Object.keys(results).length > 0 && (
+                <>
+                  <Text style={s.sectionTitle}>Where You Ended Up</Text>
+                  {Object.entries(results).sort(([,a],[,b]) => Number(b) - Number(a)).map(([lie, count]) => (
+                    <View key={lie} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                      <Text style={{ width: 90, fontSize: 13, fontWeight: '600', color: colors.primary }}>{lie}</Text>
+                      <View style={{ flex: 1, height: 24, backgroundColor: colors.grayLight, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 }}>
+                        <View style={{ height: '100%', width: `${Math.min(100, (Number(count) / Math.max(totalShots, 1)) * 100)}%`, backgroundColor: lie === 'Green' || lie === 'Fairway' ? '#16a34a' : colors.gold, borderRadius: 12 }} />
+                      </View>
+                      <Text style={{ width: 50, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((Number(count) / Math.max(totalShots, 1)) * 100)}%</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {advancedCategory === 'putting' && puttLineTotal > 0 && (
+                <>
+                  <Text style={s.sectionTitle}>Hit Your Line</Text>
+                  <View style={s.summaryRow}>
+                    <View style={s.summaryCard}>
+                      <Text style={s.summaryNum}>{puttLineTotal > 0 ? Math.round((puttLineHit / puttLineTotal) * 100) : 0}%</Text>
+                      <Text style={s.summaryLabel}>Yes</Text>
+                    </View>
+                    <View style={s.summaryCard}>
+                      <Text style={s.summaryNum}>{puttLineTotal > 0 ? Math.round((puttLineMiss / puttLineTotal) * 100) : 0}%</Text>
+                      <Text style={s.summaryLabel}>No</Text>
+                    </View>
+                  </View>
+                  {puttLineMiss > 0 && (
+                    <View style={s.summaryRow}>
+                      <View style={s.summaryCard}>
+                        <Text style={s.summaryNum}>{pullCount}</Text>
+                        <Text style={s.summaryLabel}>Pull</Text>
+                      </View>
+                      <View style={s.summaryCard}>
+                        <Text style={s.summaryNum}>{pushCount}</Text>
+                        <Text style={s.summaryLabel}>Push</Text>
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
+
+              {advancedCategory === 'putting' && puttSpeedTotal > 0 && (
+                <>
+                  <Text style={s.sectionTitle}>Hit Your Speed</Text>
+                  <View style={s.summaryRow}>
+                    <View style={s.summaryCard}>
+                      <Text style={s.summaryNum}>{puttSpeedTotal > 0 ? Math.round((puttSpeedHit / puttSpeedTotal) * 100) : 0}%</Text>
+                      <Text style={s.summaryLabel}>Yes</Text>
+                    </View>
+                    <View style={s.summaryCard}>
+                      <Text style={s.summaryNum}>{puttSpeedTotal > 0 ? Math.round((puttSpeedMiss / puttSpeedTotal) * 100) : 0}%</Text>
+                      <Text style={s.summaryLabel}>No</Text>
+                    </View>
+                  </View>
+                  {puttSpeedMiss > 0 && (
+                    <View style={s.summaryRow}>
+                      <View style={s.summaryCard}>
+                        <Text style={s.summaryNum}>{hardCount}</Text>
+                        <Text style={s.summaryLabel}>Hard</Text>
+                      </View>
+                      <View style={s.summaryCard}>
+                        <Text style={s.summaryNum}>{softCount}</Text>
+                        <Text style={s.summaryLabel}>Soft</Text>
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </View>
+  );
+}
+
 // --- Custom Dropdown ---
 function Dropdown<T extends string>({ options, value, onChange, labelMap }: { options: T[]; value: T; onChange: (v: T) => void; labelMap?: Record<string, string> }) {
   const [open, setOpen] = useState(false);
@@ -96,70 +340,81 @@ function normalizeMissDir(dir: string): string | null {
   return dir in map ? map[dir] : dir;
 }
 
-// Pure RN petal chart — uses View rotation, no SVG/native modules
+// Pure RN petal chart — positions petals via cos/sin (no broken transform)
 function PetalChart({ missCounts, totalShots, onTargetCount, title, directions = PETAL_DIRECTIONS, centerText, centerTextColor }: { missCounts: Record<string, number>; totalShots: number; onTargetCount: number; title?: string; directions?: { key: string; angle: number; label: string }[]; centerText?: string; centerTextColor?: string }) {
   const size = 240;
-  const vals = Object.values(missCounts);
-  const maxCount = vals.length > 0 ? Math.max(...vals, 1) : 1;
   const cx = size / 2;
   const cy = size / 2;
+  const counts = directions.map(d => Math.max(0, Number(missCounts?.[d.key]) || 0));
+  const maxCount = counts.length > 0 ? Math.max(...counts, 1) : 1;
+  const total = Math.max(0, Number(totalShots) || 0);
+  const onTgt = Math.max(0, Number(onTargetCount) || 0);
 
   return (
     <View style={{ alignItems: 'center', marginBottom: 16 }}>
-      {title && <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>{title}</Text>}
-      <View style={{ width: size, height: size, position: 'relative', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa', borderRadius: 8 }}>
+      {title ? <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>{title}</Text> : null}
+      <View style={{ width: size, height: size, position: 'relative', backgroundColor: '#fafafa', borderRadius: 8 }}>
         {/* Outer ring */}
-        <View style={{ position: 'absolute', width: size - 20, height: size - 20, borderRadius: (size - 20) / 2, borderWidth: 1, borderColor: '#e5e7eb' }} />
+        <View style={{ position: 'absolute', left: 10, top: 10, width: size - 20, height: size - 20, borderRadius: (size - 20) / 2, borderWidth: 1, borderColor: '#e5e7eb' }} />
         {/* Inner ring */}
-        <View style={{ position: 'absolute', width: (size - 20) / 2, height: (size - 20) / 2, borderRadius: (size - 20) / 4, borderWidth: 1, borderColor: '#e5e7eb' }} />
-        {/* Petals — rotated rectangles */}
+        <View style={{ position: 'absolute', left: cx - (size - 20) / 4, top: cy - (size - 20) / 4, width: (size - 20) / 2, height: (size - 20) / 2, borderRadius: (size - 20) / 4, borderWidth: 1, borderColor: '#e5e7eb' }} />
+        {/* Petals — positioned via cos/sin from center */}
         {directions.map((d, i) => {
-          const count = missCounts[d.key] || 0;
-          if (count === 0) return null;
+          const count = counts[i];
+          if (!count) return null;
           const length = Math.max(20, (count / maxCount) * 90);
           const width = Math.max(12, length * 0.35);
+          const rad = (d.angle - 90) * Math.PI / 180;
+          // petal extends from center outward; center one end at (cx, cy), tip at (cx + cos*r, cy + sin*r)
+          const petalLeft = cx - width / 2;
+          const petalTop = cy - length / 2;
           return (
             <View
               key={`p-${i}`}
               style={{
                 position: 'absolute',
-                width: length,
-                height: width,
+                left: petalLeft,
+                top: petalTop,
+                width: width,
+                height: length,
                 backgroundColor: colors.gold,
                 opacity: 0.75,
                 borderRadius: width / 2,
-                top: cy - width / 2,
-                left: cx - length / 2,
-                transform: [{ rotate: `${d.angle - 90}deg`, translateX: length / 2 }],
+                transform: [
+                  { translateX: cx - petalLeft - width / 2 },
+                  { translateY: cy - petalTop - length / 2 },
+                  { rotate: `${d.angle - 90}deg` },
+                  { translateX: width / 2 },
+                  { translateY: length / 2 },
+                ],
               }}
             />
           );
         })}
         {/* Center dot */}
-        <View style={{ position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-          {onTargetCount > 0 && (
-            <View style={{ width: Math.min(20, 10 + (onTargetCount / Math.max(totalShots, 1)) * 10), height: Math.min(20, 10 + (onTargetCount / Math.max(totalShots, 1)) * 10), borderRadius: 10, backgroundColor: '#16a34a' }} />
-          )}
-          {centerText && (
+        <View style={{ position: 'absolute', left: cx - 12, top: cy - 12, width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+          {onTgt > 0 ? (
+            <View style={{ width: Math.min(20, 10 + (onTgt / Math.max(total, 1)) * 10), height: Math.min(20, 10 + (onTgt / Math.max(total, 1)) * 10), borderRadius: 10, backgroundColor: '#16a34a' }} />
+          ) : null}
+          {centerText ? (
             <Text style={{ position: 'absolute', fontSize: 9, fontWeight: '800', color: centerTextColor || colors.gold }}>{centerText}</Text>
-          )}
+          ) : null}
         </View>
         {/* Direction labels around the perimeter */}
         {directions.map((d, i) => {
-          const count = missCounts[d.key] || 0;
-          if (count === 0) return null;
+          if (!counts[i]) return null;
           const rad = (d.angle - 90) * Math.PI / 180;
           const labelR = 110;
           const lx = cx + Math.cos(rad) * labelR;
           const ly = cy + Math.sin(rad) * labelR;
           return (
             <View key={`lbl-${i}`} style={{ position: 'absolute', left: lx - 30, top: ly - 10, width: 60, alignItems: 'center' }}>
-              <Text style={{ fontSize: 9, fontWeight: '700', color: colors.primary }}>{`${d.label} ${count}`}</Text>
+              <Text style={{ fontSize: 9, fontWeight: '700', color: colors.primary }}>{`${d.label} ${counts[i]}`}</Text>
             </View>
           );
         })}
       </View>
-      {onTargetCount > 0 && <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>On Target: {onTargetCount} ({Math.round(onTargetCount / Math.max(totalShots, 1) * 100)}%)</Text>}
+      {onTgt > 0 ? <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 4 }}>On Target: {onTgt} ({Math.round(onTgt / Math.max(total, 1) * 100)}%)</Text> : null}
     </View>
   );
 }
@@ -311,10 +566,7 @@ export default function Stats() {
   const [recentRounds, setRecentRounds] = useState<RecentRound[]>([]);
   const [wedgeTotalsByRound, setWedgeTotalsByRound] = useState<Map<string, number>>(new Map());
   const [expandedRoundId, setExpandedRoundId] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [advancedCategory, setAdvancedCategory] = useState<'tee' | 'approach' | 'chip' | 'putting'>('tee');
   const [advancedShots, setAdvancedShots] = useState<any[]>([]);
-  const [shapeFilter, setShapeFilter] = useState<string>('all');
 
   useEffect(() => {
     if (!user) return;
@@ -507,214 +759,10 @@ export default function Stats() {
             <FairwayMissBar leftPct={missLPct} rightPct={missRPct} leftCount={missLCount} rightCount={missRCount} />
           )}
 
-          {/* Advanced Stats Dashboard */}
-          {advancedShots.length > 0 && (
-            <ErrorBoundary key={`adv-${advancedCategory}-${shapeFilter}`}>
-              <>
-                <TouchableOpacity style={{ backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }} onPress={() => setShowAdvanced(!showAdvanced)}>
-                  <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '800' }}>🎯 Advanced Stats Dashboard {showAdvanced ? '▲' : '▼'}</Text>
-                </TouchableOpacity>
-
-                {showAdvanced && (() => {
-                const categories: { key: typeof advancedCategory; label: string }[] = [
-                  { key: 'tee', label: 'Tee Shots' },
-                  { key: 'approach', label: 'Approach Shots' },
-                  { key: 'chip', label: 'Chip/Pitch' },
-                  { key: 'putting', label: 'Putting' },
-                ];
-
-                const isPutt = (sh: any) => !!sh.is_putt || !!sh.putt_result || !!sh.putt_break || !!sh.putt_distance || !!sh.putt_hit_line || !!sh.putt_hit_speed;
-                const catShots = advancedShots.filter(sh => {
-                  if (advancedCategory === 'tee') return sh.shot_number === 1 && !isPutt(sh);
-                  if (advancedCategory === 'approach') return sh.intention === 'hit_green' && !isPutt(sh);
-                  if (advancedCategory === 'chip') return (sh.intention === 'chip_pitch' || sh.intention === 'recovery' || sh.intention === 'punch_out') && !isPutt(sh);
-                  if (advancedCategory === 'putting') return isPutt(sh);
-                  return false;
-                });
-
-                const totalShots = catShots.length;
-
-                // Get unique shot shapes for filter
-                const uniqueShapes = new Set<string>();
-                catShots.forEach(sh => { if (sh.shot_shape) uniqueShapes.add(sh.shot_shape); });
-                const shapeOptions = ['all', ...Array.from(uniqueShapes)];
-
-                // Apply shape filter for non-putting
-                const filteredCatShots = advancedCategory !== 'putting' && shapeFilter !== 'all'
-                  ? catShots.filter(sh => sh.shot_shape === shapeFilter)
-                  : catShots;
-
-                // Build petal miss counts for non-putting categories
-                const petalMissCounts: Record<string, number> = {};
-                let onTargetCount = 0;
-                if (advancedCategory !== 'putting') {
-                  filteredCatShots.forEach(sh => {
-                    if (!sh.miss_direction) return;
-                    const normalized = normalizeMissDir(sh.miss_direction);
-                    if (normalized === null) { onTargetCount++; return; }
-                    petalMissCounts[normalized] = (petalMissCounts[normalized] || 0) + 1;
-                  });
-                }
-
-                // Shot shape breakdown
-                const shapes: Record<string, number> = {};
-                catShots.forEach(sh => {
-                  if (sh.shot_shape) shapes[sh.shot_shape] = (shapes[sh.shot_shape] || 0) + 1;
-                });
-
-                // Putt stats
-                const puttLineHit = catShots.filter(sh => sh.putt_hit_line === 'yes').length;
-                const puttLineMiss = catShots.filter(sh => sh.putt_hit_line === 'no').length;
-                const puttLineTotal = puttLineHit + puttLineMiss;
-                const pullCount = catShots.filter(sh => sh.putt_line_miss === 'Pull').length;
-                const pushCount = catShots.filter(sh => sh.putt_line_miss === 'Push').length;
-
-                const puttSpeedHit = catShots.filter(sh => sh.putt_hit_speed === 'yes').length;
-                const puttSpeedMiss = catShots.filter(sh => sh.putt_hit_speed === 'no').length;
-                const puttSpeedTotal = puttSpeedHit + puttSpeedMiss;
-                const hardCount = catShots.filter(sh => sh.putt_speed_miss === 'Hard').length;
-                const softCount = catShots.filter(sh => sh.putt_speed_miss === 'Soft').length;
-
-                // Result lies
-                const results: Record<string, number> = {};
-                catShots.forEach(sh => {
-                  if (sh.result_lie) results[sh.result_lie] = (results[sh.result_lie] || 0) + 1;
-                });
-
-                return (
-                  <View style={{ marginBottom: 20 }}>
-                    {/* Category selector dropdown */}
-                    <Dropdown
-                      options={categories.map(c => c.key)}
-                      value={advancedCategory}
-                      onChange={(v) => { setAdvancedCategory(v); setShapeFilter('all'); }}
-                      labelMap={Object.fromEntries(categories.map(c => [c.key, c.label]))}
-                    />
-
-                    <Text style={{ fontSize: 13, color: colors.gray, marginBottom: 12 }}>{totalShots} shots tracked</Text>
-
-                    {totalShots > 0 && (
-                      <>
-                        {/* PETAL CHART for non-putting */}
-                        {advancedCategory !== 'putting' && (
-                          <>
-                            {/* Shape filter dropdown */}
-                            {uniqueShapes.size > 0 && (
-                              <Dropdown
-                                options={shapeOptions}
-                                value={shapeFilter}
-                                onChange={setShapeFilter}
-                                labelMap={{ all: 'Overall' }}
-                              />
-                            )}
-                            <PetalChart missCounts={petalMissCounts} totalShots={filteredCatShots.length} onTargetCount={onTargetCount} title="Shot Dispersion" />
-                          </>
-                        )}
-
-                        {/* PUTTING: Petal + Distance Stats */}
-                        {advancedCategory === 'putting' && (
-                          <>
-                            <PuttPetalChart shots={catShots} />
-                            <PuttDistanceStats shots={catShots} />
-                          </>
-                        )}
-
-                        {/* Shot shape breakdown (non-putting) */}
-                        {advancedCategory !== 'putting' && Object.keys(shapes).length > 0 && (
-                          <>
-                            <Text style={s.sectionTitle}>Intended Shot Shape</Text>
-                            {Object.entries(shapes).sort(([,a],[,b]) => b - a).map(([shape, count]) => (
-                              <View key={shape} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                                <Text style={{ width: 90, fontSize: 13, fontWeight: '600', color: colors.primary }}>{shape}</Text>
-                                <View style={{ flex: 1, height: 24, backgroundColor: colors.grayLight, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 }}>
-                                  <View style={{ height: '100%', width: `${(count / totalShots) * 100}%`, backgroundColor: colors.gold, borderRadius: 12 }} />
-                                </View>
-                                <Text style={{ width: 50, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((count / totalShots) * 100)}%</Text>
-                              </View>
-                            ))}
-                          </>
-                        )}
-
-                        {/* Result lie breakdown (non-putting) */}
-                        {advancedCategory !== 'putting' && Object.keys(results).length > 0 && (
-                          <>
-                            <Text style={s.sectionTitle}>Where You Ended Up</Text>
-                            {Object.entries(results).sort(([,a],[,b]) => b - a).map(([lie, count]) => (
-                              <View key={lie} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                                <Text style={{ width: 90, fontSize: 13, fontWeight: '600', color: colors.primary }}>{lie}</Text>
-                                <View style={{ flex: 1, height: 24, backgroundColor: colors.grayLight, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 }}>
-                                  <View style={{ height: '100%', width: `${(count / totalShots) * 100}%`, backgroundColor: lie === 'Green' || lie === 'Fairway' ? '#16a34a' : colors.gold, borderRadius: 12 }} />
-                                </View>
-                                <Text style={{ width: 50, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'right' }}>{Math.round((count / totalShots) * 100)}%</Text>
-                              </View>
-                            ))}
-                          </>
-                        )}
-
-                        {/* Putting-specific: line & speed */}
-                        {advancedCategory === 'putting' && puttLineTotal > 0 && (
-                          <>
-                            <Text style={s.sectionTitle}>Hit Your Line</Text>
-                            <View style={s.summaryRow}>
-                              <View style={s.summaryCard}>
-                                <Text style={s.summaryNum}>{Math.round((puttLineHit / puttLineTotal) * 100)}%</Text>
-                                <Text style={s.summaryLabel}>Yes</Text>
-                              </View>
-                              <View style={s.summaryCard}>
-                                <Text style={s.summaryNum}>{Math.round((puttLineMiss / puttLineTotal) * 100)}%</Text>
-                                <Text style={s.summaryLabel}>No</Text>
-                              </View>
-                            </View>
-                            {puttLineMiss > 0 && (
-                              <View style={s.summaryRow}>
-                                <View style={s.summaryCard}>
-                                  <Text style={s.summaryNum}>{pullCount}</Text>
-                                  <Text style={s.summaryLabel}>Pull</Text>
-                                </View>
-                                <View style={s.summaryCard}>
-                                  <Text style={s.summaryNum}>{pushCount}</Text>
-                                  <Text style={s.summaryLabel}>Push</Text>
-                                </View>
-                              </View>
-                            )}
-                          </>
-                        )}
-
-                        {advancedCategory === 'putting' && puttSpeedTotal > 0 && (
-                          <>
-                            <Text style={s.sectionTitle}>Hit Your Speed</Text>
-                            <View style={s.summaryRow}>
-                              <View style={s.summaryCard}>
-                                <Text style={s.summaryNum}>{Math.round((puttSpeedHit / puttSpeedTotal) * 100)}%</Text>
-                                <Text style={s.summaryLabel}>Yes</Text>
-                              </View>
-                              <View style={s.summaryCard}>
-                                <Text style={s.summaryNum}>{Math.round((puttSpeedMiss / puttSpeedTotal) * 100)}%</Text>
-                                <Text style={s.summaryLabel}>No</Text>
-                              </View>
-                            </View>
-                            {puttSpeedMiss > 0 && (
-                              <View style={s.summaryRow}>
-                                <View style={s.summaryCard}>
-                                  <Text style={s.summaryNum}>{hardCount}</Text>
-                                  <Text style={s.summaryLabel}>Hard</Text>
-                                </View>
-                                <View style={s.summaryCard}>
-                                  <Text style={s.summaryNum}>{softCount}</Text>
-                                  <Text style={s.summaryLabel}>Soft</Text>
-                                </View>
-                              </View>
-                            )}
-                          </>
-                        )}
-                      </>
-                    )}
-                  </View>
-                );
-              })()}
-            </>
-            </ErrorBoundary>
-          )}
+          {/* Advanced Stats Dashboard — isolated, defensive, never crashes the tab */}
+                    <ErrorBoundary>
+                      <AdvancedStatsDashboard advancedShots={advancedShots || []} />
+                    </ErrorBoundary>
 
           {/* Condition-Filtered Stats */}
           <ConditionFilteredStats rounds={allRounds} holeScores={allScoresByRound} />
