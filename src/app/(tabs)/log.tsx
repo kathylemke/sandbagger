@@ -298,18 +298,37 @@ export default function LogRound() {
     }
   }, []);
 
-  // Check for saved draft
+  const validateDraft = (raw: string | null): any | null => {
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      // Must be an object with at least courseId or courseName
+      if (!parsed || typeof parsed !== 'object') return null;
+      if (!parsed.courseId && !parsed.courseName) return null;
+      // Reject if JSON contains anything obviously bad (functions, circular refs already handled by JSON.parse)
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  // Check for saved draft — validate and auto-clear if malformed
   useEffect(() => {
-    AsyncStorage.getItem(DRAFT_KEY).then(stored => {
-      if (stored) {
-        try {
-          const draft = JSON.parse(stored);
-          setHasDraft(true);
-          setDraftCourseName(draft.courseName || 'Unknown');
-          setDraftDate(draft.datePlayed || '');
-        } catch {}
+    AsyncStorage.getItem(DRAFT_KEY).then(async stored => {
+      if (!stored) return;
+      const draft = validateDraft(stored);
+      if (!draft) {
+        // Malformed draft — silently clear it so it doesn't block the app
+        console.warn('[log] Cleared malformed draft on load');
+        await AsyncStorage.removeItem(DRAFT_KEY);
+        return;
       }
-    });
+      try {
+        setHasDraft(true);
+        setDraftCourseName(draft.courseName || 'Unknown');
+        setDraftDate(draft.datePlayed || '');
+      } catch {}
+    }).catch(() => {});
   }, [DRAFT_KEY]);
 
   // Check for editing round (from feed Edit button) — runs on every tab focus
