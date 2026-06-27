@@ -31,19 +31,21 @@ function passes(shot: any, field: string, filterValue: string): boolean {
 // Buckets
 // ============================================================
 
-const APPROACH_DISTANCE_BUCKETS = [
-  { key: '0-20', min: 0, max: 20, label: '0-20 yds' },
-  { key: '20-40', min: 20, max: 40, label: '20-40 yds' },
-  { key: '40-60', min: 40, max: 60, label: '40-60 yds' },
-  { key: '60-80', min: 60, max: 80, label: '60-80 yds' },
-  { key: '80-100', min: 80, max: 100, label: '80-100 yds' },
-  { key: '100-120', min: 100, max: 120, label: '100-120 yds' },
-  { key: '120-140', min: 120, max: 140, label: '120-140 yds' },
-  { key: '140-160', min: 140, max: 160, label: '140-160 yds' },
-  { key: '160-180', min: 160, max: 180, label: '160-180 yds' },
-  { key: '180-200', min: 180, max: 200, label: '180-200 yds' },
-  { key: '200-220', min: 200, max: 220, label: '200-220 yds' },
-  { key: '220+', min: 220, max: Infinity, label: '220+ yds' },
+// Proximity buckets — distance from hole AFTER the shot, in FEET.
+// A wedge from 110 yards that ends up 12 feet from the pin → bucket "0-20 ft".
+const PROXIMITY_BUCKETS = [
+  { key: '0-20', min: 0, max: 20, label: '0-20 ft' },
+  { key: '20-40', min: 20, max: 40, label: '20-40 ft' },
+  { key: '40-60', min: 40, max: 60, label: '40-60 ft' },
+  { key: '60-80', min: 60, max: 80, label: '60-80 ft' },
+  { key: '80-100', min: 80, max: 100, label: '80-100 ft' },
+  { key: '100-120', min: 100, max: 120, label: '100-120 ft' },
+  { key: '120-140', min: 120, max: 140, label: '120-140 ft' },
+  { key: '140-160', min: 140, max: 160, label: '140-160 ft' },
+  { key: '160-180', min: 160, max: 180, label: '160-180 ft' },
+  { key: '180-200', min: 180, max: 200, label: '180-200 ft' },
+  { key: '200-220', min: 200, max: 220, label: '200-220 ft' },
+  { key: '220+', min: 220, max: Infinity, label: '220+ ft' },
 ];
 
 const PUTT_DISTANCE_BUCKETS = [
@@ -285,10 +287,10 @@ function ApproachView({ shots }: { shots: any[] }) {
       if (!passes(sh, 'club', club)) return false;
       if (!passes(sh, 'shot_shape', shape)) return false;
       if (distance !== 'all') {
-        const ap = safeNum(sh?.approach_distance);
-        if (ap == null) return false; // partial data → skip when specific bucket chosen
-        const b = APPROACH_DISTANCE_BUCKETS.find(x => x.key === distance);
-        if (!b || ap < b.min || ap >= b.max) return false;
+        const prox = safeNum(sh?.approach_distance);
+        if (prox == null) return false; // partial data → skip when specific bucket chosen
+        const b = PROXIMITY_BUCKETS.find(x => x.key === distance);
+        if (!b || prox < b.min || prox >= b.max) return false;
       }
       return true;
     });
@@ -333,20 +335,20 @@ function ApproachView({ shots }: { shots: any[] }) {
   return (
     <>
       <ChipRow label="Club" options={clubs.map(k => ({ key: k, label: k === 'all' ? 'All' : k }))} value={club} onChange={setClub} />
-      <ChipRow label="Distance" options={[{ key: 'all', label: 'All' }, ...APPROACH_DISTANCE_BUCKETS.map(b => ({ key: b.key, label: b.label }))]} value={distance} onChange={setDistance} />
+      <ChipRow label="Proximity" options={[{ key: 'all', label: 'All' }, ...PROXIMITY_BUCKETS.map(b => ({ key: b.key, label: b.label }))]} value={distance} onChange={setDistance} />
       <ChipRow label="Shape" options={shapes.map(k => ({ key: k, label: k === 'all' ? 'All' : k }))} value={shape} onChange={setShape} />
 
       <Section title="Proximity">
         <Text style={s.summary}>
           {filtered.length} shots
-          {avgProx != null && ` · Avg ${avgProx.toFixed(1)} yds`}
-          {closest != null && ` · Closest ${closest.toFixed(0)}`}
-          {farthest != null && ` · Farthest ${farthest.toFixed(0)}`}
+          {avgProx != null && ` · Avg ${avgProx.toFixed(1)} ft`}
+          {closest != null && ` · Closest ${closest.toFixed(0)} ft`}
+          {farthest != null && ` · Farthest ${farthest.toFixed(0)} ft`}
         </Text>
       </Section>
 
       {proxByClubRows.length > 0 && (
-        <Section title="Proximity by Club (avg yds)">
+        <Section title="Proximity by Club (avg ft from hole)">
           <BarList
             rows={proxByClubRows}
             maxValue={Math.max(...proxByClubRows.map(r => r.value), 1)}
