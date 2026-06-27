@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { colors } from '../../lib/theme';
 import ScoreCell from '../../components/ScoreCell';
 import ConditionFilteredStats from '../../components/ConditionFilteredStats';
+import AdvancedStatsDashboard from '../../components/AdvancedStatsDashboard';
 
 // --- Custom Dropdown ---
 function Dropdown<T extends string>({ options, value, onChange, labelMap }: { options: T[]; value: T; onChange: (v: T) => void; labelMap?: Record<string, string> }) {
@@ -107,6 +108,7 @@ export default function Stats() {
   const [recentRounds, setRecentRounds] = useState<RecentRound[]>([]);
   const [wedgeTotalsByRound, setWedgeTotalsByRound] = useState<Map<string, number>>(new Map());
   const [expandedRoundId, setExpandedRoundId] = useState<string | null>(null);
+  const [advancedShots, setAdvancedShots] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -136,6 +138,18 @@ export default function Stats() {
         byRound.get(sc.round_id)!.push(sc);
       });
       setAllScoresByRound(byRound);
+
+      const allAdvShots: any[] = [];
+      (scores || []).forEach((sc: any) => {
+        if (!sc.notes) return;
+        try {
+          const parsed = JSON.parse(sc.notes);
+          if (parsed && parsed.mode === 'advanced' && Array.isArray(parsed.shots)) {
+            parsed.shots.forEach((shot: any) => allAdvShots.push({ ...shot, hole_number: sc.hole_number, par: sc.par }));
+          }
+        } catch {}
+      });
+      setAdvancedShots(allAdvShots);
 
       const wTotals = new Map<string, number>();
       byRound.forEach((holes, roundId) => {
@@ -286,6 +300,9 @@ export default function Stats() {
           {(missLPct > 0 || missRPct > 0) && (
             <FairwayMissBar leftPct={missLPct} rightPct={missRPct} leftCount={missLCount} rightCount={missRCount} />
           )}
+
+          {/* Advanced Stats Dashboard */}
+          <AdvancedStatsDashboard advancedShots={advancedShots || []} />
 
           {/* Condition-Filtered Stats */}
           <ConditionFilteredStats rounds={allRounds} holeScores={allScoresByRound} />
