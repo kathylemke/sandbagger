@@ -29,6 +29,9 @@ interface ShotData {
   result_lie: string;
   miss_direction: string;
   green_position?: string;
+  // Distance from hole after the shot — units depend on context:
+  // hit_green + on green = FEET (putt distance), otherwise = YARDS
+  distance_to_hole?: string;
   // Putt-specific fields
   is_putt?: boolean;
   putt_distance?: string; // feet
@@ -42,6 +45,12 @@ interface ShotData {
   putt_hit_speed?: string; // 'yes' | 'no'
   putt_speed_miss?: string; // 'hard' | 'soft'
   approach_distance?: string; // yards for approach shots
+}
+
+// Detect if a shot is a putt based on its fields
+function shotIsPutt(shot: any): boolean {
+  if (!shot) return false;
+  return !!shot.is_putt || !!shot.putt_result || !!shot.putt_break || !!shot.putt_distance || !!shot.putt_hit_line || !!shot.putt_hit_speed || !!shot.putt_slope;
 }
 
 interface StrategyData {
@@ -1057,6 +1066,50 @@ export default function LogRound() {
 
             <Text style={s.formLabel}>Result — Where Did You End Up?</Text>
             <PillRow options={RESULT_LIES} value={shot.result_lie} onChange={v => updateShot(holeIdx, shotIdx, 'result_lie', v)} wrap />
+
+            {/* Distance to hole (proximity) — auto-populates next shot's distance.
+                Unit is implied by context: hit_green + on green = FEET, otherwise YARDS. */}
+            {!shotIsPutt(shot) && (() => {
+              const currentEntry = holeEntries[holeIdx];
+              const hasNextShot = currentEntry && shotIdx < (currentEntry.shots?.length ?? 0) - 1;
+              if (!hasNextShot) return null;
+              return (
+              <>
+                <Text style={s.formLabel}>
+                  {shot.intention === 'hit_green' ? 'Proximity to Hole' : 'Distance to Hole'}
+                  <Text style={{ fontSize: 11, color: colors.grayDark, fontWeight: '500' }}>
+                    {' '}({shot.intention === 'hit_green' && shot.result_lie === 'Green' ? 'ft' : 'yds'})
+                  </Text>
+                </Text>
+                <TextInput style={s.input}
+                  value={shot.distance_to_hole || ''}
+                  onChangeText={v => {
+                    updateShot(holeIdx, shotIdx, 'distance_to_hole' as any, v);
+                    // Auto-populate next shot's distance
+                    const num = parseFloat(v);
+                    if (!isNaN(num) && num > 0) {
+                      const onGreen = shot.intention === 'hit_green' && shot.result_lie === 'Green';
+                      const unitIsFeet = onGreen;
+                      const nextShot = currentEntry?.shots?.[shotIdx + 1];
+                      if (nextShot) {
+                        if (shotIsPutt(nextShot)) {
+                          // Populate putt_distance (feet): convert yards → feet if needed
+                          const feet = unitIsFeet ? num : num * 3;
+                          updateShot(holeIdx, shotIdx + 1, 'putt_distance', String(feet));
+                        } else {
+                          // Populate approach_distance (yards): convert feet → yards if needed
+                          const yards = unitIsFeet ? num / 3 : num;
+                          updateShot(holeIdx, shotIdx + 1, 'approach_distance', String(yards));
+                        }
+                      }
+                    }
+                  }}
+                  keyboardType="number-pad"
+                  placeholder={shot.intention === 'hit_green' ? (shot.result_lie === 'Green' ? '12' : '15') : '20'}
+                  placeholderTextColor={colors.gray} />
+              </>
+              );
+            })()}
 
             <Text style={s.formLabel}>Miss Direction</Text>
             <PillRow options={MISS_DIRECTIONS} value={shot.miss_direction} onChange={v => updateShot(holeIdx, shotIdx, 'miss_direction', v)} wrap />

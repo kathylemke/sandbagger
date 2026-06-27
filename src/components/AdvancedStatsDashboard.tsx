@@ -296,6 +296,12 @@ function TeeView({ shots }: { shots: any[] }) {
 // Build a lookup: for each shot, what's the proximity (in feet) of the next shot
 // in the same hole? Used for approaches that are followed by a putt or another
 // approach — the next shot's starting distance IS the proximity of this one.
+//
+// Data model:
+//   - If current shot has explicit `distance_to_hole` field:
+//     - hit_green + result_lie === 'Green' → value is in FEET (putt distance)
+//     - otherwise → value is in YARDS (chipped/pitched back into play)
+//   - Otherwise, derive from next shot's distance field
 function buildProximityMap(allShots: any[]): Map<string, number | null> {
   const map = new Map<string, number | null>();
   if (!Array.isArray(allShots) || allShots.length === 0) return map;
@@ -313,15 +319,32 @@ function buildProximityMap(allShots: any[]): Map<string, number | null> {
       const cur = byHole[h][i];
       const next = byHole[h][i + 1];
       const key = `${cur.hole_number}-${cur.shot_number}`;
+      // Skip putts — they have their own stats view
+      if (isPutt(cur)) {
+        map.set(key, null);
+        continue;
+      }
+
+      // Priority 1: explicit distance_to_hole field on current shot
+      const explicit = safeNum(cur?.distance_to_hole);
+      if (explicit != null) {
+        // Infer unit: feet if hit_green and actually on the green, else yards
+        const onGreen = safeStr(cur?.intention) === 'hit_green' && safeStr(cur?.result_lie) === 'Green';
+        const unitIsFeet = onGreen;
+        map.set(key, unitIsFeet ? explicit : explicit * 3);
+        continue;
+      }
+
+      // Priority 2: derive from next shot's distance
       if (next) {
-        // If next is a putt, use putt_distance (feet). Otherwise approximate
-        // by converting the next shot's approach_distance (yards) → feet.
         if (isPutt(next)) {
+          // Next shot is a putt — its putt_distance (feet) IS the proximity
           const pd = safeNum(next.putt_distance);
           map.set(key, pd);
         } else {
+          // Next shot is another approach — approach_distance is in yards,
+          // convert to feet for averaging
           const ad = safeNum(next.approach_distance);
-          // convert yards → feet for consistency
           map.set(key, ad != null ? ad * 3 : null);
         }
       } else {
