@@ -293,6 +293,32 @@ function TeeView({ shots }: { shots: any[] }) {
 // Category: Approach
 // ============================================================
 
+// Build a lookup: for each shot, what was the "hitting from" position?
+// That's the previous shot's result_lie (Fairway, Rough, Bunker, Fescue, etc.)
+// First shot of every hole has no previous → not in the map.
+function buildHittingFromMap(allShots: any[]): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!Array.isArray(allShots) || allShots.length === 0) return map;
+  const byHole: Record<string, any[]> = {};
+  for (const sh of allShots) {
+    const h = sh?.hole_number;
+    if (h == null) continue;
+    if (!byHole[h]) byHole[h] = [];
+    byHole[h].push(sh);
+  }
+  for (const h of Object.keys(byHole)) {
+    byHole[h].sort((a, b) => (a.shot_number || 0) - (b.shot_number || 0));
+    for (let i = 1; i < byHole[h].length; i++) {
+      const cur = byHole[h][i];
+      const prev = byHole[h][i - 1];
+      const key = `${cur.hole_number}-${cur.shot_number}`;
+      const prevLie = safeStr(prev?.result_lie);
+      if (prevLie) map.set(key, prevLie);
+    }
+  }
+  return map;
+}
+
 // Build a lookup: for each shot, what's the proximity (in feet) of the next shot
 // in the same hole? Used for approaches that are followed by a putt or another
 // approach — the next shot's starting distance IS the proximity of this one.
@@ -319,35 +345,46 @@ function buildProximityMap(allShots: any[]): Map<string, number | null> {
       const cur = byHole[h][i];
       const next = byHole[h][i + 1];
       const key = `${cur.hole_number}-${cur.shot_number}`;
-      // Skip putts — they have their own stats view
-      if (isPutt(cur)) {
-        map.set(key, null);
-        continue;
-      }
 
       // Priority 1: explicit distance_to_hole field on current shot
       const explicit = safeNum(cur?.distance_to_hole);
       if (explicit != null) {
-        // Infer unit: feet if hit_green and actually on the green, else yards
         const onGreen = safeStr(cur?.intention) === 'hit_green' && safeStr(cur?.result_lie) === 'Green';
         const unitIsFeet = onGreen;
         map.set(key, unitIsFeet ? explicit : explicit * 3);
         continue;
       }
 
-      // Priority 2: derive from next shot's distance
+      // For putts: proximity = 0 if made, or putt_distance_remaining (feet left) if missed
+      if (isPutt(cur)) {
+        const result = safeStr(cur?.putt_result);
+        if (result === 'made') {
+          map.set(key, 0);
+        } else if (result) {
+          // Missed putt — use the leftover distance as proximity
+          const remaining = safeNum(cur?.putt_distance_remaining);
+          map.set(key, remaining);
+        } else {
+          map.set(key, null);
+        }
+        continue;
+      }
+
+      // Priority 2: derive from next shot's distance (the next shot starts
+      // where this one ended up, so its starting distance = this shot's proximity)
       if (next) {
         if (isPutt(next)) {
-          // Next shot is a putt — its putt_distance (feet) IS the proximity
+          // Next shot is a putt — putt_distance (feet) IS the proximity
           const pd = safeNum(next.putt_distance);
           map.set(key, pd);
         } else {
-          // Next shot is another approach — approach_distance is in yards,
-          // convert to feet for averaging
+          // Next shot is another approach — approach_distance (yards)
+          // Convert to feet for consistency in averaging
           const ad = safeNum(next.approach_distance);
           map.set(key, ad != null ? ad * 3 : null);
         }
       } else {
+        // No next shot — proximity is genuinely unknown for this shot
         map.set(key, null);
       }
     }
@@ -438,6 +475,7 @@ function ApproachView({ shots, allShots }: { shots: any[]; allShots: any[] }) {
   const [club, setClub] = useState<string>('all');
   const [distance, setDistance] = useState<string>('all'); // distance filter (yards)
   const [shape, setShape] = useState<string>('all');
+  const [hittingFrom, setHittingFrom] = useState<string>('all');
 
   const clubs = useMemo(() => {
     const c = new Set<string>();
@@ -450,6 +488,21 @@ function ApproachView({ shots, allShots }: { shots: any[]; allShots: any[] }) {
     shots.forEach(sh => { const v = safeStr(sh?.shot_shape); if (v) s.add(v); });
     return ['all', ...Array.from(s).sort()];
   }, [shots]);
+
+  // Hitting-from lookup: hole-shot → where the previous shot ended up
+  const hittingFromMap = useMemo(() => buildHittingFromMap(allShots), [allShots]);
+  // Available hitting-from values, sorted with common ones first
+  const hittingFromOptions = useMemo(() => {
+    const seen = new Set<string>();
+    shots.forEach(sh => {
+      const v = hittingFromMap.get(`${sh.hole_number}-${sh.shot_number}`);
+      if (v) seen.add(v);
+    });
+    const preferred = ['Fairway', 'Rough', 'Fescue', 'Bunker', 'Green', 'Fringe', 'Recovery', 'Trees'];
+    const sorted = preferred.filter(p => seen.has(p));
+    const rest = Array.from(seen).filter(v => !preferred.includes(v)).sort();
+    return ['all', ...sorted, ...rest];
+  }, [shots, hittingFromMap]);
 
   // Proximity lookup: hole-shot → feet-from-hole after this shot
   const proxMap = useMemo(() => buildProximityMap(allShots), [allShots]);
@@ -465,9 +518,14 @@ function ApproachView({ shots, allShots }: { shots: any[]; allShots: any[] }) {
         const b = DISTANCE_BUCKETS.find(x => x.key === distance);
         if (!b || d < b.min || d >= b.max) return false;
       }
+      // Hitting-from filter — uses previous shot's result_lie
+      if (hittingFrom !== 'all') {
+        const hf = hittingFromMap.get(`${sh.hole_number}-${sh.shot_number}`) || '';
+        if (hf !== hittingFrom) return false;
+      }
       return true;
     });
-  }, [shots, club, distance, shape]);
+  }, [shots, club, distance, shape, hittingFrom, hittingFromMap]);
 
   // Proximity stats — derived from next shot's distance (feet)
   const proxValues = filtered
@@ -496,6 +554,7 @@ function ApproachView({ shots, allShots }: { shots: any[]; allShots: any[] }) {
     <>
       <ChipRow label="Club" options={clubs.map(k => ({ key: k, label: k === 'all' ? 'All' : k }))} value={club} onChange={setClub} />
       <ChipRow label="Distance (shot length)" options={[{ key: 'all', label: 'All' }, ...DISTANCE_BUCKETS.map(b => ({ key: b.key, label: b.label }))]} value={distance} onChange={setDistance} />
+      <ChipRow label="Hitting From" options={hittingFromOptions.map(k => ({ key: k, label: k === 'all' ? 'All' : k }))} value={hittingFrom} onChange={setHittingFrom} />
       <ChipRow label="Shape" options={shapes.map(k => ({ key: k, label: k === 'all' ? 'All' : k }))} value={shape} onChange={setShape} />
 
       <Section title="Proximity (ft from hole)">
@@ -533,10 +592,25 @@ function ApproachView({ shots, allShots }: { shots: any[]; allShots: any[] }) {
 // Category: Putting
 // ============================================================
 
-function PuttingView({ putts }: { putts: any[] }) {
+function PuttingView({ putts, allShots }: { putts: any[]; allShots: any[] }) {
   const [distBucket, setDistBucket] = useState<string>('all');
   const [slope, setSlope] = useState<string>('all');
   const [brk, setBrk] = useState<string>('all');
+  const [hittingFrom, setHittingFrom] = useState<string>('all');
+
+  // Hitting-from lookup: which surface are we putting from? (green, fringe, rough, etc.)
+  const hittingFromMap = useMemo(() => buildHittingFromMap(allShots || []), [allShots]);
+  const hittingFromOptions = useMemo(() => {
+    const seen = new Set<string>();
+    putts.forEach(sh => {
+      const v = hittingFromMap.get(`${sh.hole_number}-${sh.shot_number}`);
+      if (v) seen.add(v);
+    });
+    const preferred = ['Green', 'Fringe', 'Rough', 'Fairway', 'Fescue', 'Bunker', 'Recovery', 'Trees'];
+    const sorted = preferred.filter(p => seen.has(p));
+    const rest = Array.from(seen).filter(v => !preferred.includes(v)).sort();
+    return ['all', ...sorted, ...rest];
+  }, [putts, hittingFromMap]);
 
   // First: filter by distance bucket (only filters shots with putt_distance data)
   // All other filters applied per-view so shots with partial data still count in make%.
@@ -579,10 +653,18 @@ function PuttingView({ putts }: { putts: any[] }) {
     return rows;
   }, [putts]);
 
-  // For all other views, apply distance + slope + break filters
+  // For all other views, apply distance + slope + break + hitting-from filters
   const fullyFiltered = useMemo(() => {
-    return distFiltered.filter(sh => passes(sh, 'putt_slope', slope) && passes(sh, 'putt_break', brk));
-  }, [distFiltered, slope, brk]);
+    return distFiltered.filter(sh => {
+      if (!passes(sh, 'putt_slope', slope)) return false;
+      if (!passes(sh, 'putt_break', brk)) return false;
+      if (hittingFrom !== 'all') {
+        const hf = hittingFromMap.get(`${sh.hole_number}-${sh.shot_number}`) || '';
+        if (hf !== hittingFrom) return false;
+      }
+      return true;
+    });
+  }, [distFiltered, slope, brk, hittingFrom, hittingFromMap]);
 
   // Make% summary for current filter
   const madeCount = fullyFiltered.filter(sh => normalizePuttResult(safeStr(sh?.putt_result)) === 'made').length;
@@ -655,6 +737,7 @@ function PuttingView({ putts }: { putts: any[] }) {
   return (
     <>
       <ChipRow label="Distance" options={[{ key: 'all', label: 'All' }, ...PUTT_DISTANCE_BUCKETS.map(b => ({ key: b.key, label: b.label }))]} value={distBucket} onChange={setDistBucket} />
+      <ChipRow label="Hitting From" options={hittingFromOptions.map(k => ({ key: k, label: k === 'all' ? 'All' : k }))} value={hittingFrom} onChange={setHittingFrom} />
       <ChipRow label="Slope" options={slopes.map(k => ({ key: k, label: k === 'all' ? 'All' : k.charAt(0).toUpperCase() + k.slice(1) }))} value={slope} onChange={setSlope} />
       <ChipRow label="Break" options={breaks.map(k => ({ key: k, label: k === 'all' ? 'All' : k }))} value={brk} onChange={setBrk} />
 
@@ -805,9 +888,9 @@ export default function AdvancedStatsDashboard({ advancedShots }: { advancedShot
           {/* Category tabs */}
           <View style={s.tabRow}>
             {[
-              { key: 'tee' as const, label: `Tee${teeShots.length ? ` (${teeShots.length})` : ''}` },
-              { key: 'approach' as const, label: `Approach${approachShots.length ? ` (${approachShots.length})` : ''}` },
-              { key: 'putting' as const, label: `Putting${putts.length ? ` (${putts.length})` : ''}` },
+              { key: 'tee' as const, label: 'Tee' },
+              { key: 'approach' as const, label: 'Approach' },
+              { key: 'putting' as const, label: 'Putting' },
             ].map(t => (
               <TouchableOpacity
                 key={t.key}
@@ -822,7 +905,7 @@ export default function AdvancedStatsDashboard({ advancedShots }: { advancedShot
 
           {category === 'tee' && <TeeView shots={teeShots} />}
           {category === 'approach' && <ApproachView shots={approachShots} allShots={advancedShots} />}
-          {category === 'putting' && <PuttingView putts={putts} />}
+          {category === 'putting' && <PuttingView putts={putts} allShots={advancedShots} />}
         </View>
       )}
     </View>

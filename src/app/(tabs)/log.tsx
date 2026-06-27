@@ -94,7 +94,7 @@ const defaultMental = (): MentalData => ({ pre_feeling: '', difficulty_rating: 3
 
 const SHOT_SHAPES = ['Straight', 'Draw', 'Fade', 'Punch', 'Flop', 'Knockdown', 'High', 'Low'];
 const CLUBS = ['Driver', '3W', '5W', '7W', '2H', '3H', '4H', '5H', '3i', '4i', '5i', '6i', '7i', '8i', '9i', 'PW', 'GW', 'SW', 'LW', 'Putter'];
-const RESULT_LIES = ['Fairway', 'Rough', 'Bunker', 'Green', 'Fringe', 'Water', 'OB', 'Trees', 'Cart Path'];
+const RESULT_LIES = ['Fairway', 'Rough', 'Fescue', 'Bunker', 'Green', 'Fringe', 'Water', 'OB', 'Trees', 'Cart Path'];
 const MISS_DIRECTIONS = ['Left', 'Right', 'Short', 'Long', 'On Target'];
 const INTENTIONS = [
   { key: 'hit_fairway', label: 'Hit Fairway' },
