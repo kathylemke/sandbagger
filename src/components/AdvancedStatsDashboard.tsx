@@ -7,10 +7,38 @@ import { colors } from '../lib/theme';
 // ============================================================
 
 const safeStr = (v: any) => (v == null ? '' : String(v));
-const safeNum = (v: any): number | null => {
+function safeNum(v: any): number | null {
   const n = parseFloat(v);
   return Number.isFinite(n) ? n : null;
-};
+}
+
+// Quantile for IQR / median calculation
+function quantile(sorted: number[], q: number): number {
+  if (sorted.length === 0) return 0;
+  const pos = (sorted.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  if (sorted[base + 1] !== undefined) {
+    return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+  }
+  return sorted[base];
+}
+
+function computeStats(values: number[]): { n: number; min: number; q1: number; median: number; q3: number; max: number; mean: number; iqr: number; stddev: number } | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const min = sorted[0];
+  const max = sorted[sorted.length - 1];
+  const median = quantile(sorted, 0.5);
+  const q1 = quantile(sorted, 0.25);
+  const q3 = quantile(sorted, 0.75);
+  const mean = sorted.reduce((a, b) => a + b, 0) / sorted.length;
+  const iqr = q3 - q1;
+  // Standard deviation
+  const variance = sorted.reduce((sum, v) => sum + (v - mean) ** 2, 0) / sorted.length;
+  const stddev = Math.sqrt(variance);
+  return { n: sorted.length, min, q1, median, q3, max, mean, iqr, stddev };
+}
 
 function isPutt(shot: any): boolean {
   if (!shot) return false;
@@ -31,21 +59,21 @@ function passes(shot: any, field: string, filterValue: string): boolean {
 // Buckets
 // ============================================================
 
-// Proximity buckets — distance from hole AFTER the shot, in FEET.
-// A wedge from 110 yards that ends up 12 feet from the pin → bucket "0-20 ft".
-const PROXIMITY_BUCKETS = [
-  { key: '0-20', min: 0, max: 20, label: '0-20 ft' },
-  { key: '20-40', min: 20, max: 40, label: '20-40 ft' },
-  { key: '40-60', min: 40, max: 60, label: '40-60 ft' },
-  { key: '60-80', min: 60, max: 80, label: '60-80 ft' },
-  { key: '80-100', min: 80, max: 100, label: '80-100 ft' },
-  { key: '100-120', min: 100, max: 120, label: '100-120 ft' },
-  { key: '120-140', min: 120, max: 140, label: '120-140 ft' },
-  { key: '140-160', min: 140, max: 160, label: '140-160 ft' },
-  { key: '160-180', min: 160, max: 180, label: '160-180 ft' },
-  { key: '180-200', min: 180, max: 200, label: '180-200 ft' },
-  { key: '200-220', min: 200, max: 220, label: '200-220 ft' },
-  { key: '220+', min: 220, max: Infinity, label: '220+ ft' },
+// Distance buckets — the LENGTH of the shot in YARDS (how far the user hit FROM).
+// Filter chip; user picks the bucket they're interested in.
+const DISTANCE_BUCKETS = [
+  { key: '0-20', min: 0, max: 20, label: '0-20 yds' },
+  { key: '20-40', min: 20, max: 40, label: '20-40 yds' },
+  { key: '40-60', min: 40, max: 60, label: '40-60 yds' },
+  { key: '60-80', min: 60, max: 80, label: '60-80 yds' },
+  { key: '80-100', min: 80, max: 100, label: '80-100 yds' },
+  { key: '100-120', min: 100, max: 120, label: '100-120 yds' },
+  { key: '120-140', min: 120, max: 140, label: '120-140 yds' },
+  { key: '140-160', min: 140, max: 160, label: '140-160 yds' },
+  { key: '160-180', min: 160, max: 180, label: '160-180 yds' },
+  { key: '180-200', min: 180, max: 200, label: '180-200 yds' },
+  { key: '200-220', min: 200, max: 220, label: '200-220 yds' },
+  { key: '220+', min: 220, max: Infinity, label: '220+ yds' },
 ];
 
 const PUTT_DISTANCE_BUCKETS = [
@@ -265,9 +293,127 @@ function TeeView({ shots }: { shots: any[] }) {
 // Category: Approach
 // ============================================================
 
-function ApproachView({ shots }: { shots: any[] }) {
+// Build a lookup: for each shot, what's the proximity (in feet) of the next shot
+// in the same hole? Used for approaches that are followed by a putt or another
+// approach — the next shot's starting distance IS the proximity of this one.
+function buildProximityMap(allShots: any[]): Map<string, number | null> {
+  const map = new Map<string, number | null>();
+  if (!Array.isArray(allShots) || allShots.length === 0) return map;
+  // Group by hole_number
+  const byHole: Record<string, any[]> = {};
+  for (const sh of allShots) {
+    const h = sh?.hole_number;
+    if (h == null) continue;
+    if (!byHole[h]) byHole[h] = [];
+    byHole[h].push(sh);
+  }
+  for (const h of Object.keys(byHole)) {
+    byHole[h].sort((a, b) => (a.shot_number || 0) - (b.shot_number || 0));
+    for (let i = 0; i < byHole[h].length; i++) {
+      const cur = byHole[h][i];
+      const next = byHole[h][i + 1];
+      const key = `${cur.hole_number}-${cur.shot_number}`;
+      if (next) {
+        // If next is a putt, use putt_distance (feet). Otherwise approximate
+        // by converting the next shot's approach_distance (yards) → feet.
+        if (isPutt(next)) {
+          const pd = safeNum(next.putt_distance);
+          map.set(key, pd);
+        } else {
+          const ad = safeNum(next.approach_distance);
+          // convert yards → feet for consistency
+          map.set(key, ad != null ? ad * 3 : null);
+        }
+      } else {
+        map.set(key, null);
+      }
+    }
+  }
+  return map;
+}
+
+function ProximityStatsBox({ stats, nDerivable, nTotal }: { stats: ReturnType<typeof computeStats>; nDerivable: number; nTotal: number }) {
+  if (!stats) {
+    return (
+      <Text style={s.empty}>
+        No proximity data yet. Proximity = distance to hole after the shot, in feet.
+        Log a putt (or another shot) after each approach for proximity to populate.
+      </Text>
+    );
+  }
+  // Build a simple text distribution table
+  const fmt = (v: number) => `${v.toFixed(1)} ft`;
+  return (
+    <View>
+      <View style={s.statGrid}>
+        <Stat label="Count" value={`${stats.n}`} sub={nDerivable < nTotal ? `of ${nTotal}` : undefined} />
+        <Stat label="Mean" value={fmt(stats.mean)} />
+        <Stat label="Std Dev" value={fmt(stats.stddev)} />
+      </View>
+      <View style={[s.statGrid, { marginTop: 8 }]}>
+        <Stat label="Min" value={fmt(stats.min)} />
+        <Stat label="Q1" value={fmt(stats.q1)} />
+        <Stat label="Median" value={fmt(stats.median)} />
+        <Stat label="Q3" value={fmt(stats.q3)} />
+        <Stat label="Max" value={fmt(stats.max)} />
+      </View>
+      <Text style={[s.subtle, { marginTop: 8 }]}>IQR: {fmt(stats.iqr)} (Q3 − Q1)</Text>
+    </View>
+  );
+}
+
+function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <View style={s.statCell}>
+      <Text style={s.statLabel}>{label}</Text>
+      <Text style={s.statValue}>{value}</Text>
+      {sub ? <Text style={s.statSub}>{sub}</Text> : null}
+    </View>
+  );
+}
+
+// Simple distribution histogram (10-ft buckets, capped at 80ft for display)
+function ProximityHistogram({ values }: { values: number[] }) {
+  const bucketSize = 10;
+  const maxShown = 80;
+  const buckets: { min: number; max: number; count: number }[] = [];
+  for (let m = 0; m < maxShown; m += bucketSize) {
+    buckets.push({ min: m, max: m + bucketSize, count: 0 });
+  }
+  // Plus a catch-all "80+" bucket
+  buckets.push({ min: maxShown, max: Infinity, count: 0 });
+  for (const v of values) {
+    if (v >= maxShown) {
+      buckets[buckets.length - 1].count++;
+    } else {
+      const b = buckets.find(b => v >= b.min && v < b.max);
+      if (b) b.count++;
+    }
+  }
+  const maxCount = Math.max(...buckets.map(b => b.count), 1);
+  return (
+    <View>
+      {buckets.map(b => {
+        const pct = (b.count / Math.max(values.length, 1)) * 100;
+        return (
+          <View key={`${b.min}-${b.max}`} style={s.histRow}>
+            <Text style={s.histLabel}>
+              {b.max === Infinity ? `${b.min}+ ft` : `${b.min}-${b.max} ft`}
+            </Text>
+            <View style={s.histTrack}>
+              <View style={[s.histFill, { width: `${Math.max(2, (b.count / maxCount) * 100)}%` }]} />
+            </View>
+            <Text style={s.histValue}>{b.count} ({Math.round(pct)}%)</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function ApproachView({ shots, allShots }: { shots: any[]; allShots: any[] }) {
   const [club, setClub] = useState<string>('all');
-  const [distance, setDistance] = useState<string>('all');
+  const [distance, setDistance] = useState<string>('all'); // distance filter (yards)
   const [shape, setShape] = useState<string>('all');
 
   const clubs = useMemo(() => {
@@ -282,38 +428,29 @@ function ApproachView({ shots }: { shots: any[] }) {
     return ['all', ...Array.from(s).sort()];
   }, [shots]);
 
+  // Proximity lookup: hole-shot → feet-from-hole after this shot
+  const proxMap = useMemo(() => buildProximityMap(allShots), [allShots]);
+
   const filtered = useMemo(() => {
     return shots.filter(sh => {
       if (!passes(sh, 'club', club)) return false;
       if (!passes(sh, 'shot_shape', shape)) return false;
+      // Distance filter — uses approach_distance (length of shot, yards)
       if (distance !== 'all') {
-        const prox = safeNum(sh?.approach_distance);
-        if (prox == null) return false; // partial data → skip when specific bucket chosen
-        const b = PROXIMITY_BUCKETS.find(x => x.key === distance);
-        if (!b || prox < b.min || prox >= b.max) return false;
+        const d = safeNum(sh?.approach_distance);
+        if (d == null) return false; // partial data → skip when specific bucket chosen
+        const b = DISTANCE_BUCKETS.find(x => x.key === distance);
+        if (!b || d < b.min || d >= b.max) return false;
       }
       return true;
     });
   }, [shots, club, distance, shape]);
 
-  // Proximity summary
-  const proximityNums = filtered.map(sh => safeNum(sh?.approach_distance)).filter((n): n is number => n != null);
-  const avgProx = proximityNums.length > 0 ? (proximityNums.reduce((a, b) => a + b, 0) / proximityNums.length) : null;
-  const closest = proximityNums.length > 0 ? Math.min(...proximityNums) : null;
-  const farthest = proximityNums.length > 0 ? Math.max(...proximityNums) : null;
-
-  // Proximity by club
-  const proxByClub: Record<string, number[]> = {};
-  filtered.forEach(sh => {
-    const c = safeStr(sh?.club);
-    const ap = safeNum(sh?.approach_distance);
-    if (!c || ap == null) return;
-    if (!proxByClub[c]) proxByClub[c] = [];
-    proxByClub[c].push(ap);
-  });
-  const proxByClubRows = Object.entries(proxByClub)
-    .map(([c, nums]) => ({ label: c, value: nums.reduce((a, b) => a + b, 0) / nums.length, sub: `(${nums.length})` }))
-    .sort((a, b) => a.value - b.value);
+  // Proximity stats — derived from next shot's distance (feet)
+  const proxValues = filtered
+    .map(sh => proxMap.get(`${sh.hole_number}-${sh.shot_number}`))
+    .filter((v): v is number => v != null);
+  const proxStats = computeStats(proxValues);
 
   // Miss tendency
   const counts: Record<string, number> = {};
@@ -335,25 +472,19 @@ function ApproachView({ shots }: { shots: any[] }) {
   return (
     <>
       <ChipRow label="Club" options={clubs.map(k => ({ key: k, label: k === 'all' ? 'All' : k }))} value={club} onChange={setClub} />
-      <ChipRow label="Proximity" options={[{ key: 'all', label: 'All' }, ...PROXIMITY_BUCKETS.map(b => ({ key: b.key, label: b.label }))]} value={distance} onChange={setDistance} />
+      <ChipRow label="Distance (shot length)" options={[{ key: 'all', label: 'All' }, ...DISTANCE_BUCKETS.map(b => ({ key: b.key, label: b.label }))]} value={distance} onChange={setDistance} />
       <ChipRow label="Shape" options={shapes.map(k => ({ key: k, label: k === 'all' ? 'All' : k }))} value={shape} onChange={setShape} />
 
-      <Section title="Proximity">
+      <Section title="Proximity (ft from hole)">
         <Text style={s.summary}>
-          {filtered.length} shots
-          {avgProx != null && ` · Avg ${avgProx.toFixed(1)} ft`}
-          {closest != null && ` · Closest ${closest.toFixed(0)} ft`}
-          {farthest != null && ` · Farthest ${farthest.toFixed(0)} ft`}
+          {filtered.length} shots in current filter · {proxValues.length} with proximity data
         </Text>
+        <ProximityStatsBox stats={proxStats} nDerivable={proxValues.length} nTotal={filtered.length} />
       </Section>
 
-      {proxByClubRows.length > 0 && (
-        <Section title="Proximity by Club (avg ft from hole)">
-          <BarList
-            rows={proxByClubRows}
-            maxValue={Math.max(...proxByClubRows.map(r => r.value), 1)}
-            format={v => v.toFixed(1)}
-          />
+      {proxValues.length > 0 && (
+        <Section title="Proximity Distribution">
+          <ProximityHistogram values={proxValues} />
         </Section>
       )}
 
@@ -667,7 +798,7 @@ export default function AdvancedStatsDashboard({ advancedShots }: { advancedShot
           </View>
 
           {category === 'tee' && <TeeView shots={teeShots} />}
-          {category === 'approach' && <ApproachView shots={approachShots} />}
+          {category === 'approach' && <ApproachView shots={approachShots} allShots={advancedShots} />}
           {category === 'putting' && <PuttingView putts={putts} />}
         </View>
       )}
@@ -878,6 +1009,70 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
     width: 40,
+    textAlign: 'right',
+  },
+  statGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  statCell: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  statSub: {
+    fontSize: 10,
+    color: '#9ca3af',
+    marginTop: 1,
+  },
+  histRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  histLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary,
+    width: 70,
+  },
+  histTrack: {
+    flex: 1,
+    height: 16,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    marginHorizontal: 6,
+    overflow: 'hidden',
+  },
+  histFill: {
+    height: '100%',
+    backgroundColor: colors.gold,
+    borderRadius: 8,
+  },
+  histValue: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+    width: 80,
     textAlign: 'right',
   },
 });
