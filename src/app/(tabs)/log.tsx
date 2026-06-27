@@ -1003,7 +1003,23 @@ export default function LogRound() {
     if (!shot) return null;
     const sectionKey = `shot-${holeIdx}-${shotIdx}`;
     const isOpen = expandedShots[sectionKey] ?? (shotIdx === 0);
-    const summary = [shot.club, INTENTIONS.find(i => i.key === shot.intention)?.label, shot.result_lie].filter(Boolean).join(' · ');
+    // Chain context: where is this shot hitting FROM?
+    // Shot 1 = from Tee (always). Shots 2+ = from previous shot's result_lie.
+    const entry = holeEntries[holeIdx];
+    const prevShot = shotIdx > 0 ? entry?.shots?.[shotIdx - 1] : null;
+    const fromLie = shotIdx === 0 ? 'Tee' : safeStr(prevShot?.result_lie);
+    // Shot length: yards for non-putts, feet for putts
+    const shotLength = shotIsPutt(shot)
+      ? (shot.putt_distance ? `${shot.putt_distance}ft` : '')
+      : (shot.approach_distance ? `${shot.approach_distance} yds` : '');
+    const summaryParts = [
+      shot.club,
+      shotLength,
+      fromLie ? `from ${fromLie}` : '',
+      INTENTIONS.find(i => i.key === shot.intention)?.label,
+      shot.result_lie,
+    ].filter(Boolean);
+    const summary = summaryParts.join(' · ');
     const showGreenGrid = shot.intention === 'hit_green' || shot.result_lie === 'Green' || shot.result_lie === 'Fringe';
 
     return (

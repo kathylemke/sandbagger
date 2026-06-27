@@ -295,7 +295,7 @@ function TeeView({ shots }: { shots: any[] }) {
 
 // Build a lookup: for each shot, what was the "hitting from" position?
 // That's the previous shot's result_lie (Fairway, Rough, Bunker, Fescue, etc.)
-// First shot of every hole has no previous → not in the map.
+// First shot of every hole (the tee shot) is always from "Tee".
 function buildHittingFromMap(allShots: any[]): Map<string, string> {
   const map = new Map<string, string>();
   if (!Array.isArray(allShots) || allShots.length === 0) return map;
@@ -308,6 +308,12 @@ function buildHittingFromMap(allShots: any[]): Map<string, string> {
   }
   for (const h of Object.keys(byHole)) {
     byHole[h].sort((a, b) => (a.shot_number || 0) - (b.shot_number || 0));
+    // First shot of the hole — tee shot, always from "Tee"
+    if (byHole[h].length > 0) {
+      const first = byHole[h][0];
+      map.set(`${first.hole_number}-${first.shot_number}`, 'Tee');
+    }
+    // Subsequent shots — from = previous shot's result_lie
     for (let i = 1; i < byHole[h].length; i++) {
       const cur = byHole[h][i];
       const prev = byHole[h][i - 1];
@@ -498,7 +504,7 @@ function ApproachView({ shots, allShots }: { shots: any[]; allShots: any[] }) {
       const v = hittingFromMap.get(`${sh.hole_number}-${sh.shot_number}`);
       if (v) seen.add(v);
     });
-    const preferred = ['Fairway', 'Rough', 'Fescue', 'Bunker', 'Green', 'Fringe', 'Recovery', 'Trees'];
+    const preferred = ['Tee', 'Fairway', 'Rough', 'Fescue', 'Bunker', 'Green', 'Fringe', 'Recovery', 'Trees'];
     const sorted = preferred.filter(p => seen.has(p));
     const rest = Array.from(seen).filter(v => !preferred.includes(v)).sort();
     return ['all', ...sorted, ...rest];
@@ -606,7 +612,7 @@ function PuttingView({ putts, allShots }: { putts: any[]; allShots: any[] }) {
       const v = hittingFromMap.get(`${sh.hole_number}-${sh.shot_number}`);
       if (v) seen.add(v);
     });
-    const preferred = ['Green', 'Fringe', 'Rough', 'Fairway', 'Fescue', 'Bunker', 'Recovery', 'Trees'];
+    const preferred = ['Tee', 'Green', 'Fringe', 'Rough', 'Fairway', 'Fescue', 'Bunker', 'Recovery', 'Trees'];
     const sorted = preferred.filter(p => seen.has(p));
     const rest = Array.from(seen).filter(v => !preferred.includes(v)).sort();
     return ['all', ...sorted, ...rest];
