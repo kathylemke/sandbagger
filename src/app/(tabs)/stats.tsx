@@ -145,7 +145,7 @@ export default function Stats() {
         try {
           const parsed = JSON.parse(sc.notes);
           if (parsed && parsed.mode === 'advanced' && Array.isArray(parsed.shots)) {
-            parsed.shots.forEach((shot: any) => allAdvShots.push({ ...shot, hole_number: sc.hole_number, par: sc.par }));
+            parsed.shots.forEach((shot: any) => allAdvShots.push({ ...shot, hole_number: sc.hole_number, par: sc.par, round_id: sc.round_id }));
           }
         } catch {}
       });

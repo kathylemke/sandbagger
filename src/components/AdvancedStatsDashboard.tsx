@@ -296,28 +296,29 @@ function TeeView({ shots }: { shots: any[] }) {
 // Build a lookup: for each shot, what was the "hitting from" position?
 // That's the previous shot's result_lie (Fairway, Rough, Bunker, Fescue, etc.)
 // First shot of every hole (the tee shot) is always from "Tee".
+// Keyed by (round_id, hole_number) so shots from different rounds don't bleed together.
 function buildHittingFromMap(allShots: any[]): Map<string, string> {
   const map = new Map<string, string>();
   if (!Array.isArray(allShots) || allShots.length === 0) return map;
-  const byHole: Record<string, any[]> = {};
+  // Group by (round_id, hole_number) — each round has its own Hole 1, 2, etc.
+  const byRndHole: Record<string, any[]> = {};
   for (const sh of allShots) {
-    const h = sh?.hole_number;
-    if (h == null) continue;
-    if (!byHole[h]) byHole[h] = [];
-    byHole[h].push(sh);
+    const k = `${sh?.round_id || 'noround'}-${sh?.hole_number}`;
+    if (!byRndHole[k]) byRndHole[k] = [];
+    byRndHole[k].push(sh);
   }
-  for (const h of Object.keys(byHole)) {
-    byHole[h].sort((a, b) => (a.shot_number || 0) - (b.shot_number || 0));
+  for (const k of Object.keys(byRndHole)) {
+    byRndHole[k].sort((a, b) => (a.shot_number || 0) - (b.shot_number || 0));
     // First shot of the hole — tee shot, always from "Tee"
-    if (byHole[h].length > 0) {
-      const first = byHole[h][0];
-      map.set(`${first.hole_number}-${first.shot_number}`, 'Tee');
+    if (byRndHole[k].length > 0) {
+      const first = byRndHole[k][0];
+      map.set(`${first.round_id || 'noround'}-${first.hole_number}-${first.shot_number}`, 'Tee');
     }
     // Subsequent shots — from = previous shot's result_lie
-    for (let i = 1; i < byHole[h].length; i++) {
-      const cur = byHole[h][i];
-      const prev = byHole[h][i - 1];
-      const key = `${cur.hole_number}-${cur.shot_number}`;
+    for (let i = 1; i < byRndHole[k].length; i++) {
+      const cur = byRndHole[k][i];
+      const prev = byRndHole[k][i - 1];
+      const key = `${cur.round_id || 'noround'}-${cur.hole_number}-${cur.shot_number}`;
       const prevLie = safeStr(prev?.result_lie);
       if (prevLie) map.set(key, prevLie);
     }
@@ -337,20 +338,19 @@ function buildHittingFromMap(allShots: any[]): Map<string, string> {
 function buildProximityMap(allShots: any[]): Map<string, number | null> {
   const map = new Map<string, number | null>();
   if (!Array.isArray(allShots) || allShots.length === 0) return map;
-  // Group by hole_number
-  const byHole: Record<string, any[]> = {};
+  // Group by (round_id, hole_number) — each round has its own Hole 1, 2, etc.
+  const byRndHole: Record<string, any[]> = {};
   for (const sh of allShots) {
-    const h = sh?.hole_number;
-    if (h == null) continue;
-    if (!byHole[h]) byHole[h] = [];
-    byHole[h].push(sh);
+    const k = `${sh?.round_id || 'noround'}-${sh?.hole_number}`;
+    if (!byRndHole[k]) byRndHole[k] = [];
+    byRndHole[k].push(sh);
   }
-  for (const h of Object.keys(byHole)) {
-    byHole[h].sort((a, b) => (a.shot_number || 0) - (b.shot_number || 0));
-    for (let i = 0; i < byHole[h].length; i++) {
-      const cur = byHole[h][i];
-      const next = byHole[h][i + 1];
-      const key = `${cur.hole_number}-${cur.shot_number}`;
+  for (const k of Object.keys(byRndHole)) {
+    byRndHole[k].sort((a, b) => (a.shot_number || 0) - (b.shot_number || 0));
+    for (let i = 0; i < byRndHole[k].length; i++) {
+      const cur = byRndHole[k][i];
+      const next = byRndHole[k][i + 1];
+      const key = `${cur.round_id || 'noround'}-${cur.hole_number}-${cur.shot_number}`;
 
       // Priority 1: explicit distance_to_hole field on current shot
       const explicit = safeNum(cur?.distance_to_hole);
@@ -501,7 +501,7 @@ function ApproachView({ shots, allShots }: { shots: any[]; allShots: any[] }) {
   const hittingFromOptions = useMemo(() => {
     const seen = new Set<string>();
     shots.forEach(sh => {
-      const v = hittingFromMap.get(`${sh.hole_number}-${sh.shot_number}`);
+      const v = hittingFromMap.get(`${sh.round_id || 'noround'}-${sh.hole_number}-${sh.shot_number}`);
       if (v) seen.add(v);
     });
     const preferred = ['Tee', 'Fairway', 'Rough', 'Fescue', 'Bunker', 'Green', 'Fringe', 'Recovery', 'Trees'];
@@ -526,7 +526,7 @@ function ApproachView({ shots, allShots }: { shots: any[]; allShots: any[] }) {
       }
       // Hitting-from filter — uses previous shot's result_lie
       if (hittingFrom !== 'all') {
-        const hf = hittingFromMap.get(`${sh.hole_number}-${sh.shot_number}`) || '';
+        const hf = hittingFromMap.get(`${sh.round_id || 'noround'}-${sh.hole_number}-${sh.shot_number}`) || '';
         if (hf !== hittingFrom) return false;
       }
       return true;
@@ -535,7 +535,7 @@ function ApproachView({ shots, allShots }: { shots: any[]; allShots: any[] }) {
 
   // Proximity stats — derived from next shot's distance (feet)
   const proxValues = filtered
-    .map(sh => proxMap.get(`${sh.hole_number}-${sh.shot_number}`))
+    .map(sh => proxMap.get(`${sh.round_id || 'noround'}-${sh.hole_number}-${sh.shot_number}`))
     .filter((v): v is number => v != null);
   const proxStats = computeStats(proxValues);
 
@@ -609,7 +609,7 @@ function PuttingView({ putts, allShots }: { putts: any[]; allShots: any[] }) {
   const hittingFromOptions = useMemo(() => {
     const seen = new Set<string>();
     putts.forEach(sh => {
-      const v = hittingFromMap.get(`${sh.hole_number}-${sh.shot_number}`);
+      const v = hittingFromMap.get(`${sh.round_id || 'noround'}-${sh.hole_number}-${sh.shot_number}`);
       if (v) seen.add(v);
     });
     const preferred = ['Tee', 'Green', 'Fringe', 'Rough', 'Fairway', 'Fescue', 'Bunker', 'Recovery', 'Trees'];
@@ -665,7 +665,7 @@ function PuttingView({ putts, allShots }: { putts: any[]; allShots: any[] }) {
       if (!passes(sh, 'putt_slope', slope)) return false;
       if (!passes(sh, 'putt_break', brk)) return false;
       if (hittingFrom !== 'all') {
-        const hf = hittingFromMap.get(`${sh.hole_number}-${sh.shot_number}`) || '';
+        const hf = hittingFromMap.get(`${sh.round_id || 'noround'}-${sh.hole_number}-${sh.shot_number}`) || '';
         if (hf !== hittingFrom) return false;
       }
       return true;
